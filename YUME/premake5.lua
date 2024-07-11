@@ -36,7 +36,6 @@ project "YUME"
 
 	filter "system:windows"
 		systemversion "latest"
-		staticruntime "on"
 
 		defines 
 		{

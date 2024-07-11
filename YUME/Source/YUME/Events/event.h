@@ -51,16 +51,6 @@ namespace YUME
 			{
 				return GetCategoryFlags() & p_Category;
 			}
-
-			inline std::ostream& operator<<(std::ostream& p_Os)
-			{
-				return p_Os << this->ToString();
-			}
-
-			explicit inline operator std::string() const
-			{
-				return ToString();
-			}
 	};
 
 	class YM_PUBLIC EventDispatcher
@@ -90,5 +80,8 @@ namespace YUME
 			Event& m_Event;
 	};
 
+	inline std::ostream& operator<<(std::ostream& os, const Event& event) {
+		return os << event.ToString();
+	}
 }
 

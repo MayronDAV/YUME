@@ -1,7 +1,7 @@
 ## Features
 - [ ] Add a reference counting system.
-- [ ] Add a Event system.
-- [ ] Add Window.
+- [x] Add a Event system.
+- [x] Add Window.
 - [ ] Add Vulkan.
 - [ ] Add ImGui Vulkan.
 - [ ] Send each event to a queue instead of dispatching it immediately.
