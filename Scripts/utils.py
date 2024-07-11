@@ -1,37 +1,16 @@
 import sys
 import os
-import requests
 import time
-import urllib
+import urllib.request
 from zipfile import ZipFile
 
-def GetSystemEnvironmentVariable(name):
-    if os.name == 'nt':
-        import winreg
-        key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"System\CurrentControlSet\Control\Session Manager\Environment")
-        try:
-            return winreg.QueryValueEx(key, name)[0]
-        except:
-            return None
-    else:
-        return os.environ.get(name)
 
-def GetUserEnvironmentVariable(name):
-    if os.name == 'nt':
-        import winreg
-        key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Environment")
-        try:
-            return winreg.QueryValueEx(key, name)[0]
-        except:
-            return None
-    else:
-        return os.environ.get(name)
 
 def DownloadFile(url, filepath):
     path = filepath
     filepath = os.path.abspath(filepath)
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            
+    
     if isinstance(url, list):
         for url_option in url:
             print("Downloading", url_option)
@@ -56,21 +35,20 @@ def DownloadFile(url, filepath):
 
     with open(filepath, 'wb') as f:
         headers = {'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36"}
-        response = requests.get(url, headers=headers, stream=True)
-        total = response.headers.get('content-length')
-
-        if total is None:
-            f.write(response.content)
-        else:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req) as response:
+            total = response.length
             downloaded = 0
-            total = int(total)
             startTime = time.time()
-            for data in response.iter_content(chunk_size=max(int(total/1000), 1024*1024)):
-                downloaded += len(data)
-                f.write(data)
+            while True:
+                chunk = response.read(1024*1024)  # 1 MB chunks
+                if not chunk:
+                    break
+                f.write(chunk)
+                downloaded += len(chunk)
                 
                 try:
-                    done = int(50*downloaded/total) if downloaded < total else 50
+                    done = int(50 * downloaded / total) if downloaded < total else 50
                     percentage = (downloaded / total) * 100 if downloaded < total else 100
                 except ZeroDivisionError:
                     done = 50
@@ -85,7 +63,7 @@ def DownloadFile(url, filepath):
                 if avgKBPerSecond > 1024:
                     avgMBPerSecond = avgKBPerSecond / 1024
                     avgSpeedString = '{:.2f} MB/s'.format(avgMBPerSecond)
-                sys.stdout.write('\r[{}{}] {:.2f}% ({})     '.format('█' * done, '.' * (50-done), percentage, avgSpeedString))
+                sys.stdout.write('\r[{}{}] {:.2f}% ({})     '.format('█' * done, '.' * (50 - done), percentage, avgSpeedString))
                 sys.stdout.flush()
     sys.stdout.write('\n')
 

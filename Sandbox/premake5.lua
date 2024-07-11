@@ -28,6 +28,11 @@ project "Sandbox"
 		"YUME"
 	}
 
+	postbuildcommands 
+	{
+		("{COPYFILE} %{wks.location}/bin/" .. outputdir .. "/YUME/YUME.dll %{wks.location}/bin/" .. outputdir .. "/%{prj.name}/")
+	}
+
 	filter "system:windows"
 		systemversion "latest"
 		defines "YM_PLATFORM_WINDOWS"

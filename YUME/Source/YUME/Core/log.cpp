@@ -1,3 +1,4 @@
+#include "YUME/yumepch.h"
 #include "YUME/Core/log.h"
 
 #include <spdlog/sinks/stdout_color_sinks.h>

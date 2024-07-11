@@ -1,6 +1,9 @@
 import sys
 import subprocess
+import platform
 import importlib.util as importlib_util
+
+
 
 class PythonConfiguration:
     @classmethod
@@ -39,7 +42,9 @@ class PythonConfiguration:
             permissionGranted = (reply == 'y')
         
         print(f"Installing {packageName} module...")
-        subprocess.check_call(['python', '-m', 'pip', 'install', packageName])
+        pythonExec = "python" if platform.system().lower() == "windows" else "python3"
+        #subprocess.check_call(['python', '-m', 'pip', 'install', packageName])
+        subprocess.call([pythonExec, '-m', 'pip', 'install', packageName])
 
         return cls.__ValidatePackage(packageName)
 

@@ -10,10 +10,7 @@ class Sandbox : public YUME::Application
 };
 
 
-
 YUME::Application* YUME::CreateApplication()
 {
-	YM_TRACE("Teste")
-
 	return new Sandbox();
 }

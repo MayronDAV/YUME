@@ -3,6 +3,8 @@
 #include "YUME/Core/application.h"
 #include "YUME/Core/log.h"
 
+
+
 extern YUME::Application* YUME::CreateApplication();
 
 int main(int p_Argc, char** p_Argv)
