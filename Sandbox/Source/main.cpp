@@ -10,19 +10,39 @@ class ExampleLayer : public YUME::Layer
 		ExampleLayer()
 			: Layer("Example") {}
 
-		void OnUpdate() override
+		void OnUpdate(YUME::Timestep p_Ts) override 
 		{
-			YM_TRACE("ExampleLayer::OnUpdate() -> {}", m_Runtime)
-			m_Runtime++;
+			glm::vec4 color(1, 1, 1, 1);
+			color.r = std::cos(YUME::Clock::GetTime());
+			color.g = std::cos(YUME::Clock::GetTime()) / std::sin(YUME::Clock::GetTime());
+			color.b = std::sin(YUME::Clock::GetTime());
+
+			YUME::RendererCommand::ClearColor(color);
+
+			YUME::RendererCommand::Begin();
+
+			YUME::RendererCommand::End();
 		}
 
 		void OnEvent(YUME::Event& p_Event) override
 		{
-			YM_TRACE("ExampleLayer Event: {}", p_Event.ToString())
+			if (YUME::Input::IsKeyPressed(YUME::Key::W))
+			{
+				YM_CORE_INFO("W Is pressed!!!")
+			}
+			if (YUME::Input::IsKeyPressed(YUME::Key::A))
+			{
+				YM_CORE_INFO("A Is pressed!!!")
+			}
+			if (YUME::Input::IsKeyPressed(YUME::Key::S))
+			{
+				YM_CORE_INFO("S Is pressed!!!")
+			}
+			if (YUME::Input::IsKeyPressed(YUME::Key::D))
+			{
+				YM_CORE_INFO("D Is pressed!!!")
+			}
 		}
-
-	private:
-		int m_Runtime = 0;
 };
 
 

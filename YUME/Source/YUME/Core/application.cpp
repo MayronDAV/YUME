@@ -2,6 +2,13 @@
 #include "YUME/Core/application.h"
 #include "YUME/Core/log.h"
 
+#include "YUME/Core/timestep.h"
+
+#include "YUME/Renderer/renderer_command.h"
+#include "YUME/Renderer/renderer3D.h"
+#include "YUME/Utils/clock.h"
+
+
 #include <iostream>
 
 
@@ -9,20 +16,50 @@
 
 namespace YUME
 {
+	Application* Application::s_Instance = nullptr;
+
 	Application::Application()
 	{
+		YM_CORE_ASSERT(s_Instance == nullptr)
+		s_Instance = this;
+
 		m_Window = std::unique_ptr<Window>(Window::Create());
 		m_Window->SetEventCallback(YM_BIND_EVENT_FN(Application::OnEvent));
+
+		RendererCommand::Init(m_Window->GetContext());
+		Renderer3D::Init();
+	}
+
+	Application::~Application()
+	{
+		YUME::RendererCommand::Shutdown();
 	}
 
 	void Application::Run()
 	{
 		while (m_Running)
 		{
+
+			double time = Clock::GetTime();
+			Timestep timestep = time - m_LastFrameTime;
+			m_LastFrameTime = time;
+
 			if (!m_Minimized)
 			{
+				if (double currentTime = Clock::GetTime();
+					currentTime - m_LastTime >= 1.0f)
+				{
+					m_FPS = m_FPSCounter / (currentTime - m_LastTime);
+					m_LastTime = currentTime;
+					m_FPSCounter = 0;
+				}
+
 				for (auto& layer : m_LayerStack)
-					layer->OnUpdate();
+					layer->OnUpdate(timestep);
+
+				YM_CORE_INFO("FPS -> {}", (int)m_FPS)
+
+				m_FPSCounter++;
 			}
 
 			m_Window->OnUpdate();

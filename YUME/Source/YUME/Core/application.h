@@ -8,13 +8,14 @@
 #include "YUME/Core/layer_stack.h"
 
 
+
 namespace YUME
 {
 	class YM_PUBLIC Application
 	{
 		public:
 			Application();
-			virtual ~Application() = default;
+			virtual ~Application();
 
 			void Run();
 
@@ -22,6 +23,10 @@ namespace YUME
 			void PushOverlay(Layer* p_Overlay);
 
 			void OnEvent(Event& p_Event);
+
+			Window& GetWindow() { return *m_Window; }
+
+			static Application& Get() { return *s_Instance; }
 
 		private:
 			bool OnWindowClose(WindowCloseEvent& p_Event);
@@ -31,8 +36,17 @@ namespace YUME
 			std::unique_ptr<Window> m_Window;
 			bool m_Running = true;
 			bool m_Minimized = false;
+			double m_LastFrameTime = 0.0;
 
 			LayerStack m_LayerStack;
+
+			double m_LastTime = 0;
+			double m_FPSCounter = 0;
+			double m_FPS = 0;
+
+
+		private:
+			static Application* s_Instance;
 	};
 
 	Application* CreateApplication();

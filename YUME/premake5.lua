@@ -34,13 +34,23 @@ project "YUME"
 	pchheader "YUME/yumepch.h"
 	pchsource "Source/YUME/yumepch.cpp"
 
+	local source = "%{wks.location}/bin/" .. outputdir .. "/YUME/YUME.dll"
+	local destination = "%{wks.location}/bin/" .. outputdir .. "/Sandbox"
+	local copyfile = "   {COPYFILE} " .. source .. " " .. destination
+
 	filter "system:windows"
 		systemversion "latest"
-
 		defines 
 		{
 			"YM_PLATFORM_WINDOWS",
 			"YM_BUILD_DLL"
+		}
+
+		postbuildcommands
+		{
+			("if exist " .. destination .. " ("),
+			(copyfile),
+			(")")
 		}
 
 	filter "system:linux"
@@ -50,6 +60,14 @@ project "YUME"
 			"YM_PLATFORM_LINUX",
 			"YM_BUILD_DLL"
 		}
+
+		postbuildcommands 
+		{
+			("if [ -f " .. destination .. " ]; then \\"),
+			(copyfile .. "; \\"),
+			("fi")
+		}
+
 
 	filter "configurations:Debug"
 		defines "YM_DEBUG"

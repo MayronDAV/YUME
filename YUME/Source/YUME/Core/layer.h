@@ -2,10 +2,11 @@
 
 #include "YUME/Core/base.h"
 #include "YUME/Events/event.h"
+#include "YUME/Core/timestep.h"
+
 
 namespace YUME
 {
-
 	class YM_PUBLIC Layer
 	{
 		public:
@@ -14,7 +15,7 @@ namespace YUME
 
 			virtual void OnAttach() {}
 			virtual void OnDetach() {}
-			virtual void OnUpdate() {}
+			virtual void OnUpdate(Timestep p_Ts) {}
 			virtual void OnImGuiRender() {}
 			virtual void OnEvent(Event& event) {}
 

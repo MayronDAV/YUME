@@ -12,6 +12,6 @@ namespace YUME
 {
 	Window* Window::Create(const WindowProps& p_Props)
 	{
-		return new VULKAN::Window(p_Props);
+		return new VulkanWindow(p_Props);
 	}
 }

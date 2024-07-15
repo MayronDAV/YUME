@@ -5,14 +5,13 @@
 #include "YUME/Events/mouse_event.h"
 #include "YUME/Events/key_event.h"
 
-#include <vulkan/vulkan.h>
-
+// Lib
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 
 
-namespace YUME::VULKAN
+namespace YUME
 {
 	namespace Utils
 	{
@@ -37,12 +36,13 @@ namespace YUME::VULKAN
 		YM_CORE_ERROR("GLFW Error ({0}): {1}", p_Error, p_Description)
 	}
 
-	Window::Window(const WindowProps& p_Props)
+	VulkanWindow::VulkanWindow(const WindowProps& p_Props)
 	{
+		m_Context = std::make_unique<VulkanContext>();
 		Init(p_Props);
 	}
 
-	Window::~Window()
+	VulkanWindow::~VulkanWindow()
 	{
 		try
 		{
@@ -54,14 +54,19 @@ namespace YUME::VULKAN
 		}
 	}
 
-	void Window::SetCursorMode(CursorMode p_Mode)
+	GraphicsContext* VulkanWindow::GetContext()
+	{
+		return m_Context.get();
+	}
+
+	void VulkanWindow::SetCursorMode(CursorMode p_Mode)
 	{
 		int mode = Utils::CursorModeToGLFWCursorMode(p_Mode);
 		if (mode != 0)
 			glfwSetInputMode(m_Window, GLFW_CURSOR, mode);
 	}
 
-	void Window::Init(const WindowProps& p_Props)
+	void VulkanWindow::Init(const WindowProps& p_Props)
 	{
 		m_Data.Title = p_Props.Title;
 		m_Data.Width = p_Props.Width;
@@ -80,6 +85,7 @@ namespace YUME::VULKAN
 
 		m_Window = glfwCreateWindow((int)p_Props.Width, (int)p_Props.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		YM_CORE_ASSERT(m_Window)
+		m_Context->Init(m_Window);
 		++s_GLFWWindowCount;
 
 		glfwSetWindowUserPointer(m_Window, &m_Data);
@@ -91,6 +97,7 @@ namespace YUME::VULKAN
 			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(p_Window);
 			data.Width = p_Width;
 			data.Height = p_Height;
+			data.Resized = true;
 
 			WindowResizeEvent event(p_Width, p_Height);
 			data.EventCallback(event);
@@ -176,7 +183,7 @@ namespace YUME::VULKAN
 		});
 	}
 
-	void Window::Shutdown()
+	void VulkanWindow::Shutdown()
 	{
 		YM_CORE_WARN("{} window shutdown", m_Data.Title)
 		glfwDestroyWindow(m_Window);
@@ -188,18 +195,25 @@ namespace YUME::VULKAN
 		}
 	}
 
-	void Window::OnUpdate()
+	void VulkanWindow::OnUpdate()
 	{
+		if (m_Data.Resized)
+		{
+			m_Context->OnResize();
+			m_Data.Resized = false;
+		}
+
 		glfwPollEvents();
+		m_Context->SwapBuffer();
 	}
 
-	void Window::SetVSync(bool p_Enabled)
+	void VulkanWindow::SetVSync(bool p_Enabled)
 	{
 		YM_CORE_TRACE("Set vsync {}", p_Enabled)
 		m_Data.VSync = p_Enabled;
 	}
 
-	bool Window::IsVSync() const
+	bool VulkanWindow::IsVSync() const
 	{
 		return m_Data.VSync;
 	}

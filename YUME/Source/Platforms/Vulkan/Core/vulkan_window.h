@@ -3,16 +3,20 @@
 #include "YUME/Core/base.h"
 #include "YUME/Core/window.h"
 
+#include "Platforms/Vulkan/Renderer/vulkan_context.h"
+
+
+
 
 struct GLFWwindow;
 
-namespace YUME::VULKAN
+namespace YUME
 {
-	class YM_PUBLIC Window : public YUME::Window
+	class YM_PUBLIC VulkanWindow : public Window
 	{
 		public:
-			explicit Window(const WindowProps& props);
-			~Window() override;
+			explicit VulkanWindow(const WindowProps& props);
+			~VulkanWindow() override;
 
 			void OnUpdate() override;
 
@@ -25,6 +29,8 @@ namespace YUME::VULKAN
 			bool IsVSync() const override;
 
 			void* GetNativeWindow() const override { return m_Window; }
+
+			GraphicsContext* GetContext() override;
 
 			void SetCursorMode(CursorMode p_Mode) override;
 
@@ -41,10 +47,13 @@ namespace YUME::VULKAN
 				uint32_t Width;
 				uint32_t Height;
 				bool VSync;
+				bool Resized = false;
 
 				EventCallbackFn EventCallback;
 			};
 
 			WindowData m_Data;
+
+			std::unique_ptr<VulkanContext> m_Context;
 	};
 }

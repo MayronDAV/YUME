@@ -5,6 +5,8 @@
 #include "YUME/Core/base.h"
 #include "YUME/Events/event.h"
 
+#include "YUME/Renderer/graphics_context.h"
+
 
 
 namespace YUME
@@ -48,6 +50,8 @@ namespace YUME
 			virtual void* GetNativeWindow() const = 0;
 
 			virtual void SetCursorMode(CursorMode p_Mode) = 0;
+
+			virtual GraphicsContext* GetContext() = 0;
 
 			static Window* Create(const WindowProps& p_Props = WindowProps());
 	};
