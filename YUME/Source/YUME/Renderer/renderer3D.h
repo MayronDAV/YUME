@@ -5,7 +5,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC Renderer3D
+	class YM_API Renderer3D
 	{
 		public:
 			static void Init();

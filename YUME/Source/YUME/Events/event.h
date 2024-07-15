@@ -35,7 +35,7 @@ namespace YUME
 
 #define EVENT_CLASS_CATEGORY(category) virtual int GetCategoryFlags() const override { return category; }
 
-	class YM_PUBLIC Event
+	class YM_API Event
 	{
 		public:
 			virtual ~Event() = default;
@@ -53,7 +53,7 @@ namespace YUME
 			}
 	};
 
-	class YM_PUBLIC EventDispatcher
+	class YM_API EventDispatcher
 	{
 		private:
 			template<typename T>

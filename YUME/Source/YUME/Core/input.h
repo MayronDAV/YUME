@@ -5,7 +5,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC Input
+	class YM_API Input
 	{
 		public:
 			static bool IsKeyPressed(int p_Keycode);

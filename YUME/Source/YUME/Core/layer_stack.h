@@ -10,7 +10,7 @@
 namespace YUME
 {
 
-	class YM_PUBLIC LayerStack
+	class YM_API LayerStack
 	{
 		public:
 			LayerStack() = default;

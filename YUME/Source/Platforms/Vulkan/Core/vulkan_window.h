@@ -12,7 +12,7 @@ struct GLFWwindow;
 
 namespace YUME
 {
-	class YM_PUBLIC VulkanWindow : public Window
+	class YM_API VulkanWindow : public Window
 	{
 		public:
 			explicit VulkanWindow(const WindowProps& props);
@@ -41,7 +41,7 @@ namespace YUME
 		private:
 			GLFWwindow* m_Window;
 
-			struct YM_LOCAL WindowData
+			struct WindowData
 			{
 				std::string Title;
 				uint32_t Width;

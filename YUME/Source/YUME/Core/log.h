@@ -13,7 +13,7 @@
 namespace YUME
 {
 
-	class YM_PUBLIC Log
+	class YM_API Log
 	{
 		public:
 

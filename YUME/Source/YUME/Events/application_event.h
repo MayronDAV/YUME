@@ -7,7 +7,7 @@
 namespace YUME
 {
 
-	class YM_PUBLIC WindowResizeEvent : public Event
+	class YM_API WindowResizeEvent : public Event
 	{
 		public:
 			WindowResizeEvent(uint32_t p_Width, uint32_t p_Height)
@@ -31,7 +31,7 @@ namespace YUME
 			uint32_t m_Height;
 	};
 
-	class YM_PUBLIC WindowCloseEvent : public Event
+	class YM_API WindowCloseEvent : public Event
 	{
 		public:
 			WindowCloseEvent() = default;
@@ -40,7 +40,7 @@ namespace YUME
 			EVENT_CLASS_CATEGORY(EventCategoryApplication)
 	};
 
-	class YM_PUBLIC AppTickEvent : public Event
+	class YM_API AppTickEvent : public Event
 	{
 		public:
 			AppTickEvent() = default;
@@ -49,7 +49,7 @@ namespace YUME
 			EVENT_CLASS_CATEGORY(EventCategoryApplication)
 	};
 
-	class YM_PUBLIC AppUpdateEvent : public Event
+	class YM_API AppUpdateEvent : public Event
 	{
 		public:
 			AppUpdateEvent() = default;
@@ -58,7 +58,7 @@ namespace YUME
 			EVENT_CLASS_CATEGORY(EventCategoryApplication)
 	};
 
-	class YM_PUBLIC AppRenderEvent : public Event
+	class YM_API AppRenderEvent : public Event
 	{
 		public:
 			AppRenderEvent() = default;
@@ -67,7 +67,7 @@ namespace YUME
 			EVENT_CLASS_CATEGORY(EventCategoryApplication)
 	};
 
-	class YM_PUBLIC WindowDropEvent : public Event
+	class YM_API WindowDropEvent : public Event
 	{
 		public:
 			explicit WindowDropEvent(const std::vector<std::filesystem::path>& p_Paths)

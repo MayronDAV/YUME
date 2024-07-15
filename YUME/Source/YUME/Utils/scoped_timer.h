@@ -6,7 +6,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC ScopedTimer
+	class YM_API ScopedTimer
 	{
 		public:
 			ScopedTimer() { Reset(); }

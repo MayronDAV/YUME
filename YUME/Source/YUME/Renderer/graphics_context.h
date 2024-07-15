@@ -6,7 +6,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC GraphicsContext
+	class YM_API GraphicsContext
 	{
 		public:
 			virtual ~GraphicsContext() = default;

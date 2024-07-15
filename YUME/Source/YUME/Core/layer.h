@@ -7,7 +7,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC Layer
+	class YM_API Layer
 	{
 		public:
 			explicit Layer(const std::string& p_Name = "Layer");

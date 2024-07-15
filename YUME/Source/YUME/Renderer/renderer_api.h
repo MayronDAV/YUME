@@ -9,7 +9,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC RendererAPI
+	class YM_API RendererAPI
 	{
 		public:
 			virtual ~RendererAPI() = default;

@@ -28,7 +28,7 @@ namespace YUME
 		std::vector<VkPresentModeKHR> PresentModes;
 	};
 
-	class YM_PUBLIC VulkanContext : public GraphicsContext
+	class YM_API VulkanContext : public GraphicsContext
 	{
 		public:
 			~VulkanContext() override;
@@ -37,7 +37,7 @@ namespace YUME
 
 			void SwapBuffer() override;
 
-			struct YM_PUBLIC SwapchainOptions
+			struct YM_API SwapchainOptions
 			{
 				VkPresentModeKHR PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 				VkExtent2D Extent2D = { 800, 600 };
@@ -47,7 +47,7 @@ namespace YUME
 
 			VkSwapchainKHR& CreateSwapchain(const SwapchainOptions& p_Options = {});
 
-			struct YM_PUBLIC ImagesViewOptions
+			struct YM_API ImagesViewOptions
 			{
 				VkImageViewType ViewType = VK_IMAGE_VIEW_TYPE_2D;
 				VkSurfaceFormatKHR Format = { VK_FORMAT_R8G8B8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR };

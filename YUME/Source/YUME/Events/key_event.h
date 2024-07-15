@@ -7,7 +7,7 @@
 namespace YUME 
 {
 
-	class YM_PUBLIC KeyEvent : public Event
+	class YM_API KeyEvent : public Event
 	{
 		public:
 			inline int GetKeyCode() const { return m_KeyCode; }
@@ -21,7 +21,7 @@ namespace YUME
 			int m_KeyCode;
 	};
 
-	class YM_PUBLIC KeyPressedEvent : public KeyEvent
+	class YM_API KeyPressedEvent : public KeyEvent
 	{
 		public:
 			KeyPressedEvent(int p_Keycode, bool p_IsRepeat = false)
@@ -42,7 +42,7 @@ namespace YUME
 			bool m_IsRepeat;
 	};
 
-	class YM_PUBLIC KeyReleasedEvent : public KeyEvent
+	class YM_API KeyReleasedEvent : public KeyEvent
 	{
 		public:
 			explicit KeyReleasedEvent(int p_Keycode)
@@ -58,7 +58,7 @@ namespace YUME
 			EVENT_CLASS_TYPE(KeyReleased)
 	};
 
-	class YM_PUBLIC KeyTypedEvent : public KeyEvent
+	class YM_API KeyTypedEvent : public KeyEvent
 	{
 		public:
 			explicit KeyTypedEvent(int p_Keycode)

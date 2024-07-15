@@ -8,7 +8,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC Timer
+	class YM_API Timer
 	{
 		public:
             Timer() = default;

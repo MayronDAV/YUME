@@ -4,7 +4,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC Clock
+	class YM_API Clock
 	{
 		public:
 			static double GetTime();

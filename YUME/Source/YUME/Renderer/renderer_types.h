@@ -17,7 +17,7 @@ namespace YUME
 	};
 
 	using RenderVariant = std::variant<std::monostate>;
-	struct YM_LOCAL RenderPacket
+	struct YM_API RenderPacket
 	{
 		RenderType Type; // Must to be defined
 		RenderVariant Data = std::monostate{};

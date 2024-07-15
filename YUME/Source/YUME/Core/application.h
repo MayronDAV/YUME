@@ -11,7 +11,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC Application
+	class YM_API Application
 	{
 		public:
 			Application();

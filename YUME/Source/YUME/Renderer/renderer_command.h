@@ -9,7 +9,7 @@
 namespace YUME
 {
 
-	class YM_PUBLIC RendererCommand
+	class YM_API RendererCommand
 	{
 		public:
 			static void Init(GraphicsContext* p_Context);

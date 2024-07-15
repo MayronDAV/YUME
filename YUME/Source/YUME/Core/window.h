@@ -11,7 +11,7 @@
 
 namespace YUME
 {
-	struct YM_PUBLIC WindowProps
+	struct YM_API WindowProps
 	{
 		std::string Title;
 		uint32_t Width;
@@ -30,7 +30,7 @@ namespace YUME
 		HIDDEN = 0, DISABLED, NORMAL
 	};
 
-	class YM_PUBLIC Window
+	class YM_API Window
 	{
 		public:
 			using EventCallbackFn = std::function<void(Event&)>;

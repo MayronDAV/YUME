@@ -7,7 +7,7 @@
 namespace YUME
 {
 
-	class YM_PUBLIC MouseMovedEvent : public Event
+	class YM_API MouseMovedEvent : public Event
 	{
 		public:
 			MouseMovedEvent(float p_X, float p_Y)
@@ -31,7 +31,7 @@ namespace YUME
 			float m_MouseY;
 	};
 
-	class YM_PUBLIC MouseScrolledEvent : public Event
+	class YM_API MouseScrolledEvent : public Event
 	{
 		public:
 			MouseScrolledEvent(float p_Xoffset, float p_Yoffset)
@@ -55,7 +55,7 @@ namespace YUME
 			float m_YOffset;
 	};
 
-	class YM_PUBLIC MouseButtonEvent : public Event
+	class YM_API MouseButtonEvent : public Event
 	{
 		public:
 			inline int GetMouseButton() const { return m_Button; }
@@ -69,7 +69,7 @@ namespace YUME
 			int m_Button;
 	};
 
-	class YM_PUBLIC MouseButtonPressedEvent : public MouseButtonEvent
+	class YM_API MouseButtonPressedEvent : public MouseButtonEvent
 	{
 		public:
 			explicit MouseButtonPressedEvent(int p_Button)
@@ -85,7 +85,7 @@ namespace YUME
 			EVENT_CLASS_TYPE(MouseButtonPressed)
 	};
 
-	class YM_PUBLIC MouseButtonReleasedEvent : public MouseButtonEvent
+	class YM_API MouseButtonReleasedEvent : public MouseButtonEvent
 	{
 		public:
 			explicit MouseButtonReleasedEvent(int p_Button)

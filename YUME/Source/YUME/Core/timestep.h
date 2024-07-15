@@ -6,7 +6,7 @@
 
 namespace YUME
 {
-	class YM_PUBLIC Timestep
+	class YM_API Timestep
 	{
 		public:
 			Timestep(double p_Time = 0.0f)
