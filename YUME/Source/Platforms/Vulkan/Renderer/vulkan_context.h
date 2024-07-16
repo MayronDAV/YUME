@@ -101,6 +101,7 @@ namespace YUME
 			VkExtent2D GetCurrentExtent2D() { return m_SwapchainOptions.Extent2D; }
 			VkQueue& GetQueue() { return m_Queue; }
 			VkImage& GetImage() { return m_Images[m_CurrentImageIndex]; }
+			VkDevice& GetDevice() { return m_Device; }
 
 		private:
 			void CreateInstance();

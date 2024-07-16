@@ -20,6 +20,7 @@ project "YUME"
 		"%{IncludeDir.glfw}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.glslang}",
 		"%{IncludeDir.Vulkan}",
 		"%{LibraryDir.VulkanSDK}"
 	}
@@ -27,7 +28,8 @@ project "YUME"
 	links
 	{
 		"glfw",
-
+		"glslang",
+		
 		"%{Library.Vulkan}"
 	}
 
@@ -78,7 +80,7 @@ project "YUME"
 		{
 			"%{Library.ShaderC_Debug}",
 			"%{Library.SPIRV_Cross_Debug}",
-			"%{Library.SPIRV_Cross_GLSL_Debug}"
+			"%{Library.SPIRV_Cross_GLSL_Debug}",
 		}
 
 
@@ -91,7 +93,7 @@ project "YUME"
 		{
 			"%{Library.ShaderC_Release}",
 			"%{Library.SPIRV_Cross_Release}",
-			"%{Library.SPIRV_Cross_GLSL_Release}"
+			"%{Library.SPIRV_Cross_GLSL_Release}",
 		}
 
 	filter "configurations:Dist"
@@ -103,5 +105,5 @@ project "YUME"
 		{
 			"%{Library.ShaderC_Release}",
 			"%{Library.SPIRV_Cross_Release}",
-			"%{Library.SPIRV_Cross_GLSL_Release}"
+			"%{Library.SPIRV_Cross_GLSL_Release}",
 		}

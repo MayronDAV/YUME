@@ -11,6 +11,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <filesystem>
 
 #include "YUME/Core/base.h"
 #include "YUME/Core/log.h"

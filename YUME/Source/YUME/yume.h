@@ -31,6 +31,7 @@
 #include "YUME/Renderer/graphics_context.h"
 #include "YUME/Renderer/renderer_command.h"
 #include "YUME/Renderer/renderer_api.h"
+#include "YUME/Renderer/shader.h"
 // --------------------------
 
 

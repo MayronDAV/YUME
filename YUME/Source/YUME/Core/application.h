@@ -24,7 +24,7 @@ namespace YUME
 
 			void OnEvent(Event& p_Event);
 
-			Window& GetWindow() { return *m_Window; }
+			Window& GetWindow() { return *m_Window.get(); }
 
 			static Application& Get() { return *s_Instance; }
 

@@ -8,14 +8,17 @@ class ExampleLayer : public YUME::Layer
 {
 	public:
 		ExampleLayer()
-			: Layer("Example") {}
+			: Layer("Example") 
+		{
+			YUME::Ref<YUME::Shader> shaderTest = YUME::Shader::Create("assets/shaders/shader_test.glsl");
+		}
 
 		void OnUpdate(YUME::Timestep p_Ts) override 
 		{
 			glm::vec4 color(1, 1, 1, 1);
-			color.r = std::cos(YUME::Clock::GetTime());
-			color.g = std::cos(YUME::Clock::GetTime()) / std::sin(YUME::Clock::GetTime());
-			color.b = std::sin(YUME::Clock::GetTime());
+			color.r = (float)std::cos(YUME::Clock::GetTime());
+			color.g = (float)std::cos(YUME::Clock::GetTime()) / (float)std::sin(YUME::Clock::GetTime());
+			color.b = (float)std::sin(YUME::Clock::GetTime());
 
 			YUME::RendererCommand::ClearColor(color);
 

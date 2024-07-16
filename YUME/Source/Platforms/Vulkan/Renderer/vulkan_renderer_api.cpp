@@ -15,13 +15,11 @@ namespace YUME
 {
 
 
-	VulkanRendererAPI::~VulkanRendererAPI()
-	{
-	}
+	VulkanRendererAPI::~VulkanRendererAPI() = default;
 
 	void VulkanRendererAPI::Init(GraphicsContext* p_Context)
 	{
-		m_Context = reinterpret_cast<VulkanContext*>(p_Context);
+		m_Context = dynamic_cast<VulkanContext*>(p_Context);
 	}
 
 	void VulkanRendererAPI::SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height)
@@ -90,9 +88,8 @@ namespace YUME
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 		vkCmdEndRenderPass(commandBuffer);
 
-		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-			throw std::runtime_error("failed to record command buffer!");
-		}
+		auto res = vkEndCommandBuffer(commandBuffer);
+		YM_CORE_VERIFY(res == VK_SUCCESS)
 
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -110,9 +107,8 @@ namespace YUME
 		VkSemaphore signalSemaphores[] = { m_Context->GetWaitSemaphore() };
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
-		if (vkQueueSubmit(m_Context->GetQueue(), 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-			throw std::runtime_error("failed to submit draw command buffer!");
-		}
+		res = vkQueueSubmit(m_Context->GetQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+		YM_CORE_VERIFY(res == VK_SUCCESS)
 	}
 
 }

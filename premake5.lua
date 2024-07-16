@@ -28,6 +28,7 @@ group "Dependencies"
 	include "Thirdparty/glfw"
 	include "Thirdparty/glm"
 	include "Thirdparty/spdlog"
+	include "Thirdparty/glslang"
 group ""
 
 group "Core"
