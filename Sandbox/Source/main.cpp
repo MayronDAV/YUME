@@ -4,25 +4,82 @@
 #include <string>
 
 
+struct Vertice
+{
+	glm::vec3 Position;
+	glm::vec4 Color;
+};
+
+
 class ExampleLayer : public YUME::Layer
 {
 	public:
 		ExampleLayer()
-			: Layer("Example") 
+			: Layer("Example")
 		{
-			YUME::Ref<YUME::Shader> shaderTest = YUME::Shader::Create("assets/shaders/shader_test.glsl");
+			m_QuadShader = YUME::Shader::Create("assets/shaders/quad_shader.glsl");
+
+			YUME::PipelineCreateInfo pci{};
+			pci.Shader = m_QuadShader;
+			m_GraphicPipeline = YUME::Pipeline::Create(pci);
+
+			m_QuadShader->SetPipeline(m_GraphicPipeline);
+
+			m_VAO = YUME::VertexArray::Create();
+
+			std::vector<Vertice> inputData = {
+				Vertice{{-0.5f,-0.5f, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }},
+				Vertice{{ 0.5f,-0.5f, 0.0f }, { 0.0f, 1.0f, 1.0f, 1.0f }},
+				Vertice{{ 0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f }},
+				Vertice{{-0.5f, 0.5f, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }},
+			};
+
+			YUME::Ref<YUME::VertexBuffer> VBO = YUME::VertexBuffer::Create(inputData.size() * sizeof(Vertice));
+			VBO->SetLayout({
+				{ YUME::DataType::Float3, "a_Position"  },
+				{ YUME::DataType::Float4, "a_Color"	    }
+			});
+			VBO->SetData(inputData.data(), inputData.size() * sizeof(Vertice));
+			m_VAO->AddVertexBuffer(VBO);
+
+			std::vector<uint32_t> indexData = {
+				0, 1, 2, 0, 2, 3
+			};
+
+			YUME::Ref<YUME::IndexBuffer> quadIB = YUME::IndexBuffer::Create(indexData.data(), (uint32_t)indexData.size());
+			m_VAO->SetIndexBuffer(quadIB);
+
+			m_QuadShader->AddVertexArray(m_VAO);
 		}
 
-		void OnUpdate(YUME::Timestep p_Ts) override 
+		void OnUpdate(YUME::Timestep p_Ts) override
 		{
-			glm::vec4 color(1, 1, 1, 1);
-			color.r = (float)std::cos(YUME::Clock::GetTime());
-			color.g = (float)std::cos(YUME::Clock::GetTime()) / (float)std::sin(YUME::Clock::GetTime());
-			color.b = (float)std::sin(YUME::Clock::GetTime());
+			if (m_Wireframe && m_ModeFill)
+			{
+				m_GraphicPipeline->SetPolygonMode(YUME::PolygonMode::LINE);
+				m_ModeFill = false;
+			}
+			if (!m_Wireframe && !m_ModeFill)
+			{
+				m_GraphicPipeline->SetPolygonMode(YUME::PolygonMode::FILL);
+				m_ModeFill = true;
+			}
 
-			YUME::RendererCommand::ClearColor(color);
+			if (m_UpdateColor)
+			{
+				m_Color.r = (float)std::cos(YUME::Clock::GetTime());
+				m_Color.g = (float)std::cos(YUME::Clock::GetTime()) / (float)std::sin(YUME::Clock::GetTime());
+				m_Color.b = (float)std::sin(YUME::Clock::GetTime());
+			}
+			YUME::RendererCommand::ClearColor(m_Color);
 
 			YUME::RendererCommand::Begin();
+
+			YUME::RendererCommand::SetViewport(0, 0, 800, 600);
+
+			m_QuadShader->Bind();
+
+			YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());
 
 			YUME::RendererCommand::End();
 		}
@@ -31,21 +88,48 @@ class ExampleLayer : public YUME::Layer
 		{
 			if (YUME::Input::IsKeyPressed(YUME::Key::W))
 			{
-				YM_CORE_INFO("W Is pressed!!!")
+				YM_CORE_WARN("W Is pressed!!!")
+				m_Color = { 1, 0, 0, 1 };
 			}
 			if (YUME::Input::IsKeyPressed(YUME::Key::A))
 			{
-				YM_CORE_INFO("A Is pressed!!!")
+				YM_CORE_WARN("A Is pressed!!!")
+				m_Color = { 0, 1, 0, 1 };
 			}
 			if (YUME::Input::IsKeyPressed(YUME::Key::S))
 			{
-				YM_CORE_INFO("S Is pressed!!!")
+				YM_CORE_WARN("S Is pressed!!!")
+				m_Color = { 0, 0, 1, 1 };
 			}
 			if (YUME::Input::IsKeyPressed(YUME::Key::D))
 			{
-				YM_CORE_INFO("D Is pressed!!!")
+				YM_CORE_WARN("D Is pressed!!!")
+				m_Color = {1, 1, 1, 1};
+			}
+
+			if (YUME::Input::IsKeyPressedOnce(p_Event, YUME::Key::Space))
+			{
+				YM_CORE_WARN("Space Is pressed!!!")
+				m_UpdateColor = !m_UpdateColor;
+			}
+
+			if (YUME::Input::IsKeyPressedOnce(p_Event, YUME::Key::J))
+			{
+				YM_CORE_WARN("J Is pressed!!!")
+				m_Wireframe = !m_Wireframe;
 			}
 		}
+
+	private:
+		glm::vec4 m_Color{1, 1, 1, 1};
+		bool m_UpdateColor = true;
+		YUME::Ref<YUME::Pipeline> m_GraphicPipeline;
+		YUME::Ref<YUME::Shader> m_QuadShader;
+
+		YUME::Ref<YUME::VertexArray> m_VAO;
+
+		bool m_Wireframe = false;
+		bool m_ModeFill = true;
 };
 
 

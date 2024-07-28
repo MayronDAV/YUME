@@ -1,7 +1,7 @@
 #pragma once
 
 #include "YUME/Renderer/renderer_api.h"
-#include "Platforms/Vulkan/Renderer/vulkan_context.h"
+#include "Platform/Vulkan/Renderer/vulkan_context.h"
 
 #include <vulkan/vulkan.h>
 
@@ -22,7 +22,8 @@ namespace YUME
 
 			void ClearColor(const glm::vec4& p_Color) override { m_Color = p_Color; }
 
-			void Draw(const RenderPacket& p_Packet) override;
+			void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount) override;
+			void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount) override;
 
 		private:
 			VulkanContext* m_Context = nullptr;

@@ -10,7 +10,7 @@ workspace "YUME"
 		"Release",
 		"Dist"
 	}
-
+	
 	filter "system:windows"
 		flags { "MultiProcessorCompile" }
 		defines
@@ -19,7 +19,6 @@ workspace "YUME"
 			"_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS",
 			"_CRT_SECURE_NO_WARNINGS"
 		}
-	
 	
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 

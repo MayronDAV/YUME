@@ -38,8 +38,12 @@ namespace YUME
 	{
 		s_RendererAPI->ClearColor(p_Color);
 	}
-	void RendererCommand::Draw(const RenderPacket& p_Packet)
+	void RendererCommand::Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount)
 	{
-		s_RendererAPI->Draw(p_Packet);
+		s_RendererAPI->Draw(p_VertexArray, p_VertexCount);
+	}
+	void RendererCommand::DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount)
+	{
+		s_RendererAPI->DrawIndexed(p_VertexArray, p_IndexCount);
 	}
 }

@@ -1,5 +1,5 @@
 #include "YUME/yumepch.h"
-#include "Platforms/Vulkan/Core/vulkan_window.h"
+#include "Platform/Vulkan/Core/vulkan_window.h"
 
 #include "YUME/Events/application_event.h"
 #include "YUME/Events/mouse_event.h"

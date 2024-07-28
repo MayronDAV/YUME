@@ -1,8 +1,8 @@
 #include "YUME/yumepch.h"
 #include "YUME/Renderer/renderer_api.h"
-#include "YUME/Core/yume_config.h"
+#include "YUME/Core/engine.h"
 
-#include "Platforms/Vulkan/Renderer/vulkan_renderer_api.h"
+#include "Platform/Vulkan/Renderer/vulkan_renderer_api.h"
 
 
 
@@ -10,7 +10,7 @@ namespace YUME
 {
 	RendererAPI* RendererAPI::Create()
 	{
-		switch (s_RenderAPI)
+		switch (Engine::GetAPI())
 		{
 			case YUME::RenderAPI::None:
 				YM_CORE_VERIFY(false, "Renderer API type, must to be defined!")

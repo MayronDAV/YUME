@@ -1,5 +1,6 @@
 #pragma once
 
+#include "YUME/Core/log.h"
 #include <filesystem>
 
 

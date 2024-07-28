@@ -8,6 +8,8 @@
 #include "YUME/Renderer/renderer3D.h"
 #include "YUME/Utils/clock.h"
 
+#include "YUME/Core/engine.h"
+
 
 #include <iostream>
 
@@ -23,6 +25,8 @@ namespace YUME
 		YM_CORE_ASSERT(s_Instance == nullptr)
 		s_Instance = this;
 
+		Engine::Init();
+
 		m_Window = std::unique_ptr<Window>(Window::Create());
 		m_Window->SetEventCallback(YM_BIND_EVENT_FN(Application::OnEvent));
 
@@ -33,6 +37,8 @@ namespace YUME
 	Application::~Application()
 	{
 		YUME::RendererCommand::Shutdown();
+
+		Engine::Release();
 	}
 
 	void Application::Run()

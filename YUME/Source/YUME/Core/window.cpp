@@ -4,7 +4,7 @@
 // TODO: make a settings manager for choose vulkan, opengl e etc...
 // Currently only support Vulkan
 
-#include "Platforms/Vulkan/Core/vulkan_window.h"
+#include "Platform/Vulkan/Core/vulkan_window.h"
 
 
 

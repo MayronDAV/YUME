@@ -3,6 +3,7 @@
 #include "YUME/Core/base.h"
 #include "YUME/Renderer/renderer_api.h"
 #include "YUME/Renderer/renderer_types.h"
+#include "YUME/Renderer/vertex_array.h"
 
 
 
@@ -22,7 +23,8 @@ namespace YUME
 
 			static void ClearColor(const glm::vec4& p_Color);
 
-			static void Draw(const RenderPacket& p_Packet);
+			static void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount);
+			static void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount);
 
 			static RendererAPI* Get() { return s_RendererAPI; }
 

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "YUME/Core/base.h"
-#include "YUME/Core/yume_config.h"
+#include "YUME/Core/engine.h"
+
 
 
 namespace YUME

@@ -23,6 +23,8 @@
 	#endif
 #endif
 
+#define YM_NO_DLLINTERFACE_WARN 1
+
 #define YM_EXPAND_MACRO(x) x
 #define YM_STRINGIFY_MACRO(x) #x
 
@@ -30,12 +32,33 @@
 
 #define YM_BIND_EVENT_FN(fn) std::bind(&fn, this, std::placeholders::_1)
 
+
+#ifndef YM_DEBUG
+	#ifdef YM_PLATFORM_LINUX
+		#define YM_ALWAYS_INLINE __attribute__((always_inline)) inline
+	#elif defined(YM_PLATFORM_WINDOWS)
+		#define YM_ALWAYS_INLINE __forceinline
+	#endif
+#else
+	#define YM_ALWAYS_INLINE inline
+#endif
+
+#define YM_FORCE_INLINE YM_ALWAYS_INLINE
+
+#define YM_NONCOPYABLE(class_name)                     \
+    class_name(const class_name&)            = delete; \
+    class_name& operator=(const class_name&) = delete;
+
+#define YM_NONCOPYABLEANDMOVE(class_name)              \
+    class_name(const class_name&)            = delete; \
+    class_name& operator=(const class_name&) = delete; \
+    class_name(class_name&&)                 = delete; \
+    class_name& operator=(class_name&&)      = delete;
+
 #include "YUME/Core/assert.h"
 
 namespace YUME
 {
-	// TODO: make this ref counted
-
 	template<typename T>
 	using Scope = std::unique_ptr<T>;
 	template<typename T, typename ... Args>
@@ -52,4 +75,6 @@ namespace YUME
 		return std::make_shared<T>(std::forward<Args>(args)...);
 	}
 
+	template<typename T>
+	using WeakRef = std::weak_ptr<T>;
 }
