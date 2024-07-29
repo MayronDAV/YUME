@@ -7,9 +7,7 @@
 #include "YUME/Events/application_event.h"
 #include "YUME/Core/layer_stack.h"
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
-
+#include "YUME/ImGui/imgui_layer.h"
 
 
 namespace YUME
@@ -29,6 +27,8 @@ namespace YUME
 
 			Window& GetWindow() { return *m_Window.get(); }
 
+			void ReloadImGui() { m_ReloadImGui = true; }
+
 			static Application& Get() { return *s_Instance; }
 
 		private:
@@ -46,6 +46,9 @@ namespace YUME
 			double m_LastTime = 0;
 			double m_FPSCounter = 0;
 			double m_FPS = 0;
+
+			ImGuiLayer* m_ImGuiLayer = nullptr;
+			bool m_ReloadImGui = false;
 
 
 		private:

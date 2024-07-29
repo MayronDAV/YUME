@@ -32,6 +32,9 @@ namespace YUME
 
 		RendererCommand::Init(m_Window->GetContext());
 		Renderer3D::Init();
+
+		m_ImGuiLayer = ImGuiLayer::Create();
+		PushOverlay(m_ImGuiLayer);
 	}
 
 	Application::~Application()
@@ -50,6 +53,18 @@ namespace YUME
 			Timestep timestep = time - m_LastFrameTime;
 			m_LastFrameTime = time;
 
+			if (m_ReloadImGui)
+			{
+				m_ImGuiLayer->OnDetach();
+				m_LayerStack.PopOverlay(m_ImGuiLayer);
+				m_ImGuiLayer = nullptr;
+
+				m_ImGuiLayer = ImGuiLayer::Create();
+				PushOverlay(m_ImGuiLayer);
+
+				m_ReloadImGui = false;
+			}
+
 			if (!m_Minimized)
 			{
 				if (double currentTime = Clock::GetTime();
@@ -62,6 +77,13 @@ namespace YUME
 
 				for (auto& layer : m_LayerStack)
 					layer->OnUpdate(timestep);
+
+				m_ImGuiLayer->Begin();
+				{
+					for (Layer* layer : m_LayerStack)
+						layer->OnImGuiRender();
+				}
+				m_ImGuiLayer->End();
 
 				YM_CORE_INFO("FPS -> {}", (int)m_FPS)
 
