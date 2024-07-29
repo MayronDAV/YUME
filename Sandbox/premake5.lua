@@ -19,6 +19,7 @@ project "Sandbox"
 		"%{wks.location}/YUME/Source",
 
 		"%{IncludeDir.glm}",
+		"%{IncludeDir.imgui}",
 		"%{IncludeDir.spdlog}"
 	}
 

@@ -10,3 +10,6 @@
 [submodule "Thirdparty/glslang"]
 	path = Thirdparty/glslang
 	url = https://github.com/MayronDAV/glslang
+[submodule "Thirdparty/imgui"]
+	path = Thirdparty/imgui
+	url = https://github.com/MayronDAV/imgui

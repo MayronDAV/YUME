@@ -7,6 +7,9 @@
 #include "YUME/Events/application_event.h"
 #include "YUME/Core/layer_stack.h"
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_internal.h>
+
 
 
 namespace YUME
