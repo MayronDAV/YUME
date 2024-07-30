@@ -20,12 +20,15 @@ project "Sandbox"
 
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.imgui}",
+		"%{IncludeDir.imgui}/imgui",
+		"%{IncludeDir.imgui}/backends",
 		"%{IncludeDir.spdlog}"
 	}
 
 	links 
 	{
-		"YUME"
+		"YUME",
+		"imgui"
 	}
 
 	postbuildcommands 

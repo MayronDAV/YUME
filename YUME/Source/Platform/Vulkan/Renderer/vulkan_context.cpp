@@ -59,6 +59,7 @@ namespace YUME
 #endif
 
 	VkInstance VulkanContext::s_Instance = VK_NULL_HANDLE;
+	DeletionQueue VulkanContext::m_MainDeletionQueue = DeletionQueue();
 
 	VulkanContext::~VulkanContext()
 	{
@@ -87,6 +88,8 @@ namespace YUME
 		m_CommandBuffers.Free();
 
 		m_RenderPass.reset();
+
+		m_MainDeletionQueue.Flush();
 	
 		VulkanDevice::Release();
 
@@ -238,117 +241,6 @@ namespace YUME
 		vkResetFences(device, 1, &m_InFlightFences[m_CurrentFrame]);
 	}
 
-
-	void VulkanContext::TransitionImageLayout(VkImage p_Image, VkFormat p_Format, VkImageLayout p_OldLayout, VkImageLayout p_NewLayout) const 
-	{
-		auto commandPool = VulkanDevice::Get().GetCommandPool();
-		auto& device = VulkanDevice::Get().GetDevice();
-
-		// Alocação do Command Buffer
-		VkCommandBufferAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = commandPool;
-		allocInfo.commandBufferCount = 1;
-
-		VkCommandBuffer commandBuffer;
-		vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
-
-		// Início do Command Buffer
-		VkCommandBufferBeginInfo beginInfo = {};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-		// Configuração da Barrier
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.oldLayout = p_OldLayout;
-		barrier.newLayout = p_NewLayout;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = p_Image;
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = 1;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-
-		if (p_NewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-			if (p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT || p_Format == VK_FORMAT_D24_UNORM_S8_UINT) {
-				barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-			}
-		}
-		else {
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-
-		VkPipelineStageFlags sourceStage;
-		VkPipelineStageFlags destinationStage;
-
-		// Determinação dos Estágios e Máscaras de Acesso
-		if (p_OldLayout == VK_IMAGE_LAYOUT_UNDEFINED && p_NewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		}
-		else if (p_OldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-			sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		}
-		else if (p_OldLayout == VK_IMAGE_LAYOUT_UNDEFINED && p_NewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		}
-		else if (p_OldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.dstAccessMask = 0;
-			sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-		}
-		else if (p_OldLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && p_NewLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-			barrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			sourceStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		}
-		else {
-			throw std::invalid_argument("unsupported layout transition!");
-		}
-
-		// Pipeline Barrier
-		vkCmdPipelineBarrier(
-			commandBuffer,
-			sourceStage, destinationStage,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier
-		);
-
-		// Finalização do Command Buffer
-		vkEndCommandBuffer(commandBuffer);
-
-		// Submissão do Command Buffer
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-
-		auto& graphicQueue = VulkanDevice::Get().GetGraphicQueue();
-
-		vkQueueSubmit(graphicQueue, 1, &submitInfo, VK_NULL_HANDLE);
-		vkQueueWaitIdle(graphicQueue);
-
-		// Liberação do Command Buffer
-		vkFreeCommandBuffers(device, VulkanDevice::Get().GetCommandPool(), 1, &commandBuffer);
-	}
-
 	void VulkanContext::BeginFrame()
 	{
 		auto& device = VulkanDevice::Get().GetDevice();
@@ -370,6 +262,38 @@ namespace YUME
 		}
 
 		m_CurrentImageIndex = imageIndex;
+
+		auto images = VulkanSwapchain::Get().GetImages();
+		Utils::TransitionImageLayout(images[m_CurrentFrame], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+		m_CommandBuffers.Reset(m_CurrentFrame);
+
+		m_CommandBuffers.Begin(m_CurrentFrame);
+	}
+
+	void VulkanContext::EndFrame()
+	{
+		auto images = VulkanSwapchain::Get().GetImages();
+		Utils::TransitionImageLayout(images[m_CurrentFrame], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+		m_CommandBuffers.End(m_CurrentFrame);
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.waitSemaphoreCount = 1;
+		VkSemaphore waitSemaphores[] = { m_SignalSemaphores[m_CurrentFrame] };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_CommandBuffers.Get(m_CurrentFrame);
+
+		submitInfo.signalSemaphoreCount = 1;
+		VkSemaphore signalSemaphores[] = { m_WaitSemaphores[m_CurrentFrame] };
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		auto res = vkQueueSubmit(VulkanDevice::Get().GetGraphicQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+		YM_CORE_VERIFY(res == VK_SUCCESS)
 	}
 
 	void VulkanContext::CreateInstance()

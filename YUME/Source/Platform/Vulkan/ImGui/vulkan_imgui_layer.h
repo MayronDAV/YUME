@@ -1,19 +1,21 @@
 #pragma once
 #include "YUME/ImGui/imgui_layer.h"
+#include "Platform/Vulkan/Core/vulkan_renderpass.h"
+#include "Platform/Vulkan/Core/vulkan_scframebuffer.h"
 
 // Lib
 #include <vulkan/vulkan.h>
-#include <imgui/imgui.h>
 
 
+struct ImGui_ImplVulkanH_Window;
 
 namespace YUME
 {
 	class YM_API VulkanImGuiLayer : public ImGuiLayer
 	{
 		public:
-			VulkanImGuiLayer();
-			~VulkanImGuiLayer() override = default;
+			VulkanImGuiLayer() = default;
+			~VulkanImGuiLayer() override;
 
 		protected:
 			void Init() override;
@@ -21,6 +23,9 @@ namespace YUME
 			void Render() override;
 			void OnResize_Impl(uint32_t p_Width, uint32_t p_Height) override;
 			void Clear() override;
-		
+
+		private:
+			Ref<VulkanRenderPass> m_RenderPass = nullptr;
+			
 	};
 }

@@ -7,6 +7,38 @@
 namespace YUME
 {
 
+	std::vector<VkDeviceQueueCreateInfo> ConsolidateQueueCreateInfos(const std::vector<VkDeviceQueueCreateInfo>& p_OriginalQueueInfos)
+	{
+		std::unordered_map<uint32_t, VkDeviceQueueCreateInfo> queueInfoMap;
+		for (const auto& info : p_OriginalQueueInfos)
+		{
+			auto it = queueInfoMap.find(info.queueFamilyIndex);
+			if (it != queueInfoMap.end())
+			{
+				auto& existingInfo = it->second;
+
+				std::vector<float> combinedPriorities(existingInfo.pQueuePriorities, existingInfo.pQueuePriorities + existingInfo.queueCount);
+				combinedPriorities.insert(combinedPriorities.end(), info.pQueuePriorities, info.pQueuePriorities + info.queueCount);
+				std::sort(combinedPriorities.begin(), combinedPriorities.end());
+				combinedPriorities.erase(std::unique(combinedPriorities.begin(), combinedPriorities.end()), combinedPriorities.end());
+
+				existingInfo.queueCount = static_cast<uint32_t>(combinedPriorities.size());
+			}
+			else
+			{
+				queueInfoMap[info.queueFamilyIndex] = info;
+			}
+		}
+
+		std::vector<VkDeviceQueueCreateInfo> consolidatedQueueInfos;
+		for (const auto& pair : queueInfoMap)
+		{
+			consolidatedQueueInfos.push_back(pair.second);
+		}
+
+		return consolidatedQueueInfos;
+	}
+
 	/////////////////////////////////////////////////////////////
 	//////////////////// Physical Device ////////////////////////
 	/////////////////////////////////////////////////////////////
@@ -324,7 +356,7 @@ namespace YUME
 
 		std::vector<const char*> devExts = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME
 		};
 		std::vector<const char*> requiredExts;
 
@@ -352,10 +384,12 @@ namespace YUME
 		physFeatures.geometryShader = VK_TRUE;
 		physFeatures.tessellationShader = VK_TRUE;
 
+		auto queueCreateInfos = ConsolidateQueueCreateInfos(physDevice.QueueCreateInfos);
+
 		VkDeviceCreateInfo deviceCreateInfo = {};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		deviceCreateInfo.queueCreateInfoCount = (uint32_t)physDevice.QueueCreateInfos.size();
-		deviceCreateInfo.pQueueCreateInfos = physDevice.QueueCreateInfos.data();
+		deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
+		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
 		deviceCreateInfo.enabledExtensionCount = (uint32_t)requiredExts.size();
 		deviceCreateInfo.ppEnabledExtensionNames = requiredExts.data();
 		deviceCreateInfo.pEnabledFeatures = &physFeatures;

@@ -22,6 +22,8 @@ project "YUME"
 		"%{IncludeDir.spdlog}",
 		"%{IncludeDir.glslang}",
 		"%{IncludeDir.imgui}",
+		"%{IncludeDir.imgui}/imgui",
+		"%{IncludeDir.imgui}/backends",
 		"%{IncludeDir.Vulkan}",
 		"%{LibraryDir.VulkanSDK}"
 	}

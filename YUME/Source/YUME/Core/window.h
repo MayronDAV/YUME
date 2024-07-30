@@ -37,6 +37,9 @@ namespace YUME
 
 			virtual ~Window() = default;
 
+			virtual void BeginFrame() {}
+			virtual void EndFrame() {}
+
 			virtual void OnUpdate() = 0;
 
 			virtual uint32_t GetWidth() const = 0;

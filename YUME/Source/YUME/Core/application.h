@@ -25,7 +25,11 @@ namespace YUME
 
 			void OnEvent(Event& p_Event);
 
+			double GetFPS() const { return m_FPS; }
+
 			Window& GetWindow() { return *m_Window.get(); }
+
+			inline ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
 
 			void ReloadImGui() { m_ReloadImGui = true; }
 

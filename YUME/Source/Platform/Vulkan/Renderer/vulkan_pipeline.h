@@ -29,7 +29,14 @@ namespace YUME
 
 			void Bind() override;
 
-			void SetPolygonMode(PolygonMode p_Mode) override { m_CreateInfo.PolygonMode = p_Mode; Invalidade(); }
+			void SetPolygonMode(PolygonMode p_Mode) override
+			{
+				if (m_CreateInfo.PolygonMode != p_Mode)
+				{
+					m_CreateInfo.PolygonMode = p_Mode;
+					Invalidade();
+				}
+			}
 
 			Shader* GetShader() override { return m_Shader.get(); }
 			const VkPipelineLayout& GetLayout() const { return m_Layout; }

@@ -18,6 +18,9 @@ namespace YUME
 			explicit VulkanWindow(const WindowProps& props);
 			~VulkanWindow() override;
 
+			void BeginFrame() override;
+			void EndFrame() override;
+
 			void OnUpdate() override;
 
 			uint32_t GetWidth() const override { return m_Data.Width; }

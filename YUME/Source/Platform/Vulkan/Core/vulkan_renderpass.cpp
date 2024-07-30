@@ -16,18 +16,27 @@ namespace YUME
 		}
 	}
 
-	void VulkanRenderPass::Init()
+	void VulkanRenderPass::Init(bool p_ClearEnable)
 	{
 		// TODO: Make it more configurable.
+
+		m_ClearEnable = p_ClearEnable;
 
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.format = VulkanSwapchain::Get().GetFormat().format;
 		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		if (p_ClearEnable)
+		{
+			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		}
+		else
+		{
+			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		}
 		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		VkAttachmentReference colorAttachmentRef{};
@@ -82,8 +91,16 @@ namespace YUME
 		rpBegin.renderArea.offset.y = 0;
 		rpBegin.renderArea.extent.width = p_Width;
 		rpBegin.renderArea.extent.height = p_Height;
-		rpBegin.clearValueCount = 1;
-		rpBegin.pClearValues = &clearValue;
+		if (m_ClearEnable)
+		{
+			rpBegin.clearValueCount = 1;
+			rpBegin.pClearValues = &clearValue;
+		}
+		else
+		{
+			rpBegin.clearValueCount = 0;
+			rpBegin.pClearValues = nullptr;
+		}
 
 		vkCmdBeginRenderPass(p_CommandBuffer, &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
 	}

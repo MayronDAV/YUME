@@ -16,7 +16,7 @@ namespace YUME
 			VulkanRenderPass() = default;
 			~VulkanRenderPass();
 
-			void Init();
+			void Init(bool p_ClearEnable = true);
 
 			void Begin(VkCommandBuffer p_CommandBuffer, VkFramebuffer p_Frame, uint32_t p_Width, uint32_t p_Height, const glm::vec4& p_Color = {0.0f, 0.0f, 0.0f, 1.0f}, bool p_ClearDepth = false);
 			void End(VkCommandBuffer p_CommandBuffer);
@@ -25,6 +25,7 @@ namespace YUME
 
 		private:
 			VkRenderPass m_RenderPass = nullptr;
+			bool m_ClearEnable = true;
 			
 	};
 }

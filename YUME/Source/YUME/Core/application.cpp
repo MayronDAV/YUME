@@ -12,6 +12,7 @@
 
 
 #include <iostream>
+#include <imgui/imgui.h>
 
 
 
@@ -55,7 +56,6 @@ namespace YUME
 
 			if (m_ReloadImGui)
 			{
-				m_ImGuiLayer->OnDetach();
 				m_LayerStack.PopOverlay(m_ImGuiLayer);
 				m_ImGuiLayer = nullptr;
 
@@ -75,6 +75,8 @@ namespace YUME
 					m_FPSCounter = 0;
 				}
 
+				m_Window->BeginFrame();
+
 				for (auto& layer : m_LayerStack)
 					layer->OnUpdate(timestep);
 
@@ -85,7 +87,9 @@ namespace YUME
 				}
 				m_ImGuiLayer->End();
 
-				YM_CORE_INFO("FPS -> {}", (int)m_FPS)
+				//YM_CORE_INFO("FPS -> {}", (int)m_FPS)
+
+				m_Window->EndFrame();
 
 				m_FPSCounter++;
 			}

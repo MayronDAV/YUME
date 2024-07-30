@@ -2,6 +2,8 @@
 #include "YUME/Core/entry_point.h"
 
 #include <string>
+#include <imgui/imgui.h>
+
 
 
 struct Vertice
@@ -54,15 +56,13 @@ class ExampleLayer : public YUME::Layer
 
 		void OnUpdate(YUME::Timestep p_Ts) override
 		{
-			if (m_Wireframe && m_ModeFill)
+			if (m_Wireframe)
 			{
 				m_GraphicPipeline->SetPolygonMode(YUME::PolygonMode::LINE);
-				m_ModeFill = false;
 			}
-			if (!m_Wireframe && !m_ModeFill)
+			else
 			{
 				m_GraphicPipeline->SetPolygonMode(YUME::PolygonMode::FILL);
-				m_ModeFill = true;
 			}
 
 			if (m_UpdateColor)
@@ -82,6 +82,15 @@ class ExampleLayer : public YUME::Layer
 			YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());
 
 			YUME::RendererCommand::End();
+		}
+
+		void OnImGuiRender() override
+		{
+			ImGui::SetCurrentContext(YUME::Application::Get().GetImGuiLayer()->GetCurrentContext());
+
+			ImGui::Begin("Perfomance visualizer");
+			ImGui::Text("FPS: %.0f", (float)YUME::Application::Get().GetFPS());
+			ImGui::End();
 		}
 
 		void OnEvent(YUME::Event& p_Event) override
@@ -118,6 +127,12 @@ class ExampleLayer : public YUME::Layer
 				YM_CORE_WARN("J Is pressed!!!")
 				m_Wireframe = !m_Wireframe;
 			}
+
+			if (YUME::Input::IsKeyPressedOnce(p_Event, YUME::Key::P))
+			{
+				YM_CORE_WARN("P Is pressed!!!")
+				YUME::Application::Get().ReloadImGui();
+			}
 		}
 
 	private:
@@ -129,7 +144,6 @@ class ExampleLayer : public YUME::Layer
 		YUME::Ref<YUME::VertexArray> m_VAO;
 
 		bool m_Wireframe = false;
-		bool m_ModeFill = true;
 };
 
 

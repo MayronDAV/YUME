@@ -17,16 +17,18 @@ namespace YUME
 	void ImGuiLayer::OnAttach()
 	{
 		Init();
+		m_IsAttached = true;
 	}
 
 	void ImGuiLayer::OnDetach()
 	{
 		Clear();
+		m_IsAttached = false;
 	}
 
 	void ImGuiLayer::OnEvent(Event& p_Event)
 	{
-		if (m_BlockEvents)
+		if (m_BlockEvents && m_IsAttached)
 		{
 			const ImGuiIO& io = ImGui::GetIO();
 			p_Event.Handled |= p_Event.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
@@ -49,10 +51,16 @@ namespace YUME
 		OnResize_Impl(p_Width, p_Height);
 	}
 
+	ImGuiContext* ImGuiLayer::GetCurrentContext()
+	{
+		return ImGui::GetCurrentContext();
+	}
+
 	uint32_t ImGuiLayer::GetActiveWidgetID() const
 	{
-		//return GImGui->ActiveId;
-		return 0;
+		YM_CORE_ASSERT(m_IsAttached)
+
+		return GImGui->ActiveId;
 	}
 
 	ImGuiLayer* ImGuiLayer::Create()

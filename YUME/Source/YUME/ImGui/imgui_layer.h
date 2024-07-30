@@ -3,6 +3,8 @@
 #include "YUME/Core/layer.h"
 
 
+#include <imgui/imgui.h>
+
 
 namespace YUME
 {
@@ -27,6 +29,8 @@ namespace YUME
 
 			void OnResize(uint32_t p_Width, uint32_t p_Height);
 
+			ImGuiContext* GetCurrentContext();
+
 			uint32_t GetActiveWidgetID() const;
 
 			static ImGuiLayer* Create();
@@ -40,5 +44,7 @@ namespace YUME
 
 		protected:
 			bool m_BlockEvents = true;
+			bool m_IsAttached = false;
+			void* m_DrawData = nullptr;
 	};
 }

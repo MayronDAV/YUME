@@ -42,12 +42,12 @@ namespace YUME
 
 			void HasDrawCommands(bool p_Has) { m_HasDrawCommands = p_Has; }
 
-			void TransitionImageLayout(VkImage p_Image, VkFormat p_Format, VkImageLayout p_OldLayout, VkImageLayout p_NewLayout) const;
-
 			// Draw
 			void BeginFrame();
+			void EndFrame();
 
 			uint32_t GetCurrentFrame() const { return m_CurrentFrame;  }
+			uint32_t GetCurrentImageIndex() const { return m_CurrentImageIndex; }
 
 			VkSemaphore& GetSignalSemaphore() { return m_SignalSemaphores[m_CurrentFrame]; }
 			VkSemaphore& GetWaitSemaphore() { return m_WaitSemaphores[m_CurrentFrame]; }
@@ -56,7 +56,12 @@ namespace YUME
 			VulkanCommandBuffer& GetCommandBuffer() { return m_CommandBuffers; }
 			Ref<VulkanRenderPass>& GetRenderPass() { return m_RenderPass; }
 			VulkanSCFramebuffer& GetSwapchainFramebuffer() { return m_SCFramebuffers[m_CurrentImageIndex]; }
+			std::vector<VulkanSCFramebuffer>& GetSwapchainFramebufferList() { return m_SCFramebuffers; }
 
+			static void PushFunction(const std::function<void()>& p_Function)
+			{
+				m_MainDeletionQueue.PushFunction(p_Function);
+			}
 
 			static VkInstance GetInstance() { return s_Instance; }
 
@@ -94,5 +99,7 @@ namespace YUME
 
 			bool m_ViewportResized = false;
 			bool m_HasDrawCommands = false;
+
+			static DeletionQueue m_MainDeletionQueue;
 	};
 }

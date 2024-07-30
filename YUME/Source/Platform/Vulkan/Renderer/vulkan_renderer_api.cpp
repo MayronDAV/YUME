@@ -3,6 +3,7 @@
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 #include "Platform/Vulkan/Core/vulkan_device.h"
 #include "Platform/Vulkan/Core/vulkan_swapchain.h"
+#include "Platform/Vulkan/Utils/vulkan_utils.h"
 
 #include "YUME/Core/application.h"
 
@@ -49,16 +50,8 @@ namespace YUME
 
 	void VulkanRendererAPI::Begin()
 	{
-		auto images = VulkanSwapchain::Get().GetImages();
 		auto currentFrame = m_Context->GetCurrentFrame();
-		m_Context->TransitionImageLayout(images[currentFrame], VK_FORMAT_R8G8B8A8_SRGB,
-			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-		m_Context->BeginFrame();
 		auto& commandBuffer = m_Context->GetCommandBuffer();
-		commandBuffer.Reset(currentFrame);
-
-		commandBuffer.Begin(currentFrame);
 
 		const auto& renderPass = m_Context->GetRenderPass();
 		auto& framebuffer = m_Context->GetSwapchainFramebuffer();
@@ -89,32 +82,9 @@ namespace YUME
 
 	void VulkanRendererAPI::End()
 	{
-		auto images = VulkanSwapchain::Get().GetImages();
 		auto currentFrame = m_Context->GetCurrentFrame();
-		m_Context->TransitionImageLayout(images[currentFrame], VK_FORMAT_R8G8B8A8_SRGB,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 		m_Context->GetRenderPass()->End(commandBuffer.Get(currentFrame));
-
-		commandBuffer.End(currentFrame);
-
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.waitSemaphoreCount = 1;
-		VkSemaphore waitSemaphores[] = { m_Context->GetSignalSemaphore() };
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer.Get(currentFrame);
-
-		submitInfo.signalSemaphoreCount = 1;
-		VkSemaphore signalSemaphores[] = { m_Context->GetWaitSemaphore() };
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		auto res = vkQueueSubmit(VulkanDevice::Get().GetGraphicQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-		YM_CORE_VERIFY(res == VK_SUCCESS)
 	}
 
 }

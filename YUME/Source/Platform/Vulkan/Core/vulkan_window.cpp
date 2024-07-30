@@ -54,6 +54,28 @@ namespace YUME
 		}
 	}
 
+	void VulkanWindow::OnUpdate()
+	{
+		if (m_Data.Resized)
+		{
+			m_Context->OnResize();
+			m_Data.Resized = false;
+		}
+
+		glfwPollEvents();
+		m_Context->SwapBuffer();
+	}
+
+	void VulkanWindow::BeginFrame()
+	{
+		m_Context->BeginFrame();
+	}
+
+	void VulkanWindow::EndFrame()
+	{
+		m_Context->EndFrame();
+	}
+
 	GraphicsContext* VulkanWindow::GetContext()
 	{
 		return m_Context.get();
@@ -193,18 +215,6 @@ namespace YUME
 		{
 			glfwTerminate();
 		}
-	}
-
-	void VulkanWindow::OnUpdate()
-	{
-		if (m_Data.Resized)
-		{
-			m_Context->OnResize();
-			m_Data.Resized = false;
-		}
-
-		glfwPollEvents();
-		m_Context->SwapBuffer();
 	}
 
 	void VulkanWindow::SetVSync(bool p_Enabled)

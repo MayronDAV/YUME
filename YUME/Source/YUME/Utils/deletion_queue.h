@@ -9,7 +9,7 @@ namespace YUME
 	class YM_API DeletionQueue
 	{
 		public:
-			void PushFunction(std::function<void()>&& p_Function)
+			void PushFunction(const std::function<void()>& p_Function)
 			{
 				m_Deletors.push_back(p_Function);
 			}
