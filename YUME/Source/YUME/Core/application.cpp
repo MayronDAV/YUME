@@ -56,11 +56,9 @@ namespace YUME
 
 			if (m_ReloadImGui)
 			{
-				m_LayerStack.PopOverlay(m_ImGuiLayer);
-				m_ImGuiLayer = nullptr;
+				m_ImGuiLayer->Recreate();
 
-				m_ImGuiLayer = ImGuiLayer::Create();
-				PushOverlay(m_ImGuiLayer);
+				ImGui::StyleColorsLight();
 
 				m_ReloadImGui = false;
 			}

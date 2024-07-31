@@ -7,6 +7,7 @@
 // Lib
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+#include <YUME/Events/application_event.h>
 
 
 
@@ -34,6 +35,13 @@ namespace YUME
 			p_Event.Handled |= p_Event.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
 			p_Event.Handled |= p_Event.IsInCategory(EventCategoryKeyboard) & io.WantCaptureKeyboard;
 		}
+
+		if (p_Event.GetEventType() == WindowResizeEvent::GetStaticType())
+		{
+			auto event = (WindowResizeEvent*)&p_Event;
+			YM_CORE_INFO("ImGui resize handled!")
+			OnResize_Impl(event->GetWidth(), event->GetHeight());
+		}
 	}
 
 	void ImGuiLayer::Begin()
@@ -44,11 +52,6 @@ namespace YUME
 	void ImGuiLayer::End()
 	{
 		Render();
-	}
-
-	void ImGuiLayer::OnResize(uint32_t p_Width, uint32_t p_Height)
-	{
-		OnResize_Impl(p_Width, p_Height);
 	}
 
 	ImGuiContext* ImGuiLayer::GetCurrentContext()

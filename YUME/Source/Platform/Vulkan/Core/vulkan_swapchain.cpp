@@ -65,7 +65,6 @@ namespace YUME
 		createInfo.imageExtent = m_Extent2D;
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
 	
 		if (auto& index = physDevice.Indices;
 			index.Graphics == index.Present)
@@ -123,25 +122,25 @@ namespace YUME
 	void VulkanSwapchain::ChooseSwapExtent2D(void* p_Window)
 	{
 		auto glfwWindow = (GLFWwindow*)p_Window;
-		const auto& physDevice = VulkanDevice::Get().GetPhysicalDeviceStruct();
+		auto& device = VulkanDevice::Get().GetPhysicalDevice();
+		VkSurfaceCapabilitiesKHR capabilities;
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, VulkanSurface::Get().GetSurface(), &capabilities);
 
 		VkExtent2D actualExtent;
 
-		if (physDevice.SurfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-			actualExtent = physDevice.SurfaceCapabilities.currentExtent;
+		if (capabilities.currentExtent.width != UINT32_MAX)
+		{
+			actualExtent = capabilities.currentExtent;
 		}
-		else {
+		else 
+		{
 			int width, height;
 			glfwGetFramebufferSize(glfwWindow, &width, &height);
-
+			
 			actualExtent = {
-				static_cast<uint32_t>(width),
-				static_cast<uint32_t>(height)
+				std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, (uint32_t)width)),
+				std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, (uint32_t)height))
 			};
-
-			actualExtent.width = std::clamp(actualExtent.width, physDevice.SurfaceCapabilities.minImageExtent.width, physDevice.SurfaceCapabilities.maxImageExtent.width);
-			actualExtent.height = std::clamp(actualExtent.height, physDevice.SurfaceCapabilities.minImageExtent.height, physDevice.SurfaceCapabilities.maxImageExtent.height);
-
 		}
 
 		m_Extent2D = actualExtent;

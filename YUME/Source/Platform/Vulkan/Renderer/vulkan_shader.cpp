@@ -1,18 +1,18 @@
 ﻿#include "YUME/yumepch.h"
 #include "vulkan_shader.h"
-
-#include <glslang/Public/ShaderLang.h>
-#include <glslang/SPIRV/GlslangToSpv.h>
-#include <glslang/Public/resource_limits_c.h>
-#include <spirv_cross/spirv_cross.hpp>
 #include <YUME/Utils/timer.h>
-
 #include "YUME/Core/application.h"
 #include "vulkan_context.h"
 #include "Platform/Vulkan/Core/vulkan_device.h"
 
-
+// Lib
+#include <glslang/Public/ShaderLang.h>
+#include <glslang/SPIRV/GlslangToSpv.h>
+#include <glslang/Public/resource_limits_c.h>
+#include <spirv_cross/spirv_cross.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+
 
 const TBuiltInResource DefaultTBuiltInResource = {
 	32,  // maxLights
@@ -78,21 +78,20 @@ const TBuiltInResource DefaultTBuiltInResource = {
 };
 
 
-#define UPLOAD_PUSH_CONSTANT_DATA(sizeBytes, valuePtr)										\
-YM_CORE_VERIFY(m_PushConstants.find(p_Name) != m_PushConstants.end())						\
-																							\
-auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());	\
-auto currentFrame = context->GetCurrentFrame();												\
-auto commandBuffer = context->GetCommandBuffer().Get(currentFrame);							\
-																							\
-vkCmdPushConstants(																			\
-	commandBuffer,																			\
-	m_PipelineLayout,																		\
-	m_PushConstants[p_Name].stageFlags,														\
-	m_PushConstants[p_Name].offset,															\
-	sizeBytes,																				\
-	valuePtr																				\
-);																						
+#define UPLOAD_PUSH_CONSTANT_DATA(sizeBytes, valuePtr)											\
+	YM_CORE_VERIFY(m_PushConstants.find(p_Name) != m_PushConstants.end())						\
+																								\
+	auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());	\
+	auto commandBuffer = context->GetCommandBuffer();											\
+																								\
+	vkCmdPushConstants(																			\
+		commandBuffer,																			\
+		m_PipelineLayout,																		\
+		m_PushConstants[p_Name].stageFlags,														\
+		m_PushConstants[p_Name].offset,															\
+		sizeBytes,																				\
+		valuePtr																				\
+	);																						
 
 
 namespace YUME
@@ -197,7 +196,22 @@ namespace YUME
 
 	VulkanShader::~VulkanShader()
 	{
-		CleanUp();
+		auto shaderModules = m_ShaderModules;
+		auto layout = m_PipelineLayout;
+		VulkanContext::PushFunction([shaderModules, layout]()
+		{
+			auto device = VulkanDevice::Get().GetDevice();
+
+			for (const auto& [stage, shaderModule] : shaderModules)
+			{
+				YM_CORE_TRACE("Destroying vulkan shader modules...")
+				if (shaderModule != VK_NULL_HANDLE)
+					vkDestroyShaderModule(device, shaderModule, VK_NULL_HANDLE);
+			}
+
+			YM_CORE_TRACE("Destroying vulkan pipeline layout...")
+			vkDestroyPipelineLayout(device, layout, VK_NULL_HANDLE);
+		});
 	};
 
 	void VulkanShader::CleanUp()

@@ -16,6 +16,8 @@ namespace YUME
 		public:
 			VulkanImGuiLayer() = default;
 			~VulkanImGuiLayer() override;
+			
+			void Recreate() override;
 
 		protected:
 			void Init() override;

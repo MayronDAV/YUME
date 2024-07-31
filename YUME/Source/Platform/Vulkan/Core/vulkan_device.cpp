@@ -327,6 +327,7 @@ namespace YUME
 	VulkanDevice::~VulkanDevice()
 	{
 		m_CommandPool.reset();
+		m_DescriptorPool->Destroy();
 
 		{
 			YM_CORE_TRACE("Saving vulkan pipeline cache...")
@@ -404,6 +405,8 @@ namespace YUME
 		vkGetDeviceQueue(m_Device, physDevice.Indices.Transfer, 0, &m_TransferQueue);
 
 		m_CommandPool = CreateRef<VulkanCommandPool>(physDevice.Indices.Graphics, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+		m_DescriptorPool = CreateRef<VulkanDescriptorPool>();
+		m_DescriptorPool->Init(100, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
 
 		Utils::CreateDirectoryIfNeeded(m_PipelineCacheDir);
 

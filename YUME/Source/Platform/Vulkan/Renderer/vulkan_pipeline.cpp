@@ -8,6 +8,7 @@
 
 
 
+
 namespace YUME
 {
 	VulkanPipeline::VulkanPipeline(const PipelineCreateInfo& p_CreateInfo)
@@ -24,7 +25,13 @@ namespace YUME
 			buffer.reset();
 		}
 
-		CleanUp();
+		auto pipeline = m_Pipeline;
+		VulkanContext::PushFunction([pipeline]()
+		{
+			YM_CORE_TRACE("Destroying vulkan pipeline...")
+			if (pipeline != VK_NULL_HANDLE)
+				vkDestroyPipeline(VulkanDevice::Get().GetDevice(), pipeline, VK_NULL_HANDLE);
+		});
 	}
 
 	void VulkanPipeline::CleanUp()
@@ -215,8 +222,7 @@ namespace YUME
 
 	void VulkanPipeline::Bind()
 	{
-		auto currentFrame = m_Context->GetCurrentFrame();
-		auto commandBuffer = m_Context->GetCommandBuffer().Get(currentFrame);
+		auto commandBuffer = m_Context->GetCommandBuffer();
 
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 	}

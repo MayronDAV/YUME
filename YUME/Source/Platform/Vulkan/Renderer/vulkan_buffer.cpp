@@ -83,22 +83,26 @@ namespace YUME
 
 	VulkanVertexBuffer::~VulkanVertexBuffer()
 	{
-		auto device = VulkanDevice::Get().GetDevice();
+		auto buffer = m_Buffer;
+		auto memory = m_Memory;
+		VulkanContext::PushFunction([buffer, memory]()
+		{
+			auto device = VulkanDevice::Get().GetDevice();
 
-		YM_CORE_TRACE("Destroying vulkan vertex buffer")
+			YM_CORE_TRACE("Destroying vulkan vertex buffer")
 
-		if (m_Buffer != VK_NULL_HANDLE)
-			vkDestroyBuffer(device, m_Buffer, VK_NULL_HANDLE);
-		if (m_Memory != VK_NULL_HANDLE)
-			vkFreeMemory(device, m_Memory, VK_NULL_HANDLE);
+			if (buffer != VK_NULL_HANDLE)
+				vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
+			if (memory != VK_NULL_HANDLE)
+				vkFreeMemory(device, memory, VK_NULL_HANDLE);
+		});
 
 	}
 
 	void VulkanVertexBuffer::Bind() const
 	{
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto currentFrame = context->GetCurrentFrame();
-		auto commandBuffer = context->GetCommandBuffer().Get(currentFrame);
+		auto commandBuffer = context->GetCommandBuffer();
 
 		VkDeviceSize offset = 0;
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_Buffer, &offset);
@@ -170,21 +174,26 @@ namespace YUME
 
 	VulkanIndexBuffer::~VulkanIndexBuffer()
 	{
-		auto device = VulkanDevice::Get().GetDevice();
+		auto buffer = m_Buffer;
+		auto memory = m_Memory;
+		VulkanContext::PushFunction([buffer, memory]()
+		{
+			auto device = VulkanDevice::Get().GetDevice();
 
-		YM_CORE_TRACE("Destroying vulkan index buffer")
+			YM_CORE_TRACE("Destroying vulkan index buffer")
 
-		if (m_Buffer != VK_NULL_HANDLE)
-			vkDestroyBuffer(device, m_Buffer, VK_NULL_HANDLE);
-		if (m_Memory != VK_NULL_HANDLE)
-			vkFreeMemory(device, m_Memory, VK_NULL_HANDLE);
+			if (buffer != VK_NULL_HANDLE)
+				vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
+			if (memory != VK_NULL_HANDLE)
+				vkFreeMemory(device, memory, VK_NULL_HANDLE);
+			
+		});
 	}
 
 	void VulkanIndexBuffer::Bind() const
 	{
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto currentFrame = context->GetCurrentFrame();
-		auto commandBuffer = context->GetCommandBuffer().Get(currentFrame);
+		auto commandBuffer = context->GetCommandBuffer();
 
 		VkDeviceSize offset = 0;
 		vkCmdBindIndexBuffer(commandBuffer, m_Buffer, 0, VK_INDEX_TYPE_UINT32);

@@ -12,23 +12,34 @@
 
 namespace YUME
 {
+
 #ifdef YM_DEBUG
+	#define YM_VK_DEBUG_LOG(Type)														 \
+		YM_CORE_##Type("Debug Callback:")													 \
+		YM_CORE_##Type("{}", p_CallbackData->pMessage)										 \
+		YM_CORE_##Type("\t Severity: {}", Utils::GetMessageSeverityStr(p_Severity))			 \
+		YM_CORE_##Type("\t Type: {}", Utils::GetMessageType(p_Type))						 \
+		YM_CORE_##Type("\t Objects: ")														 \
+																							 \
+		for (uint32_t i = 0; i < p_CallbackData->objectCount; i++) {						 \
+			YM_CORE_##Type("\t\t {}", p_CallbackData->pObjects[i].objectHandle)				 \
+		}
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT p_Severity,
 		VkDebugUtilsMessageTypeFlagsEXT p_Type,
 		const VkDebugUtilsMessengerCallbackDataEXT* p_CallbackData,
 		void* p_UserData)
 	{
-		// TODO: May be refactored this
-
-		YM_CORE_TRACE("Debug Callback:")
-		YM_CORE_TRACE("{}", p_CallbackData->pMessage)
-		YM_CORE_TRACE("\t Severity: {}", Utils::GetMessageSeverityStr(p_Severity))
-		YM_CORE_TRACE("\t Type: {}", Utils::GetMessageType(p_Type))
-		YM_CORE_TRACE("\t Objects: ")
-
-		for (uint32_t i = 0; i < p_CallbackData->objectCount; i++) {
-			YM_CORE_TRACE("\t\t {}", p_CallbackData->pObjects[i].objectHandle)
+		switch (p_Severity)
+		{
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: YM_VK_DEBUG_LOG(TRACE) break;
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:	  YM_VK_DEBUG_LOG(INFO)  break;
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: YM_VK_DEBUG_LOG(WARN)  break;
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:   YM_VK_DEBUG_LOG(ERROR) break;
+			default:
+				YM_VK_DEBUG_LOG(TRACE)
+				break;	
 		}
 
 		std::cout << "\n\n";
@@ -60,6 +71,7 @@ namespace YUME
 
 	VkInstance VulkanContext::s_Instance = VK_NULL_HANDLE;
 	DeletionQueue VulkanContext::m_MainDeletionQueue = DeletionQueue();
+	DeletionQueue VulkanContext::m_FrameEndDeletionQueue = DeletionQueue();
 
 	VulkanContext::~VulkanContext()
 	{
@@ -136,7 +148,7 @@ namespace YUME
 		m_CommandBuffers.Init(MAX_FRAMES_IN_FLIGHT);
 
 		YM_CORE_TRACE("Creating vulkan swapchain...")
-		VulkanSwapchain::Get().Init(false /* Vsync */, m_Window, {800, 600});
+		VulkanSwapchain::Get().Init(false /* Vsync */, m_Window);
 
 		YM_CORE_TRACE("Creating vulkan renderpass...")
 		m_RenderPass = CreateRef<VulkanRenderPass>();
@@ -193,32 +205,35 @@ namespace YUME
 
 	void VulkanContext::RecreateSwapchain()
 	{
+		// TODO: Make this class not block the main loop if the width or height is 0
+		// instead, just don't recreate and don't call other things like vkAcquireNextImageKHR.
+
 		auto& device = VulkanDevice::Get().GetDevice();
+		auto& physdevice = VulkanDevice::Get().GetPhysicalDevice();
 
 		VkExtent2D actualExtent;
+		VkSurfaceCapabilitiesKHR capabilities;
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physdevice, VulkanSurface::Get().GetSurface(), &capabilities);
 
-		int width = 0, height = 0;
-		if (m_ViewportResized)
+		if (capabilities.currentExtent.width != UINT32_MAX)
 		{
-			YM_CORE_TRACE("Resized viewport...")
+			actualExtent = capabilities.currentExtent;
+		}
 
+		if (capabilities.currentExtent.width == UINT32_MAX || (actualExtent.width == 0 || actualExtent.height == 0))
+		{
+			int width, height;
 			glfwGetFramebufferSize(m_Window, &width, &height);
 			while (width == 0 || height == 0) {
 				glfwGetFramebufferSize(m_Window, &width, &height);
 				glfwWaitEvents();
 			}
 
-			m_ViewportResized = false;
+			actualExtent = {
+				std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, (uint32_t)width)),
+				std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, (uint32_t)height)) 
+			};
 		}
-		else
-		{
-			auto extent = VulkanSwapchain::Get().GetExtent2D();
-			width = extent.width;
-			height = extent.height;
-		}
-
-		actualExtent.width = (uint32_t)width;
-		actualExtent.height = (uint32_t)height;
 
 		vkDeviceWaitIdle(device);
 
@@ -227,6 +242,8 @@ namespace YUME
 		{
 			m_SCFramebuffers[i].Invalidate(VulkanSwapchain::Get().GetImageViews()[i], actualExtent.width, actualExtent.height);
 		}
+
+		m_ViewportResized = false;
 	}
 
 	void VulkanContext::WaitFence()
@@ -294,6 +311,8 @@ namespace YUME
 
 		auto res = vkQueueSubmit(VulkanDevice::Get().GetGraphicQueue(), 1, &submitInfo, VK_NULL_HANDLE);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
+
+		m_FrameEndDeletionQueue.Flush();
 	}
 
 	void VulkanContext::CreateInstance()

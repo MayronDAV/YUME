@@ -2,6 +2,7 @@
 #include "vulkan_renderpass.h"
 #include "vulkan_device.h"
 #include "vulkan_swapchain.h"
+#include "Platform/Vulkan/Renderer/vulkan_context.h"
 
 
 
@@ -9,11 +10,15 @@ namespace YUME
 {
 	VulkanRenderPass::~VulkanRenderPass()
 	{
-		if (m_RenderPass != VK_NULL_HANDLE)
+		auto renderPass = m_RenderPass;
+		VulkanContext::PushFunction([renderPass]()
 		{
-			YM_CORE_TRACE("Destroying vulkan renderpass")
-			vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), m_RenderPass, VK_NULL_HANDLE);
-		}
+			if (renderPass != VK_NULL_HANDLE)
+			{
+				YM_CORE_TRACE("Destroying vulkan renderpass")
+				vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), renderPass, VK_NULL_HANDLE);
+			}
+		});
 	}
 
 	void VulkanRenderPass::Init(bool p_ClearEnable)

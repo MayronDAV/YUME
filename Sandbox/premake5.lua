@@ -38,9 +38,11 @@ project "Sandbox"
 
 	filter "system:windows"
 		systemversion "latest"
+		buildoptions { "/wd4251" }
 		defines "YM_PLATFORM_WINDOWS"
 
 	filter "system:linux"
+		buildoptions { "-Wno-effc++" }
 		defines "YM_PLATFORM_LINUX"
 
 	filter "configurations:Debug"

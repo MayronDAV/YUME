@@ -1,0 +1,1 @@
+call Scripts/Windows/windows_generate.bat

@@ -3,6 +3,7 @@
 #include "YUME/Core/base.h"
 #include "YUME/Core/singleton.h"
 #include "vulkan_commandpool.h"
+#include "vulkan_descriptor_pool.h"
 
 
 #include <vulkan/vulkan.h>
@@ -101,6 +102,9 @@ namespace YUME
 			VkQueue& GetComputeQueue() { return m_ComputeQueue; }
 
 			VkCommandPool GetCommandPool() { return m_CommandPool->GetHandle(); }
+			VkDescriptorPool GetDescriptorPool() { return m_DescriptorPool->Get(); }
+			void ResetDescriptorPool() { m_DescriptorPool->Reset(); }
+			void ResetCommandPool() { m_CommandPool->Reset(); }
 
 		private:
 			Scope<VulkanPhysicalDevice> m_PhysicalDevice;
@@ -117,6 +121,7 @@ namespace YUME
 			VkQueue m_ComputeQueue;
 
 			Ref<VulkanCommandPool> m_CommandPool;
+			Ref<VulkanDescriptorPool> m_DescriptorPool;
 
 			friend class ThreadSafeSingleton<VulkanDevice>;
 		

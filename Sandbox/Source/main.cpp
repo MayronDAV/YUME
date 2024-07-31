@@ -75,8 +75,6 @@ class ExampleLayer : public YUME::Layer
 
 			YUME::RendererCommand::Begin();
 
-			YUME::RendererCommand::SetViewport(0, 0, 800, 600);
-
 			m_QuadShader->Bind();
 
 			YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());

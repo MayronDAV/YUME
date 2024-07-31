@@ -27,11 +27,11 @@ namespace YUME
 			void Begin();
 			void End();
 
-			void OnResize(uint32_t p_Width, uint32_t p_Height);
-
 			ImGuiContext* GetCurrentContext();
 
 			uint32_t GetActiveWidgetID() const;
+
+			virtual void Recreate() = 0;
 
 			static ImGuiLayer* Create();
 

@@ -157,8 +157,7 @@ namespace YUME
 		ImGui::Render();
 
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto currentFrame = context->GetCurrentFrame();
-		auto commandBuffer = context->GetCommandBuffer().Get(currentFrame);
+		auto commandBuffer = context->GetCommandBuffer();
 
 		DrawImgui(commandBuffer, m_RenderPass);
 
@@ -175,14 +174,51 @@ namespace YUME
 
 	void VulkanImGuiLayer::OnResize_Impl(uint32_t p_Width, uint32_t p_Height)
 	{
+		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
+
+		auto* wd = &g_WindowData;
+		wd->Swapchain = VulkanSwapchain::Get().GetSwapChain();
+		wd->Width = VulkanSwapchain::Get().GetExtent2D().width;
+		wd->Height = VulkanSwapchain::Get().GetExtent2D().height;
+
+		for (uint32_t i = 0; i < wd->ImageCount; i++)
+		{
+			auto images = VulkanSwapchain::Get().GetImages();
+			auto imageViews = VulkanSwapchain::Get().GetImageViews();
+			wd->Frames[i].Backbuffer = images[i];
+			wd->Frames[i].BackbufferView = imageViews[i];
+			auto framebuffers = context->GetSwapchainFramebufferList();
+			wd->Frames[i].Framebuffer = framebuffers[i].Get();
+		}
 	}
 
 	void VulkanImGuiLayer::Clear()
 	{
+
+		auto descPool = g_DescriptorPool;
+		VulkanContext::PushFunction([descPool]() 
+		{
+			YM_CORE_TRACE("Destroying vulkan imgui impl...")
+			ImGui_ImplVulkan_Shutdown();
+			ImGui::DestroyContext();
+
+			YM_CORE_TRACE("Destroying vulkan imgui descriptor pool...")
+			vkDestroyDescriptorPool(VulkanDevice::Get().GetDevice(), descPool, VK_NULL_HANDLE);
+		});
+
+		ImGui_ImplGlfw_Shutdown();
+	}
+
+	void VulkanImGuiLayer::Recreate()
+	{
 		YM_CORE_TRACE("Destroying vulkan imgui impl...")
 		ImGui_ImplVulkan_Shutdown();
-		vkDestroyDescriptorPool(VulkanDevice::Get().GetDevice(), g_DescriptorPool, VK_NULL_HANDLE);
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
+
+		YM_CORE_TRACE("Destroying vulkan imgui descriptor pool...")
+		vkDestroyDescriptorPool(VulkanDevice::Get().GetDevice(), g_DescriptorPool, VK_NULL_HANDLE);
+
+		Init();
 	}
 }

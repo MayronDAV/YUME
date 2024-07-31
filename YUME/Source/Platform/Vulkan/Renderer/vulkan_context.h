@@ -53,7 +53,7 @@ namespace YUME
 			VkSemaphore& GetWaitSemaphore() { return m_WaitSemaphores[m_CurrentFrame]; }
 
 			VkFence& GetInFlightFence() { return m_InFlightFences[m_CurrentFrame]; }
-			VulkanCommandBuffer& GetCommandBuffer() { return m_CommandBuffers; }
+			VkCommandBuffer& GetCommandBuffer() { return m_CommandBuffers.Get(m_CurrentFrame); }
 			Ref<VulkanRenderPass>& GetRenderPass() { return m_RenderPass; }
 			VulkanSCFramebuffer& GetSwapchainFramebuffer() { return m_SCFramebuffers[m_CurrentImageIndex]; }
 			std::vector<VulkanSCFramebuffer>& GetSwapchainFramebufferList() { return m_SCFramebuffers; }
@@ -61,6 +61,11 @@ namespace YUME
 			static void PushFunction(const std::function<void()>& p_Function)
 			{
 				m_MainDeletionQueue.PushFunction(p_Function);
+			}
+
+			static void PushFunctionToFrameEnd(const std::function<void()>& p_Function)
+			{
+				m_FrameEndDeletionQueue.PushFunction(p_Function);
 			}
 
 			static VkInstance GetInstance() { return s_Instance; }
@@ -101,5 +106,6 @@ namespace YUME
 			bool m_HasDrawCommands = false;
 
 			static DeletionQueue m_MainDeletionQueue;
+			static DeletionQueue m_FrameEndDeletionQueue;
 	};
 }
