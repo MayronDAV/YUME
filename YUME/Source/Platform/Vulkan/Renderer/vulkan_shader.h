@@ -53,6 +53,7 @@ namespace YUME
 
 		private:
 			std::string ReadFile(const std::string_view& p_Filepath) const;
+			std::string ProcessIncludeFiles(const std::string& p_Code) const;
 			ShaderSource PreProcess(const std::string& p_Source) const;
 
 			void CompileOrGetVulkanBinaries(const ShaderSource& p_ShaderSources);

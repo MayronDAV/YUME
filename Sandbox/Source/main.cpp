@@ -19,7 +19,7 @@ class ExampleLayer : public YUME::Layer
 		ExampleLayer()
 			: Layer("Example")
 		{
-			m_QuadShader = YUME::Shader::Create("assets/shaders/quad_shader.glsl");
+			m_QuadShader = YUME::Shader::Create("assets/shaders/test_shader.glsl");
 
 			YUME::PipelineCreateInfo pci{};
 			pci.Shader = m_QuadShader;

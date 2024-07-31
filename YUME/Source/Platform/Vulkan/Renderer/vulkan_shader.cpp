@@ -292,6 +292,54 @@ namespace YUME
 		return result;
 	}
 
+	std::string VulkanShader::ProcessIncludeFiles(const std::string& p_Code) const
+	{
+		auto result = std::string();
+
+		const char* includeToken = "#include";
+		size_t pos = p_Code.find(includeToken, 0);
+		if (pos == std::string::npos)
+		{
+			YM_CORE_TRACE("Not founded any include! continuing...")
+			return p_Code;
+		}
+
+		while (pos != std::string::npos)
+		{
+			if (result == std::string())
+			{
+				result = p_Code.substr(0, pos);
+			}
+			
+			size_t eol = p_Code.find_first_of("\r\n", pos);
+			size_t start = p_Code.find("<", pos);
+			size_t end = p_Code.find(">", start);
+
+			YM_CORE_VERIFY(start != std::string::npos && end != std::string::npos, "Invalid include directive!")
+			YM_CORE_VERIFY(start < eol && end < eol, "Not on the same line!")
+
+			std::string includeFilepath = p_Code.substr(start + 1, end - start - 1);
+			std::filesystem::path filepath = m_FilePath;
+			auto path = (filepath.parent_path() / includeFilepath).string();
+			std::string includeCode = ReadFile(path);
+
+			result += includeCode;
+
+			pos = p_Code.find(includeToken, end + 1);
+			if (pos == std::string::npos)
+			{
+				result += p_Code.substr(end + 1);
+			}
+			else
+			{
+				result += p_Code.substr(end + 1, pos - end - 1);
+			}
+		}
+
+		return result;
+	}
+
+
 	VulkanShader::ShaderSource VulkanShader::PreProcess(const std::string& p_Source) const
 	{
 		ShaderSource shaderSources;
@@ -312,13 +360,14 @@ namespace YUME
 				type.erase(typeEnd);
 			}
 
-			// Encontrar a pr�xima linha de shader
 			size_t nextLinePos = p_Source.find_first_not_of("\r\n", eol);
 			pos = p_Source.find(typeToken, nextLinePos);
-			shaderSources[Utils::ShaderTypeFromString(type)] = p_Source.substr(
+			auto code = p_Source.substr(
 				nextLinePos,
 				pos - (nextLinePos == std::string::npos ? p_Source.size() - 1 : nextLinePos)
 			);
+			auto newCode = ProcessIncludeFiles(code);
+			shaderSources[Utils::ShaderTypeFromString(type)] = newCode;
 		}
 
 		return shaderSources;
