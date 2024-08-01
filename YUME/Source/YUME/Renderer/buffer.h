@@ -1,5 +1,6 @@
 #pragma once
 #include "YUME/Core/base.h"
+#include "YUME/Core/definitions.h"
 
 
 namespace YUME
@@ -136,8 +137,7 @@ namespace YUME
 
 			virtual void SetData(const void* p_Data, uint64_t p_SizeBytes) = 0;
 
-			static Ref<VertexBuffer> Create(uint64_t p_SizeBytes);
-			static Ref<VertexBuffer> Create(float* p_Vertices, uint64_t p_SizeBytes);
+			static Ref<VertexBuffer> Create(const void* p_Data, uint64_t p_SizeBytes, BufferUsage p_Usage = BufferUsage::STATIC);
 	};
 
 

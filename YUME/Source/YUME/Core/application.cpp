@@ -10,7 +10,6 @@
 
 #include "YUME/Core/engine.h"
 
-
 #include <iostream>
 #include <imgui/imgui.h>
 
@@ -56,7 +55,9 @@ namespace YUME
 
 			if (m_ReloadImGui)
 			{
-				m_ImGuiLayer->Recreate();
+				m_LayerStack.PopOverlay(m_ImGuiLayer);
+				m_ImGuiLayer = ImGuiLayer::Create();
+				PushOverlay(m_ImGuiLayer);
 
 				ImGui::StyleColorsLight();
 

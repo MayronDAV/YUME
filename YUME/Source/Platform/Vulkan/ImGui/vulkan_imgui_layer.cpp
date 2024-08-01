@@ -1,15 +1,12 @@
 #include "YUME/yumepch.h"
 #include "vulkan_imgui_layer.h"
 #include "Platform/Vulkan/Core/vulkan_device.h"
-
 #include "Platform/Vulkan/Renderer/vulkan_context.h"
 #include "YUME/Core/application.h"
 #include "Platform/Vulkan/Core/vulkan_window.h"
-#include "Platform/Vulkan/Utils/vulkan_utils.h"
-
-#include "YUME/Core/application.h"
 
 // Lib
+#include <vulkan/vulkan.h>
 #include <imgui/imgui.h>
 #define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
 #define VK_NO_PROTOTYPES
@@ -49,6 +46,9 @@ namespace YUME
 	VulkanImGuiLayer::~VulkanImGuiLayer()
 	{
 		m_RenderPass.reset();
+
+		YM_CORE_TRACE("Destroying vulkan imgui descriptor pool...")
+		vkDestroyDescriptorPool(VulkanDevice::Get().GetDevice(), g_DescriptorPool, VK_NULL_HANDLE);
 	}
 
 	void VulkanImGuiLayer::Init()
@@ -118,9 +118,9 @@ namespace YUME
 		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
 		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
-		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports; // Habilita escala de DPI em viewports
-		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts; // Habilita escala de DPI em fonts
-		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports; // Habilita escala de DPI em viewports
+		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
+		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
+		io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
 
 		ImGui::StyleColorsDark();
 
@@ -194,31 +194,9 @@ namespace YUME
 
 	void VulkanImGuiLayer::Clear()
 	{
-
-		auto descPool = g_DescriptorPool;
-		VulkanContext::PushFunction([descPool]() 
-		{
-			YM_CORE_TRACE("Destroying vulkan imgui impl...")
-			ImGui_ImplVulkan_Shutdown();
-			ImGui::DestroyContext();
-
-			YM_CORE_TRACE("Destroying vulkan imgui descriptor pool...")
-			vkDestroyDescriptorPool(VulkanDevice::Get().GetDevice(), descPool, VK_NULL_HANDLE);
-		});
-
-		ImGui_ImplGlfw_Shutdown();
-	}
-
-	void VulkanImGuiLayer::Recreate()
-	{
 		YM_CORE_TRACE("Destroying vulkan imgui impl...")
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
-
-		YM_CORE_TRACE("Destroying vulkan imgui descriptor pool...")
-		vkDestroyDescriptorPool(VulkanDevice::Get().GetDevice(), g_DescriptorPool, VK_NULL_HANDLE);
-
-		Init();
 	}
 }

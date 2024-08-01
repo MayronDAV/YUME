@@ -36,20 +36,19 @@ class ExampleLayer : public YUME::Layer
 				Vertice{{-0.5f, 0.5f, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }},
 			};
 
-			YUME::Ref<YUME::VertexBuffer> VBO = YUME::VertexBuffer::Create(inputData.size() * sizeof(Vertice));
+			auto VBO = YUME::VertexBuffer::Create(inputData.data(), inputData.size() * sizeof(Vertice));
 			VBO->SetLayout({
 				{ YUME::DataType::Float3, "a_Position"  },
 				{ YUME::DataType::Float4, "a_Color"	    }
 			});
-			VBO->SetData(inputData.data(), inputData.size() * sizeof(Vertice));
 			m_VAO->AddVertexBuffer(VBO);
 
 			std::vector<uint32_t> indexData = {
 				0, 1, 2, 0, 2, 3
 			};
 
-			YUME::Ref<YUME::IndexBuffer> quadIB = YUME::IndexBuffer::Create(indexData.data(), (uint32_t)indexData.size());
-			m_VAO->SetIndexBuffer(quadIB);
+			auto EBO = YUME::IndexBuffer::Create(indexData.data(), (uint32_t)indexData.size());
+			m_VAO->SetIndexBuffer(EBO);
 
 			m_QuadShader->AddVertexArray(m_VAO);
 		}
@@ -84,8 +83,6 @@ class ExampleLayer : public YUME::Layer
 
 		void OnImGuiRender() override
 		{
-			ImGui::SetCurrentContext(YUME::Application::Get().GetImGuiLayer()->GetCurrentContext());
-
 			ImGui::Begin("Perfomance visualizer");
 			ImGui::Text("FPS: %.0f", (float)YUME::Application::Get().GetFPS());
 			ImGui::End();
@@ -150,6 +147,8 @@ class Sandbox : public YUME::Application
 	public:
 		Sandbox()
 		{
+			ImGui::SetCurrentContext(YUME::Application::Get().GetImGuiLayer()->GetCurrentContext());
+
 			PushLayer(new ExampleLayer());
 		}
 

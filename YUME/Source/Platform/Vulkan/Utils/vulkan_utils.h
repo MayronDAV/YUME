@@ -25,4 +25,8 @@ namespace YUME::Utils
 	VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags p_AspectMask);
 
 	VkRenderingAttachmentInfo AttachmentInfo(VkImageView p_View, VkClearValue* p_Clear, VkImageLayout p_Layout);
+
+	VkCommandBuffer BeginSingleTimeCommand();
+
+	void EndSingleTimeCommand(VkCommandBuffer p_CommandBuffer);
 }

@@ -10,93 +10,32 @@
 namespace YUME
 {
 
-	VulkanVertexBuffer::VulkanVertexBuffer(uint64_t p_SizeBytes)
+	VulkanVertexBuffer::VulkanVertexBuffer(const void* p_Data, uint64_t p_SizeBytes, BufferUsage p_Usage)
 	{
-		auto device = VulkanDevice::Get().GetDevice();
-
-		m_SizeBytes = p_SizeBytes;
-
-		VkBufferCreateInfo bufferInfo = {};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = p_SizeBytes;
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		if (vkCreateBuffer(device, &bufferInfo, VK_NULL_HANDLE, &m_Buffer) != VK_SUCCESS)
+		if (p_Usage == BufferUsage::STATIC)
 		{
-			YM_CORE_ERROR("Failed to create vertex buffer!")
-			return;
+			YM_CORE_VERIFY(p_Data != nullptr)
+
+			m_Buffer = CreateScope<VulkanMemoryBuffer>(
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				p_SizeBytes
+			);
+
+			m_Buffer->SetData(p_SizeBytes, p_Data);
 		}
-
-		vkGetBufferMemoryRequirements(device, m_Buffer, &m_Requirements);
-
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = m_Requirements.size;
-		allocInfo.memoryTypeIndex = VulkanDevice::Get().FindMemoryType(m_Requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		if (vkAllocateMemory(device, &allocInfo, VK_NULL_HANDLE, &m_Memory) != VK_SUCCESS)
+		else if (p_Usage == BufferUsage::DYNAMIC)
 		{
-			YM_CORE_ERROR("Failed to allocate index buffer memory!")
-				return;
+			m_Buffer = CreateScope<VulkanMemoryBuffer>(
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				p_SizeBytes
+			);
 		}
-	}
-
-	VulkanVertexBuffer::VulkanVertexBuffer(const float* p_Vertices, uint64_t p_SizeBytes)
-	{
-		auto device = VulkanDevice::Get().GetDevice();
-
-		m_SizeBytes = p_SizeBytes;
-
-		VkBufferCreateInfo bufferInfo = {};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = p_SizeBytes;
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		if (vkCreateBuffer(device, &bufferInfo, VK_NULL_HANDLE, &m_Buffer) != VK_SUCCESS)
+		else
 		{
-			YM_CORE_ERROR("Failed to create vertex buffer!")
-			return;
+			YM_CORE_ERROR("Unknwon buffer usage!")
 		}
-
-		vkGetBufferMemoryRequirements(device, m_Buffer, &m_Requirements);
-
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = m_Requirements.size;
-		allocInfo.memoryTypeIndex = VulkanDevice::Get().FindMemoryType(m_Requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		if (vkAllocateMemory(device, &allocInfo, VK_NULL_HANDLE, &m_Memory) != VK_SUCCESS)
-		{
-			YM_CORE_ERROR("Failed to allocate index buffer memory!")
-			return;
-		}
-
-		vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
-
-		void* data;
-		vkMapMemory(device, m_Memory, 0, p_SizeBytes, 0, &data);
-		memcpy(data, p_Vertices, p_SizeBytes);
-		vkUnmapMemory(device, m_Memory);
-	}
-
-	VulkanVertexBuffer::~VulkanVertexBuffer()
-	{
-		auto buffer = m_Buffer;
-		auto memory = m_Memory;
-		VulkanContext::PushFunction([buffer, memory]()
-		{
-			auto device = VulkanDevice::Get().GetDevice();
-
-			YM_CORE_TRACE("Destroying vulkan vertex buffer")
-
-			if (buffer != VK_NULL_HANDLE)
-				vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
-			if (memory != VK_NULL_HANDLE)
-				vkFreeMemory(device, memory, VK_NULL_HANDLE);
-		});
-
 	}
 
 	void VulkanVertexBuffer::Bind() const
@@ -105,90 +44,40 @@ namespace YUME
 		auto commandBuffer = context->GetCommandBuffer();
 
 		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_Buffer, &offset);
+		auto buffer = m_Buffer->GetBuffer();
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &buffer, &offset);
 	}
 
 	void VulkanVertexBuffer::Unbind() const
 	{
-		//auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		//auto currentFrame = context->GetCurrentFrame();
-		//auto commandBuffer = context->GetCommandBuffer().Get(currentFrame);
+		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
+		auto commandBuffer = context->GetCommandBuffer();
 
-		//VkBuffer nullBuffer = VK_NULL_HANDLE;
-		//VkDeviceSize nullOffset = 0;
-		//vkCmdBindVertexBuffers(commandBuffer, 0, 1, &nullBuffer, &nullOffset);
+		VkBuffer nullBuffer = VK_NULL_HANDLE;
+		VkDeviceSize nullOffset = 0;
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &nullBuffer, &nullOffset);
 	}
 
 	void VulkanVertexBuffer::SetData(const void* p_Data, uint64_t p_SizeBytes)
 	{
-		auto device = VulkanDevice::Get().GetDevice();
-
-		vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
-
-		void* data;
-		vkMapMemory(device, m_Memory, 0, p_SizeBytes, 0, &data);
-		memcpy(data, p_Data, p_SizeBytes);
-		vkUnmapMemory(device, m_Memory);
+		m_Buffer->SetData(p_SizeBytes, p_Data);
 	}
 
 
 
 	VulkanIndexBuffer::VulkanIndexBuffer(const uint32_t* p_Indices, uint32_t p_Count)
+		: m_Count(p_Count)
 	{
-		auto device = VulkanDevice::Get().GetDevice();
+		uint64_t sizeBytes = p_Count * sizeof(uint32_t);
+		m_Buffer = CreateScope<VulkanMemoryBuffer>(
+			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			sizeBytes
+		);
 
-		m_Count = p_Count;
-
-		VkBufferCreateInfo bufferInfo = {};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = p_Count * sizeof(uint32_t);
-		bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		if (vkCreateBuffer(device, &bufferInfo, nullptr, &m_Buffer) != VK_SUCCESS) 
-		{
-			YM_CORE_ERROR("Failed to create index buffer!")
-			return;
-		}
-
-		vkGetBufferMemoryRequirements(device, m_Buffer, &m_Requirements);
-
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = m_Requirements.size;
-		allocInfo.memoryTypeIndex = VulkanDevice::Get().FindMemoryType(m_Requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-		if (vkAllocateMemory(device, &allocInfo, nullptr, &m_Memory) != VK_SUCCESS)
-		{
-			YM_CORE_ERROR("Failed to allocate index buffer memory!")
-			return;
-		}
-
-		vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
-
-		void* data;
-		vkMapMemory(device, m_Memory, 0, bufferInfo.size, 0, &data);
-		memcpy(data, p_Indices, bufferInfo.size); // `indices` é o array de índices
-		vkUnmapMemory(device, m_Memory);
+		m_Buffer->SetData(sizeBytes, p_Indices);
 	}
 
-	VulkanIndexBuffer::~VulkanIndexBuffer()
-	{
-		auto buffer = m_Buffer;
-		auto memory = m_Memory;
-		VulkanContext::PushFunction([buffer, memory]()
-		{
-			auto device = VulkanDevice::Get().GetDevice();
-
-			YM_CORE_TRACE("Destroying vulkan index buffer")
-
-			if (buffer != VK_NULL_HANDLE)
-				vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
-			if (memory != VK_NULL_HANDLE)
-				vkFreeMemory(device, memory, VK_NULL_HANDLE);
-			
-		});
-	}
 
 	void VulkanIndexBuffer::Bind() const
 	{
@@ -196,14 +85,16 @@ namespace YUME
 		auto commandBuffer = context->GetCommandBuffer();
 
 		VkDeviceSize offset = 0;
-		vkCmdBindIndexBuffer(commandBuffer, m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+		auto buffer = m_Buffer->GetBuffer();
+		vkCmdBindIndexBuffer(commandBuffer, buffer, offset, VK_INDEX_TYPE_UINT32);
 	}
 	void VulkanIndexBuffer::Unbind() const
 	{
-		// TODO:
+		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
+		auto commandBuffer = context->GetCommandBuffer();
 
-		//YM_CORE_VERIFY(false, "Not implemented!")
-		//VkBuffer nullBuffer = VK_NULL_HANDLE;
-		//vkCmdBindIndexBuffer(nullptr /* command buffer  */, nullBuffer, 0, VK_INDEX_TYPE_UINT32);
+		VkDeviceSize offset = 0;
+		VkBuffer nullBuffer = VK_NULL_HANDLE;
+		vkCmdBindIndexBuffer(commandBuffer, nullBuffer, offset, VK_INDEX_TYPE_UINT32);
 	}
 }

@@ -64,6 +64,12 @@ namespace YUME
 		VERTEX = 0, FRAGMENT
 	};
 
+	enum class BufferUsage : uint8_t
+	{
+		STATIC = 0,
+		DYNAMIC
+	};
+
 	enum TextureFlagBits : uint8_t
 	{
 		TEXTURE_SAMPLED = BIT(0),

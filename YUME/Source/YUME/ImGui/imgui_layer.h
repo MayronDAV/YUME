@@ -3,8 +3,7 @@
 #include "YUME/Core/layer.h"
 
 
-#include <imgui/imgui.h>
-
+struct ImGuiContext;
 
 namespace YUME
 {
@@ -30,8 +29,6 @@ namespace YUME
 			ImGuiContext* GetCurrentContext();
 
 			uint32_t GetActiveWidgetID() const;
-
-			virtual void Recreate() = 0;
 
 			static ImGuiLayer* Create();
 

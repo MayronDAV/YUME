@@ -92,22 +92,7 @@ namespace YUME::Utils
 
 	void TransitionImageLayout(VkImage p_Image, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout)
 	{
-		auto commandPool = VulkanDevice::Get().GetCommandPool();
-		auto& device = VulkanDevice::Get().GetDevice();
-
-		VkCommandBufferAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = commandPool;
-		allocInfo.commandBufferCount = 1;
-
-		VkCommandBuffer commandBuffer;
-		vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
-
-		VkCommandBufferBeginInfo beginInfo = {};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		vkBeginCommandBuffer(commandBuffer, &beginInfo);
+		auto commandBuffer = BeginSingleTimeCommand();
 
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -163,19 +148,7 @@ namespace YUME::Utils
 			1, &barrier
 		);
 
-		vkEndCommandBuffer(commandBuffer);
-
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-
-		auto& graphicQueue = VulkanDevice::Get().GetGraphicQueue();
-
-		vkQueueSubmit(graphicQueue, 1, &submitInfo, VK_NULL_HANDLE);
-		vkQueueWaitIdle(graphicQueue);
-
-		vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+		EndSingleTimeCommand(commandBuffer);
 	}
 
 
@@ -205,6 +178,48 @@ namespace YUME::Utils
 			colorAttachment.clearValue = *p_Clear;
 
 		return colorAttachment;
+	}
+
+	VkCommandBuffer BeginSingleTimeCommand()
+	{
+		auto commandPool = VulkanDevice::Get().GetCommandPool();
+		auto& device = VulkanDevice::Get().GetDevice();
+
+		VkCommandBufferAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandPool = commandPool;
+		allocInfo.commandBufferCount = 1;
+
+		VkCommandBuffer commandBuffer;
+		vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+		return commandBuffer;
+	}
+
+	void EndSingleTimeCommand(VkCommandBuffer p_CommandBuffer)
+	{
+		auto commandPool = VulkanDevice::Get().GetCommandPool();
+		auto& device = VulkanDevice::Get().GetDevice();
+
+		vkEndCommandBuffer(p_CommandBuffer);
+
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &p_CommandBuffer;
+
+		auto& graphicQueue = VulkanDevice::Get().GetGraphicQueue();
+
+		vkQueueSubmit(graphicQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(graphicQueue);
+
+		vkFreeCommandBuffers(device, commandPool, 1, &p_CommandBuffer);
 	}
 
 }
