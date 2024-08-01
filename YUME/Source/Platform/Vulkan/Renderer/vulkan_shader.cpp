@@ -78,21 +78,6 @@ const TBuiltInResource DefaultTBuiltInResource = {
 };
 
 
-#define UPLOAD_PUSH_CONSTANT_DATA(sizeBytes, valuePtr)											\
-	YM_CORE_VERIFY(m_PushConstants.find(p_Name) != m_PushConstants.end())						\
-																								\
-	auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());	\
-	auto commandBuffer = context->GetCommandBuffer();											\
-																								\
-	vkCmdPushConstants(																			\
-		commandBuffer,																			\
-		m_PipelineLayout,																		\
-		m_PushConstants[p_Name].stageFlags,														\
-		m_PushConstants[p_Name].offset,															\
-		sizeBytes,																				\
-		valuePtr																				\
-	);																						
-
 
 namespace YUME
 {
@@ -253,22 +238,27 @@ namespace YUME
 
 	void VulkanShader::UploadFloat(const std::string& p_Name, float p_Value)
 	{
-		UPLOAD_PUSH_CONSTANT_DATA(sizeof(float), &p_Value)
+		UploadPushConstantData(p_Name, &p_Value, sizeof(float));
 	}
 
 	void VulkanShader::UploadFloat3(const std::string& p_Name, const glm::vec3& p_Value)
 	{
-		UPLOAD_PUSH_CONSTANT_DATA(sizeof(glm::vec3), glm::value_ptr(p_Value))
+		UploadPushConstantData(p_Name, glm::value_ptr(p_Value), sizeof(glm::vec3));
 	}
 
 	void VulkanShader::UploadFloat4(const std::string& p_Name, const glm::vec4& p_Value)
 	{
-		UPLOAD_PUSH_CONSTANT_DATA(sizeof(glm::vec4), glm::value_ptr(p_Value))
+		UploadPushConstantData(p_Name, glm::value_ptr(p_Value), sizeof(glm::vec4));
+	}
+
+	void VulkanShader::UploadMat4(const std::string& p_Name, const glm::mat4& p_Value)
+	{
+		UploadPushConstantData(p_Name, glm::value_ptr(p_Value), sizeof(glm::mat4));
 	}
 
 	void VulkanShader::UploadInt(const std::string& p_Name, int p_Value)
 	{
-		UPLOAD_PUSH_CONSTANT_DATA(sizeof(int), &p_Value)
+		UploadPushConstantData(p_Name, &p_Value, sizeof(int));
 	}
 
 	std::string VulkanShader::ReadFile(const std::string_view& p_Filepath) const
@@ -485,27 +475,43 @@ namespace YUME
 		for (const auto& resource : resources.push_constant_buffers)
 		{
 			const auto& bufferType = compiler.get_type(resource.base_type_id);
-			auto bufferSize = (uint32_t)compiler.get_declared_struct_size(bufferType);
-			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
+			auto size = (uint32_t)compiler.get_declared_struct_size(bufferType);
+			uint32_t offset = compiler.get_decoration(resource.id, spv::DecorationBinding);
 			auto memberCount = (int)bufferType.member_types.size();
+			std::string resourceName = resource.name;
 
-			YM_CORE_TRACE("  Name: {0}", resource.name)
-			YM_CORE_TRACE("    Size = {0}", bufferSize)
-			YM_CORE_TRACE("    Binding = {0}", binding)
+			YM_CORE_TRACE("  Name: {0}", resourceName)
+			YM_CORE_TRACE("    Size = {0}", size)
+			YM_CORE_TRACE("    Offset = {0}", offset)
 			YM_CORE_TRACE("    Members = {0}", memberCount)
 
-			const auto& ranges = compiler.get_active_buffer_ranges(resource.id);
 
-			for (const auto& range : ranges) 
+			auto stage = Utils::ShaderTypeToVK(p_Stage);
+			if (m_PushConstantRanges.contains(offset))
 			{
-				PushConstantRangeInfo info;
-				info.Name = resource.name;
-				info.Offset = m_CurrentOffset;
-				info.Size = range.range;
-				info.Stages = Utils::ShaderTypeToVK(p_Stage);
-				m_RangeInfos.push_back(info);
+				m_PushConstantRanges[offset].stageFlags |= stage;
+				m_PushConstantRanges[offset].size = std::max(m_PushConstantRanges[offset].size, size);
 
-				m_CurrentOffset += range.range;
+				for (int i = 0; i < memberCount; i++)
+				{
+					std::string name = compiler.get_member_name(resource.base_type_id, i);
+					std::string memberName = resourceName.empty() ? name : resourceName + "." + name;
+					m_MemberOffsets[memberName].first |= stage;
+				}
+			}
+			else
+			{
+				m_PushConstantRanges[offset].stageFlags = stage;
+				m_PushConstantRanges[offset].offset = offset;
+				m_PushConstantRanges[offset].size = size;
+
+				for (int i = 0; i < memberCount; i++)
+				{
+					std::string name = compiler.get_member_name(resource.base_type_id, i);
+					std::string memberName = resourceName.empty() ? name : resourceName + "." + name;
+					uint32_t memberOffset = compiler.type_struct_member_offset(bufferType, i);
+					m_MemberOffsets[memberName] = std::make_pair(stage, offset + memberOffset);
+				}
 			}
 		}
 	}
@@ -530,55 +536,55 @@ namespace YUME
 			ShaderStageInfo.module = m_ShaderModules[stage];
 			ShaderStageInfo.pName = "main";
 			m_ShaderStages.push_back(ShaderStageInfo);
+
+			m_Stages |= Utils::ShaderTypeToVK(stage);
 		}
 
 	}
 
 	void VulkanShader::CreatePipelineLayout()
 	{
-		for (const auto& rangeInfo : m_RangeInfos) 
-		{
-			bool merged = false;
-			for (auto& vkRange : m_PushConstantRanges)
-			{
-				if (vkRange.offset == rangeInfo.Offset && vkRange.size == rangeInfo.Size)
-				{
-					vkRange.stageFlags |= rangeInfo.Stages;
-					merged = true;
-					break;
-				}
-			}
-
-			if (!merged)
-			{
-				VkPushConstantRange vkRange = {};
-				vkRange.offset = (uint32_t)rangeInfo.Offset;
-				vkRange.size = (uint32_t)rangeInfo.Size;
-
-				VkShaderStageFlags flags = 0;
-				for (const auto& shaderStages : m_ShaderStages)
-				{
-					flags |= shaderStages.stage;
-				}
-
-				vkRange.stageFlags = flags;
-				m_PushConstantRanges.push_back(vkRange);
-
-				m_PushConstants[rangeInfo.Name] = vkRange;
-			}
+		std::vector<VkPushConstantRange> pushConstantRangeArray;
+		for (const auto& range : m_PushConstantRanges) {
+			pushConstantRangeArray.push_back(range.second);
 		}
-
 
 		VkPipelineLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		layoutInfo.setLayoutCount = 0;
 		layoutInfo.pSetLayouts = nullptr;
-		layoutInfo.pushConstantRangeCount = (uint32_t)m_PushConstantRanges.size();
-		layoutInfo.pPushConstantRanges = m_PushConstantRanges.data();
+		layoutInfo.pushConstantRangeCount = (uint32_t)pushConstantRangeArray.size();
+		layoutInfo.pPushConstantRanges = pushConstantRangeArray.data();
 
 		auto device = VulkanDevice::Get().GetDevice();
 
 		auto  res = vkCreatePipelineLayout(device, &layoutInfo, VK_NULL_HANDLE, &m_PipelineLayout);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
+	}
+
+	bool VulkanShader::UploadPushConstantData(const std::string& p_Name, const void* p_Data, size_t p_SizeBytes)
+	{
+		YM_CORE_VERIFY(p_Data != nullptr && p_SizeBytes > 0)
+
+		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
+		auto commandBuffer = context->GetCommandBuffer();
+		
+		if (auto it = m_MemberOffsets.find(p_Name);
+			it != m_MemberOffsets.end())
+		{
+			auto [stage, offset] = it->second;
+			vkCmdPushConstants(
+				commandBuffer,
+				m_PipelineLayout,
+				m_Stages,
+				offset,
+				(uint32_t)p_SizeBytes,
+				p_Data
+			);
+
+			return true;
+		}
+
+		return false;
 	}
 }

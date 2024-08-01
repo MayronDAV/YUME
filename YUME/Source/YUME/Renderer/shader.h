@@ -29,6 +29,7 @@ namespace YUME
 			virtual void UploadFloat(const std::string& p_Name, float p_Value) = 0;
 			virtual void UploadFloat3(const std::string& p_Name, const glm::vec3& p_Value) = 0;
 			virtual void UploadFloat4(const std::string& p_Name, const glm::vec4& p_Value) = 0;
+			virtual void UploadMat4(const std::string& p_Name, const glm::mat4& p_Value) = 0;
 			virtual void UploadInt(const std::string& p_Name, int p_Value) = 0;
 
 			virtual void AddVertexArray(const Ref<VertexArray>& p_VertexArray) = 0;

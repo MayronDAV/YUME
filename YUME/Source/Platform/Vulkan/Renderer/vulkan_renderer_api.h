@@ -15,6 +15,7 @@ namespace YUME
 			~VulkanRendererAPI() override;
 
 			void Init(GraphicsContext* p_Context) override;
+
 			void SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height) override;
 
 			void Begin() override;

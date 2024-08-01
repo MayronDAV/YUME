@@ -48,6 +48,7 @@ namespace YUME
 			void UploadFloat(const std::string& p_Name, float p_Value) override;
 			void UploadFloat3(const std::string& p_Name, const glm::vec3& p_Value) override;
 			void UploadFloat4(const std::string& p_Name, const glm::vec4& p_Value) override;
+			void UploadMat4(const std::string& p_Name, const glm::mat4& p_Value) override;
 			void UploadInt(const std::string& p_Name, int p_Value) override;
 
 
@@ -63,6 +64,8 @@ namespace YUME
 
 			void CreatePipelineLayout();
 
+			bool UploadPushConstantData(const std::string& p_Name, const void* p_Data, size_t p_SizeBytes);
+
 		private:
 			std::string_view m_FilePath;
 			std::string_view m_Name = "Untitled";
@@ -75,16 +78,9 @@ namespace YUME
 			WeakRef<Pipeline> m_Pipeline;
 			VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
 
-			struct PushConstantRangeInfo
-			{
-				std::string Name;
-				VkShaderStageFlags Stages;
-				size_t Offset;
-				size_t Size;
-			};
-			std::vector<PushConstantRangeInfo> m_RangeInfos;
-			uint32_t m_CurrentOffset = 0;
-			std::vector<VkPushConstantRange> m_PushConstantRanges;
-			std::unordered_map<std::string, VkPushConstantRange> m_PushConstants;
+			VkShaderStageFlags m_Stages = 0;
+
+			std::unordered_map<uint32_t, VkPushConstantRange> m_PushConstantRanges;
+			std::unordered_map<std::string, std::pair<VkShaderStageFlags, uint32_t>> m_MemberOffsets;
 	};
 }

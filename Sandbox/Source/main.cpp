@@ -4,6 +4,8 @@
 #include <string>
 #include <imgui/imgui.h>
 
+#include <glm/gtc/type_ptr.hpp>
+
 
 
 struct Vertice
@@ -19,10 +21,12 @@ class ExampleLayer : public YUME::Layer
 		ExampleLayer()
 			: Layer("Example")
 		{
-			m_QuadShader = YUME::Shader::Create("assets/shaders/test_shader.glsl");
+			m_QuadShader = YUME::Shader::Create("assets/shaders/push_shader.glsl");
 
 			YUME::PipelineCreateInfo pci{};
 			pci.Shader = m_QuadShader;
+			pci.BlendMode = YUME::BlendMode::SrcAlphaOneMinusSrcAlpha;
+			pci.TransparencyEnabled = true;
 			m_GraphicPipeline = YUME::Pipeline::Create(pci);
 
 			m_QuadShader->SetPipeline(m_GraphicPipeline);
@@ -55,6 +59,34 @@ class ExampleLayer : public YUME::Layer
 
 		void OnUpdate(YUME::Timestep p_Ts) override
 		{
+			float speed = 5.0f * (float)p_Ts;
+			m_Position.z = 10.0f;
+
+			glm::vec3 direction(0.0f);
+			if (YUME::Input::IsKeyPressed(YUME::Key::W))
+			{
+				m_CurrentKeyPressed = "W";
+				direction.y = -1;
+			}
+			if (YUME::Input::IsKeyPressed(YUME::Key::S))
+			{
+				m_CurrentKeyPressed = "S";
+				direction.y = 1;
+			}
+			if (YUME::Input::IsKeyPressed(YUME::Key::A))
+			{
+				m_CurrentKeyPressed = "A";
+				direction.x = -1;
+			}
+			if (YUME::Input::IsKeyPressed(YUME::Key::D))
+			{
+				m_CurrentKeyPressed = "D";
+				direction.x = 1;
+			}
+			auto length = glm::length(direction);
+			auto normalized = glm::normalize(direction);
+			m_Position += ((length == 0) ? direction : normalized) * speed;
+
 			if (m_Wireframe)
 			{
 				m_GraphicPipeline->SetPolygonMode(YUME::PolygonMode::LINE);
@@ -76,6 +108,27 @@ class ExampleLayer : public YUME::Layer
 
 			m_QuadShader->Bind();
 
+			uint32_t width = YUME::Application::Get().GetWindow().GetWidth();
+			uint32_t height = YUME::Application::Get().GetWindow().GetHeight();
+			float aspectRatio = (float)width / (float)height;
+
+			glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
+			auto view = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
+			m_QuadShader->UploadMat4("Player.Matrix", projection * view);
+
+			float size = 5.0f;
+			for (float x = 0.0f; x < size; x++)
+			{
+				for (float y = 0.0f; y < size; y++)
+				{
+					m_QuadShader->UploadFloat3("Player.Position", { x + (x * 0.11f), y + (y * 0.11f), 0.0f });
+					m_QuadShader->UploadFloat4("Player.Color", m_TileColor);
+					YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());
+				}
+			}
+
+			m_QuadShader->UploadFloat3("Player.Position", { m_Position.x, m_Position.y, 0.0f });
+			m_QuadShader->UploadFloat4("Player.Color", m_PlayerColor);
 			YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());
 
 			YUME::RendererCommand::End();
@@ -83,62 +136,58 @@ class ExampleLayer : public YUME::Layer
 
 		void OnImGuiRender() override
 		{
-			ImGui::Begin("Perfomance visualizer");
+			ImGui::Begin("Visualizer");
 			ImGui::Text("FPS: %.0f", (float)YUME::Application::Get().GetFPS());
+			ImGui::Text("Key Pressed: %s", m_CurrentKeyPressed.c_str());
+			ImGui::End();
+
+			ImGui::Begin("Editor");
+			ImGui::DragFloat3("Player.Position", glm::value_ptr(m_Position), 1.0f);
+			ImGui::ColorEdit4("Player.Color", glm::value_ptr(m_PlayerColor));
+			ImGui::ColorEdit4("Tile Color", glm::value_ptr(m_TileColor));		
 			ImGui::End();
 		}
 
 		void OnEvent(YUME::Event& p_Event) override
 		{
-			if (YUME::Input::IsKeyPressed(YUME::Key::W))
-			{
-				YM_CORE_WARN("W Is pressed!!!")
-				m_Color = { 1, 0, 0, 1 };
-			}
-			if (YUME::Input::IsKeyPressed(YUME::Key::A))
-			{
-				YM_CORE_WARN("A Is pressed!!!")
-				m_Color = { 0, 1, 0, 1 };
-			}
-			if (YUME::Input::IsKeyPressed(YUME::Key::S))
-			{
-				YM_CORE_WARN("S Is pressed!!!")
-				m_Color = { 0, 0, 1, 1 };
-			}
-			if (YUME::Input::IsKeyPressed(YUME::Key::D))
-			{
-				YM_CORE_WARN("D Is pressed!!!")
-				m_Color = {1, 1, 1, 1};
-			}
-
 			if (YUME::Input::IsKeyPressedOnce(p_Event, YUME::Key::Space))
 			{
-				YM_CORE_WARN("Space Is pressed!!!")
+				m_CurrentKeyPressed = "Space";
 				m_UpdateColor = !m_UpdateColor;
 			}
 
 			if (YUME::Input::IsKeyPressedOnce(p_Event, YUME::Key::J))
 			{
-				YM_CORE_WARN("J Is pressed!!!")
+				m_CurrentKeyPressed = "J";
 				m_Wireframe = !m_Wireframe;
 			}
 
 			if (YUME::Input::IsKeyPressedOnce(p_Event, YUME::Key::P))
 			{
-				YM_CORE_WARN("P Is pressed!!!")
+				m_CurrentKeyPressed = "P";
 				YUME::Application::Get().ReloadImGui();
 			}
 		}
 
 	private:
-		glm::vec4 m_Color{1, 1, 1, 1};
-		bool m_UpdateColor = true;
+		glm::vec4 m_Color{0, 0, 0, 1};
+		bool m_UpdateColor = false;
 		YUME::Ref<YUME::Pipeline> m_GraphicPipeline;
 		YUME::Ref<YUME::Shader> m_QuadShader;
 
 		YUME::Ref<YUME::VertexArray> m_VAO;
 
 		bool m_Wireframe = false;
+
+		glm::vec3 m_Position = { 0.3f, 0.4f, 0.0f };
+		glm::vec3 m_Front = { 0.0f, 0.0f, -1.0f };
+		glm::vec3 m_Right = { 1.0f, 0.0f, 0.0f };
+		glm::vec3 m_Up = { 0.0f, 1.0f, 0.0f };
+
+		glm::vec4 m_PlayerColor = { 0.7f, 0.3f, 0.5f, 1.0f };
+		glm::vec4 m_TileColor = { 0.5f, 0.3f, 0.7f, 1.0f };
+
+		std::string m_CurrentKeyPressed = " ";
 };
 
 
