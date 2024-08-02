@@ -1,6 +1,6 @@
 #include "YUME/yumepch.h"
 #include "vulkan_swapchain.h"
-#include "vulkan_device.h"
+#include "Platform/Vulkan/Core/vulkan_device.h"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>

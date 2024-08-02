@@ -33,6 +33,7 @@
 #include "YUME/Renderer/renderer_api.h"
 #include "YUME/Renderer/shader.h"
 #include "YUME/Renderer/buffer.h"
+#include "YUME/Renderer/uniform_buffer.h"
 #include "YUME/Renderer/vertex_array.h"
 #include "YUME/Renderer/pipeline.h"
 // --------------------------

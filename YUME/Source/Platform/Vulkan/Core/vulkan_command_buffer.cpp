@@ -28,7 +28,7 @@ namespace YUME
 		if (!m_CommandBuffers.empty())
 		{
 			YM_CORE_TRACE("Destroying vulkan command buffers...")
-			vkFreeCommandBuffers(VulkanDevice::Get().GetDevice(), VulkanDevice::Get().GetCommandPool(), m_CommandBuffers.size(), m_CommandBuffers.data());
+			vkFreeCommandBuffers(VulkanDevice::Get().GetDevice(), VulkanDevice::Get().GetCommandPool(), (uint32_t)m_CommandBuffers.size(), m_CommandBuffers.data());
 			m_CommandBuffers.clear();
 		}
 	}

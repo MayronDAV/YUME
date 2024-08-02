@@ -11,6 +11,8 @@ workspace "YUME"
 		"Dist"
 	}
 	
+	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+	
 	filter "system:windows"
 		flags { "MultiProcessorCompile" }
 		defines
@@ -20,7 +22,6 @@ workspace "YUME"
 			"_CRT_SECURE_NO_WARNINGS"
 		}
 	
-	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
 	include "Thirdparty/premake"
@@ -29,6 +30,7 @@ group "Dependencies"
 	include "Thirdparty/spdlog"
 	include "Thirdparty/glslang"
 	include "Thirdparty/imgui"
+	include "Thirdparty/stb"
 group ""
 
 group "Core"

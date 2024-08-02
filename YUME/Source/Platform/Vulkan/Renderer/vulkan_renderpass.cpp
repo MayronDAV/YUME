@@ -1,6 +1,6 @@
 #include "YUME/yumepch.h"
 #include "vulkan_renderpass.h"
-#include "vulkan_device.h"
+#include "Platform/Vulkan/Core/vulkan_device.h"
 #include "vulkan_swapchain.h"
 #include "Platform/Vulkan/Renderer/vulkan_context.h"
 

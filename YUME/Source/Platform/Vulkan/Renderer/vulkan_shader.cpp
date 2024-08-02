@@ -11,6 +11,7 @@
 #include <glslang/Public/resource_limits_c.h>
 #include <spirv_cross/spirv_cross.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "vulkan_uniform_buffer.h"
 
 
 
@@ -166,6 +167,7 @@ namespace YUME
 		CompileOrGetVulkanBinaries(shaderSources);
 		CreateShaderModules();
 		CreatePipelineLayout();
+		CreateDescriptorSet();
 
 		timer.Stop();
 		YM_CORE_WARN("Shader creation took {0} ms", timer.Elapsed())
@@ -177,13 +179,15 @@ namespace YUME
 		lastDot = (lastDot == std::string::npos) ? p_ShaderPath.size() : lastDot;
 
 		m_Name = p_ShaderPath.substr(lastSlash, lastDot - lastSlash);
+
 	}
 
 	VulkanShader::~VulkanShader()
 	{
 		auto shaderModules = m_ShaderModules;
 		auto layout = m_PipelineLayout;
-		VulkanContext::PushFunction([shaderModules, layout]()
+		auto setLayouts = m_DescriptorSetLayouts;
+		VulkanContext::PushFunction([shaderModules, layout, setLayouts]()
 		{
 			auto device = VulkanDevice::Get().GetDevice();
 
@@ -196,6 +200,12 @@ namespace YUME
 
 			YM_CORE_TRACE("Destroying vulkan pipeline layout...")
 			vkDestroyPipelineLayout(device, layout, VK_NULL_HANDLE);
+
+			YM_CORE_TRACE("Destroying vulkan descriptor set layouts...")
+			for (auto& setLayout : setLayouts)
+			{
+				vkDestroyDescriptorSetLayout(device, setLayout, VK_NULL_HANDLE);
+			}
 		});
 	};
 
@@ -224,6 +234,19 @@ namespace YUME
 		{
 			YM_CORE_ERROR("Pipelie has deleted!")
 		}
+
+		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
+		auto commandBuffer = context->GetCommandBuffer();
+
+		vkCmdBindDescriptorSets(commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			m_PipelineLayout,
+			0,
+			1,
+			&m_DescriptorSet,
+			0,
+			nullptr
+		);
 	}
 
 	void VulkanShader::Unbind()
@@ -259,6 +282,29 @@ namespace YUME
 	void VulkanShader::UploadInt(const std::string& p_Name, int p_Value)
 	{
 		UploadPushConstantData(p_Name, &p_Value, sizeof(int));
+	}
+
+	void VulkanShader::UploadUniformBuffer(const Ref<UniformBuffer>& p_UniformBuffer)
+	{
+		YM_CORE_VERIFY(!m_DescriptorSetLayouts.empty())
+
+		auto buffer = static_cast<VulkanUniformBuffer*>(p_UniformBuffer.get());
+
+		VkDescriptorBufferInfo bufferInfo = {};
+		bufferInfo.buffer = buffer->GetBuffer();
+		bufferInfo.offset = 0;
+		bufferInfo.range = VK_WHOLE_SIZE;
+
+		VkWriteDescriptorSet descriptorWrite = {};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = m_DescriptorSet;
+		descriptorWrite.dstBinding = buffer->GetBinding();
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pBufferInfo = &bufferInfo;
+
+		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), 1, &descriptorWrite, 0, nullptr);
 	}
 
 	std::string VulkanShader::ReadFile(const std::string_view& p_Filepath) const
@@ -462,13 +508,35 @@ namespace YUME
 		{
 			const auto& bufferType = compiler.get_type(resource.base_type_id);
 			auto bufferSize = (uint32_t)compiler.get_declared_struct_size(bufferType);
+			uint32_t set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
 			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
 			auto memberCount = (int)bufferType.member_types.size();
 
 			YM_CORE_TRACE("  Name: {0}", resource.name)
 			YM_CORE_TRACE("    Size = {0}", bufferSize)
+			YM_CORE_TRACE("    Set  = {0}", set)
 			YM_CORE_TRACE("    Binding = {0}", binding)
 			YM_CORE_TRACE("    Members = {0}", memberCount)
+
+			VkDescriptorSetLayoutBinding bindingInfo{};
+			bindingInfo.binding = binding;
+			bindingInfo.descriptorCount = 1;
+			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
+			bindingInfo.pImmutableSamplers = nullptr;
+
+			VkDescriptorSetLayoutCreateInfo layoutInfo{};
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = 1;
+			layoutInfo.pBindings = &bindingInfo;
+
+			VkDescriptorSetLayout descriptorSetLayout;
+			if (vkCreateDescriptorSetLayout(VulkanDevice::Get().GetDevice(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+			{
+				YM_CORE_ERROR("Failed to create vulkan descriptor set layout!")
+			}
+
+			m_DescriptorSetLayouts.push_back(descriptorSetLayout);
 		}
 
 		YM_CORE_TRACE("Push constant buffers:")
@@ -551,8 +619,8 @@ namespace YUME
 
 		VkPipelineLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layoutInfo.setLayoutCount = 0;
-		layoutInfo.pSetLayouts = nullptr;
+		layoutInfo.setLayoutCount = (uint32_t)m_DescriptorSetLayouts.size();
+		layoutInfo.pSetLayouts = m_DescriptorSetLayouts.data();
 		layoutInfo.pushConstantRangeCount = (uint32_t)pushConstantRangeArray.size();
 		layoutInfo.pPushConstantRanges = pushConstantRangeArray.data();
 
@@ -560,6 +628,22 @@ namespace YUME
 
 		auto  res = vkCreatePipelineLayout(device, &layoutInfo, VK_NULL_HANDLE, &m_PipelineLayout);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
+	}
+
+	void VulkanShader::CreateDescriptorSet()
+	{
+		if (!m_DescriptorSetLayouts.empty())
+		{
+			VkDescriptorSetAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			allocInfo.descriptorPool = VulkanDevice::Get().GetDescriptorPool();
+			allocInfo.descriptorSetCount = 1;
+			allocInfo.pSetLayouts = m_DescriptorSetLayouts.data();
+
+			if (vkAllocateDescriptorSets(VulkanDevice::Get().GetDevice(), &allocInfo, &m_DescriptorSet) != VK_SUCCESS) {
+				YM_CORE_ERROR("Failed to allocate vulkan descriptor sets!");
+			}
+		}
 	}
 
 	bool VulkanShader::UploadPushConstantData(const std::string& p_Name, const void* p_Data, size_t p_SizeBytes)

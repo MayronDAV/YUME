@@ -13,3 +13,6 @@
 [submodule "Thirdparty/imgui"]
 	path = Thirdparty/imgui
 	url = https://github.com/MayronDAV/imgui
+[submodule "Thirdparty/stb"]
+	path = Thirdparty/stb
+	url = https://github.com/MayronDAV/stb.git

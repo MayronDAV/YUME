@@ -141,4 +141,9 @@ namespace YUME
 		D32_FLOAT_S8_UINT,
 	};
 
+	enum class DescriptorType : uint8_t
+	{
+		UNIFORM_BUFFER
+	};
+	
 }

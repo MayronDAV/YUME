@@ -3,6 +3,7 @@
 #include "YUME/Core/base.h"
 #include "vertex_array.h"
 #include "pipeline.h"
+#include "uniform_buffer.h"
 #include "YUME/Core/definitions.h"
 
 // std
@@ -31,6 +32,8 @@ namespace YUME
 			virtual void UploadFloat4(const std::string& p_Name, const glm::vec4& p_Value) = 0;
 			virtual void UploadMat4(const std::string& p_Name, const glm::mat4& p_Value) = 0;
 			virtual void UploadInt(const std::string& p_Name, int p_Value) = 0;
+
+			virtual void UploadUniformBuffer(const Ref<UniformBuffer>& p_UniformBuffer) = 0;
 
 			virtual void AddVertexArray(const Ref<VertexArray>& p_VertexArray) = 0;
 			virtual void SetPipeline(const Ref<Pipeline>& p_Pipeline) = 0;

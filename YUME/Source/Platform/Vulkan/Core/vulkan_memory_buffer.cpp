@@ -22,6 +22,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Init(VkBufferUsageFlags p_Usage, VkMemoryPropertyFlags p_MemoryPropertyFlags, VkDeviceSize p_SizeBytes)
 	{
+		YM_CORE_VERIFY(p_SizeBytes > 0)
+
 		auto device = VulkanDevice::Get().GetDevice();
 		m_UsageFlags = p_Usage;
 		m_MemoryPropertyFlags = p_MemoryPropertyFlags;
@@ -51,6 +53,8 @@ namespace YUME
 			YM_CORE_ERROR("Failed to allocate index buffer memory!")
 			return;
 		}
+
+		vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
 	}
 
 	void VulkanMemoryBuffer::Resize(VkDeviceSize p_SizeBytes, const void* p_Data)
@@ -59,15 +63,15 @@ namespace YUME
 		Init(m_UsageFlags, m_MemoryPropertyFlags, p_SizeBytes);
 	}
 
-	void VulkanMemoryBuffer::SetData(VkDeviceSize p_SizeBytes, const void* p_Data, bool p_AddBarrier)
+	void VulkanMemoryBuffer::SetData(VkDeviceSize p_SizeBytes, const void* p_Data, VkDeviceSize p_Offset, bool p_AddBarrier)
 	{
+		YM_CORE_VERIFY(p_Data != nullptr && p_SizeBytes > 0)
+
 		auto device = VulkanDevice::Get().GetDevice();
 
 		if (m_MemoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
 		{
-			vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
-
-			Map(p_SizeBytes, 0);
+			Map(p_SizeBytes, p_Offset);
 			memcpy(m_Mapped, p_Data, p_SizeBytes);
 			UnMap();
 		}
@@ -104,7 +108,7 @@ namespace YUME
 			vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0);
 
 			void* data;
-			if (vkMapMemory(device, stagingBufferMemory, 0, p_SizeBytes, 0, &data) != VK_SUCCESS)
+			if (vkMapMemory(device, stagingBufferMemory, p_Offset, p_SizeBytes, 0, &data) != VK_SUCCESS)
 			{
 				vkDestroyBuffer(device, stagingBuffer, VK_NULL_HANDLE);
 				vkFreeMemory(device, stagingBufferMemory, VK_NULL_HANDLE);
@@ -112,7 +116,7 @@ namespace YUME
 			memcpy(data, p_Data, p_SizeBytes);
 			vkUnmapMemory(device, stagingBufferMemory);
 
-			vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
+			//vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
 
 			auto commandBuffer = Utils::BeginSingleTimeCommand();
 
@@ -156,6 +160,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Map(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
 	{
+		YM_CORE_VERIFY(p_SizeBytes > 0)
+
 		if (vkMapMemory(VulkanDevice::Get().GetDevice(), m_Memory, p_Offset, p_SizeBytes, 0, &m_Mapped) != VK_SUCCESS)
 		{
 			YM_CORE_ERROR("Failed to map memory!")
@@ -177,6 +183,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Flush(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
 	{
+		YM_CORE_VERIFY(p_SizeBytes > 0)
+
 		VkMappedMemoryRange mappedRange = {};
 		mappedRange.memory = m_Memory;
 		mappedRange.offset = p_Offset;
@@ -186,6 +194,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Invalidate(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
 	{
+		YM_CORE_VERIFY(p_SizeBytes > 0)
+
 		VkMappedMemoryRange mappedRange = {};
 		mappedRange.memory = m_Memory;
 		mappedRange.offset = p_Offset;

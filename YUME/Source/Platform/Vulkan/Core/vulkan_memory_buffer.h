@@ -17,7 +17,7 @@ namespace YUME
 
             void Init(VkBufferUsageFlags p_Usage, VkMemoryPropertyFlags p_MemoryProperyFlags, VkDeviceSize p_SizeBytes);
             void Resize(VkDeviceSize p_SizeBytes, const void* p_Data);
-            void SetData(VkDeviceSize p_SizeBytes, const void* p_Data, bool p_AddBarrier = false);
+            void SetData(VkDeviceSize p_SizeBytes, const void* p_Data, VkDeviceSize p_Offset = 0, bool p_AddBarrier = false);
             const VkBuffer& GetBuffer() const { return m_Buffer; }
 
             void Map(VkDeviceSize p_SizeBytes = VK_WHOLE_SIZE, VkDeviceSize p_Offset = 0);

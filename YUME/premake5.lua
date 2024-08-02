@@ -24,6 +24,7 @@ project "YUME"
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.imgui}/imgui",
 		"%{IncludeDir.imgui}/backends",
+		"%{IncludeDir.stb}",
 		"%{IncludeDir.Vulkan}",
 		"%{LibraryDir.VulkanSDK}"
 	}
@@ -33,6 +34,7 @@ project "YUME"
 		"glfw",
 		"glslang",
 		"imgui",
+		"stb",
 
 		"%{Library.Vulkan}"
 	}

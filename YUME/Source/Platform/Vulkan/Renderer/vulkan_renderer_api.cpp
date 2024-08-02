@@ -2,7 +2,7 @@
 #include "Platform/Vulkan/Renderer/vulkan_renderer_api.h"
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 #include "Platform/Vulkan/Core/vulkan_device.h"
-#include "Platform/Vulkan/Core/vulkan_swapchain.h"
+#include "Platform/Vulkan/Renderer/vulkan_swapchain.h"
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 
 #include "YUME/Core/application.h"

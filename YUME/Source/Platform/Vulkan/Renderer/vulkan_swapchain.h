@@ -1,8 +1,8 @@
 #pragma once
 #include "YUME/Core/base.h"
 #include "YUME/Core/singleton.h"
-#include "vulkan_surface.h"
-#include "vulkan_commandpool.h"
+#include "Platform/Vulkan/Core/vulkan_surface.h"
+#include "Platform/Vulkan/Core/vulkan_commandpool.h"
 
 
 

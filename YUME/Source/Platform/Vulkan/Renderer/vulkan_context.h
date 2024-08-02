@@ -2,9 +2,9 @@
 
 #include "YUME/Core/base.h"
 #include "YUME/Renderer/graphics_context.h"
-#include "Platform/Vulkan/Core/vulkan_swapchain.h"
-#include "Platform/Vulkan/Core/vulkan_renderpass.h"
-#include "Platform/Vulkan/Core/vulkan_scframebuffer.h"
+#include "Platform/Vulkan/Renderer/vulkan_swapchain.h"
+#include "Platform/Vulkan/Renderer/vulkan_renderpass.h"
+#include "Platform/Vulkan/Renderer/vulkan_scframebuffer.h"
 #include "Platform/Vulkan/Core/vulkan_command_buffer.h"
 
 #include "YUME/Utils/deletion_queue.h"

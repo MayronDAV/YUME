@@ -14,6 +14,12 @@ struct Vertice
 	glm::vec4 Color;
 };
 
+struct Camera
+{
+	glm::mat4 Projection;
+	glm::mat4 View;
+};
+
 
 class ExampleLayer : public YUME::Layer
 {
@@ -21,7 +27,7 @@ class ExampleLayer : public YUME::Layer
 		ExampleLayer()
 			: Layer("Example")
 		{
-			m_QuadShader = YUME::Shader::Create("assets/shaders/push_shader.glsl");
+			m_QuadShader = YUME::Shader::Create("assets/shaders/uniform_buffer_shader.glsl");
 
 			YUME::PipelineCreateInfo pci{};
 			pci.Shader = m_QuadShader;
@@ -55,6 +61,8 @@ class ExampleLayer : public YUME::Layer
 			m_VAO->SetIndexBuffer(EBO);
 
 			m_QuadShader->AddVertexArray(m_VAO);
+
+			m_CameraBuffer = YUME::UniformBuffer::Create(sizeof(Camera));
 		}
 
 		void OnUpdate(YUME::Timestep p_Ts) override
@@ -114,7 +122,9 @@ class ExampleLayer : public YUME::Layer
 
 			glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
 			auto view = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
-			m_QuadShader->UploadMat4("Player.Matrix", projection * view);
+			Camera data = { projection, view };
+			m_CameraBuffer->SetData(&data, sizeof(Camera));
+			m_QuadShader->UploadUniformBuffer(m_CameraBuffer);
 
 			float size = 5.0f;
 			for (float x = 0.0f; x < size; x++)
@@ -174,8 +184,8 @@ class ExampleLayer : public YUME::Layer
 		bool m_UpdateColor = false;
 		YUME::Ref<YUME::Pipeline> m_GraphicPipeline;
 		YUME::Ref<YUME::Shader> m_QuadShader;
-
 		YUME::Ref<YUME::VertexArray> m_VAO;
+		YUME::Ref<YUME::UniformBuffer> m_CameraBuffer;
 
 		bool m_Wireframe = false;
 

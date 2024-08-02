@@ -4,6 +4,7 @@
 #include "YUME/Renderer/shader.h"
 #include "YUME/Renderer/vertex_array.h"
 #include "vulkan_pipeline.h"
+#include "YUME/Core/definitions.h"
 
 // Lib
 #include <vulkan/vulkan.h>
@@ -14,6 +15,7 @@
 
 namespace YUME
 {
+
 	class YM_API VulkanShader : public Shader
 	{
 		private:
@@ -51,6 +53,7 @@ namespace YUME
 			void UploadMat4(const std::string& p_Name, const glm::mat4& p_Value) override;
 			void UploadInt(const std::string& p_Name, int p_Value) override;
 
+			void UploadUniformBuffer(const Ref<UniformBuffer>& p_UniformBuffer) override;
 
 		private:
 			std::string ReadFile(const std::string_view& p_Filepath) const;
@@ -61,8 +64,9 @@ namespace YUME
 			void Reflect(ShaderType p_Stage, const std::vector<uint32_t>& p_ShaderData);
 
 			void CreateShaderModules();
-
 			void CreatePipelineLayout();
+
+			void CreateDescriptorSet();
 
 			bool UploadPushConstantData(const std::string& p_Name, const void* p_Data, size_t p_SizeBytes);
 
@@ -82,5 +86,8 @@ namespace YUME
 
 			std::unordered_map<uint32_t, VkPushConstantRange> m_PushConstantRanges;
 			std::unordered_map<std::string, std::pair<VkShaderStageFlags, uint32_t>> m_MemberOffsets;
+
+			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
+			VkDescriptorSet m_DescriptorSet;
 	};
 }
