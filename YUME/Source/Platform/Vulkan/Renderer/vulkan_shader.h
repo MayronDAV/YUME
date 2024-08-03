@@ -47,11 +47,11 @@ namespace YUME
 			}
 			void SetPipeline(const Ref<Pipeline>& p_Pipeline) override { YM_CORE_VERIFY(p_Pipeline->GetShader() == this)  m_Pipeline = p_Pipeline; }
 
-			void UploadFloat(const std::string& p_Name, float p_Value) override;
-			void UploadFloat3(const std::string& p_Name, const glm::vec3& p_Value) override;
-			void UploadFloat4(const std::string& p_Name, const glm::vec4& p_Value) override;
-			void UploadMat4(const std::string& p_Name, const glm::mat4& p_Value) override;
-			void UploadInt(const std::string& p_Name, int p_Value) override;
+			void PushFloat(const std::string& p_Name, float p_Value) override;
+			void PushFloat3(const std::string& p_Name, const glm::vec3& p_Value) override;
+			void PushFloat4(const std::string& p_Name, const glm::vec4& p_Value) override;
+			void PushMat4(const std::string& p_Name, const glm::mat4& p_Value) override;
+			void PushInt(const std::string& p_Name, int p_Value) override;
 
 			void UploadUniformBuffer(const Ref<UniformBuffer>& p_UniformBuffer) override;
 

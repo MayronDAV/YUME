@@ -70,15 +70,20 @@ namespace YUME
 		DYNAMIC
 	};
 
+	enum class TextureUsage : uint8_t
+	{
+		TEXTURE_SAMPLED = 0,
+		TEXTURE_COLOR_ATTACHMENT,
+		TEXTURE_DEPTH_STENCIL,
+	};
+
 	enum TextureFlagBits : uint8_t
 	{
-		TEXTURE_SAMPLED = BIT(0),
-		TEXTURE_STORAGE = BIT(1),
-		TEXTURE_RENDER_TARGET = BIT(2),
-		TEXTURE_DEPTH_STENCIL = BIT(3),
-		TEXTURE_DEPTH_STENCIL_READONLY = BIT(4),
-		TEXTURE_CREATE_MIPS = BIT(5),
-		TEXTURE_MIP_VIEWS = BIT(6)
+		TEXTURE_CREATE_MIPS = BIT(0),
+		TEXTURE_MIP_VIEWS = BIT(1),
+		TEXTURE_DEPTH_STENCIL_READONLY = BIT(2),
+		TEXTURE_RENDER_TARGET = BIT(3),
+		TEXTURE_STORAGE = BIT(4)
 	};
 	using TextureFlags = uint16_t;
 
@@ -86,7 +91,6 @@ namespace YUME
 	{
 		NONE = 0,
 		REPEAT,
-		CLAMP,
 		MIRRORED_REPEAT,
 		CLAMP_TO_EDGE,
 		CLAMP_TO_BORDER
@@ -123,15 +127,19 @@ namespace YUME
 		R8_SRGB,
 		R8_INT,
 		R8_UINT,
+		R32_INT,
+
+		RG8_SRGB,
+		RG32_UINT,
+
 		RGB8_SRGB,
+
 		RGBA8_SRGB,
 		RGBA32_FLOAT,
-		R32_INT,
-		RG32_UINT,
 
 		// Depth Format
 
-		D16_NORM, // -1.0 (-32768 ) to 1.0 (32767)
+		D16_UNORM,
 		D32_FLOAT,
 
 		// DepthStencil Format
@@ -141,9 +149,4 @@ namespace YUME
 		D32_FLOAT_S8_UINT,
 	};
 
-	enum class DescriptorType : uint8_t
-	{
-		UNIFORM_BUFFER
-	};
-	
 }

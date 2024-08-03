@@ -8,10 +8,11 @@
 
 
 
-struct Vertice
+struct Vertex
 {
 	glm::vec3 Position;
 	glm::vec4 Color;
+	glm::vec2 TexCoord;
 };
 
 struct Camera
@@ -20,6 +21,10 @@ struct Camera
 	glm::mat4 View;
 };
 
+struct Light
+{
+	glm::vec4 Color;
+};
 
 class ExampleLayer : public YUME::Layer
 {
@@ -39,17 +44,18 @@ class ExampleLayer : public YUME::Layer
 
 			m_VAO = YUME::VertexArray::Create();
 
-			std::vector<Vertice> inputData = {
-				Vertice{{-0.5f,-0.5f, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }},
-				Vertice{{ 0.5f,-0.5f, 0.0f }, { 0.0f, 1.0f, 1.0f, 1.0f }},
-				Vertice{{ 0.5f, 0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f, 1.0f }},
-				Vertice{{-0.5f, 0.5f, 0.0f }, { 1.0f, 0.0f, 1.0f, 1.0f }},
+			const std::vector<Vertex> vertices = {
+				{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
+				{{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
+				{{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+				{{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 			};
 
-			auto VBO = YUME::VertexBuffer::Create(inputData.data(), inputData.size() * sizeof(Vertice));
+			auto VBO = YUME::VertexBuffer::Create(vertices.data(), vertices.size() * sizeof(Vertex));
 			VBO->SetLayout({
 				{ YUME::DataType::Float3, "a_Position"  },
-				{ YUME::DataType::Float4, "a_Color"	    }
+				{ YUME::DataType::Float4, "a_Color"	    },
+				{ YUME::DataType::Float2, "a_TexCoord"	}
 			});
 			m_VAO->AddVertexBuffer(VBO);
 
@@ -63,6 +69,9 @@ class ExampleLayer : public YUME::Layer
 			m_QuadShader->AddVertexArray(m_VAO);
 
 			m_CameraBuffer = YUME::UniformBuffer::Create(sizeof(Camera));
+			m_LightBuffer = YUME::UniformBuffer::Create(sizeof(Light));
+
+			m_Texture = YUME::TextureImporter::LoadTexture2D("Resources/statue.jpg");
 		}
 
 		void OnUpdate(YUME::Timestep p_Ts) override
@@ -126,19 +135,24 @@ class ExampleLayer : public YUME::Layer
 			m_CameraBuffer->SetData(&data, sizeof(Camera));
 			m_QuadShader->UploadUniformBuffer(m_CameraBuffer);
 
+			//glm::vec4 color = { 0.1f, 0.1f, 0.1f, 1.0f };
+			//m_LightBuffer->SetData(&color, sizeof(Light));
+			//m_QuadShader->UploadUniformBuffer(m_LightBuffer);
+
 			float size = 5.0f;
 			for (float x = 0.0f; x < size; x++)
 			{
 				for (float y = 0.0f; y < size; y++)
 				{
-					m_QuadShader->UploadFloat3("Player.Position", { x + (x * 0.11f), y + (y * 0.11f), 0.0f });
-					m_QuadShader->UploadFloat4("Player.Color", m_TileColor);
+					m_QuadShader->PushFloat3("Player.Position", { x + (x * 0.11f), y + (y * 0.11f), 0.0f });
+					m_QuadShader->PushFloat4("Player.Color", m_TileColor);
 					YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());
 				}
 			}
 
-			m_QuadShader->UploadFloat3("Player.Position", { m_Position.x, m_Position.y, 0.0f });
-			m_QuadShader->UploadFloat4("Player.Color", m_PlayerColor);
+			//m_QuadShader->UploadTexture2D(1, m_Texture);
+			m_QuadShader->PushFloat3("Player.Position", { m_Position.x, m_Position.y, 0.0f });
+			m_QuadShader->PushFloat4("Player.Color", m_PlayerColor);
 			YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());
 
 			YUME::RendererCommand::End();
@@ -186,6 +200,7 @@ class ExampleLayer : public YUME::Layer
 		YUME::Ref<YUME::Shader> m_QuadShader;
 		YUME::Ref<YUME::VertexArray> m_VAO;
 		YUME::Ref<YUME::UniformBuffer> m_CameraBuffer;
+		YUME::Ref<YUME::UniformBuffer> m_LightBuffer;
 
 		bool m_Wireframe = false;
 
@@ -198,6 +213,8 @@ class ExampleLayer : public YUME::Layer
 		glm::vec4 m_TileColor = { 0.5f, 0.3f, 0.7f, 1.0f };
 
 		std::string m_CurrentKeyPressed = " ";
+
+		YUME::Ref<YUME::Texture2D> m_Texture;
 };
 
 

@@ -13,15 +13,17 @@ namespace YUME
 	{
 		uint32_t Width = 1;
 		uint32_t Height = 1;
+		TextureUsage Usage = TextureUsage::TEXTURE_SAMPLED;
 		TextureFormat Format = TextureFormat::RGBA8_SRGB;
 		TextureFilter MinFilter = TextureFilter::LINEAR;
 		TextureFilter MagFilter = TextureFilter::LINEAR;
-		TextureWrap Wrap = TextureWrap::REPEAT;
+		TextureWrap WrapU = TextureWrap::REPEAT;
+		TextureWrap WrapV = TextureWrap::REPEAT;
+		TextureWrap WrapW = TextureWrap::REPEAT;
 		TextureBorderColor BorderColorFlag = TextureBorderColor::CUSTOM_FLOAT;
 		// if BorderColorFlag is CUSTOM_SRGB, each component in BorderColor will be converted to int.
 		// each component in BorderColor will be clamped between 0.0f and 1.0f if CUSTOM_FLOAT or between 0 and 255 if CUSTOM_SRGB
 		glm::vec4 BorderColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-		TextureFlags Flags = TextureFlagBits::TEXTURE_CREATE_MIPS; // no need to pass TextureFlagBits::
 	};
 
 	class YM_API Texture
@@ -45,7 +47,7 @@ namespace YUME
 			virtual void Bind(uint32_t p_Slot = 0) const = 0;
 			virtual void Unbind(uint32_t p_Slot = 0) const = 0;
 
-			virtual bool operator== (const Texture& other) const = 0;
+			virtual bool operator== (const Texture& p_Other) const = 0;
 	};
 
 
@@ -53,6 +55,6 @@ namespace YUME
 	{
 		public:
 			static Ref<Texture2D> Create(const TextureSpecification& p_Spec = {});
-			static Ref<Texture2D> Create(const TextureSpecification& p_Spec = {}, const unsigned char* p_Data = nullptr, uint32_t p_Size = 0);
+			static Ref<Texture2D> Create(const TextureSpecification& p_Spec, const unsigned char* p_Data, uint32_t p_Size);
 	};
 }

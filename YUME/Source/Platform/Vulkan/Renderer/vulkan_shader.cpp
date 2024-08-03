@@ -259,27 +259,27 @@ namespace YUME
 		return m_Name;
 	}
 
-	void VulkanShader::UploadFloat(const std::string& p_Name, float p_Value)
+	void VulkanShader::PushFloat(const std::string& p_Name, float p_Value)
 	{
 		UploadPushConstantData(p_Name, &p_Value, sizeof(float));
 	}
 
-	void VulkanShader::UploadFloat3(const std::string& p_Name, const glm::vec3& p_Value)
+	void VulkanShader::PushFloat3(const std::string& p_Name, const glm::vec3& p_Value)
 	{
 		UploadPushConstantData(p_Name, glm::value_ptr(p_Value), sizeof(glm::vec3));
 	}
 
-	void VulkanShader::UploadFloat4(const std::string& p_Name, const glm::vec4& p_Value)
+	void VulkanShader::PushFloat4(const std::string& p_Name, const glm::vec4& p_Value)
 	{
 		UploadPushConstantData(p_Name, glm::value_ptr(p_Value), sizeof(glm::vec4));
 	}
 
-	void VulkanShader::UploadMat4(const std::string& p_Name, const glm::mat4& p_Value)
+	void VulkanShader::PushMat4(const std::string& p_Name, const glm::mat4& p_Value)
 	{
 		UploadPushConstantData(p_Name, glm::value_ptr(p_Value), sizeof(glm::mat4));
 	}
 
-	void VulkanShader::UploadInt(const std::string& p_Name, int p_Value)
+	void VulkanShader::PushInt(const std::string& p_Name, int p_Value)
 	{
 		UploadPushConstantData(p_Name, &p_Value, sizeof(int));
 	}

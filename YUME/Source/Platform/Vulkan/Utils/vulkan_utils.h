@@ -22,11 +22,18 @@ namespace YUME::Utils
 
 	void TransitionImageLayout(VkImage p_Image, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout);
 
-	VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags p_AspectMask);
-
 	VkRenderingAttachmentInfo AttachmentInfo(VkImageView p_View, VkClearValue* p_Clear, VkImageLayout p_Layout);
 
 	VkCommandBuffer BeginSingleTimeCommand();
-
 	void EndSingleTimeCommand(VkCommandBuffer p_CommandBuffer);
+
+	VkFormat TextureFormatToVk(TextureFormat p_Format);
+	uint32_t TextureFormatChannels(TextureFormat p_Format);
+	uint32_t TextureFormatBytesPerChannel(TextureFormat p_Format);
+	VkFilter TextureFilterToVk(TextureFilter p_Filter);
+	VkSamplerAddressMode TextureWrapToVk(TextureWrap p_Wrap);
+	VkBorderColor TextureBorderColorToVk(TextureBorderColor p_BorderColor);
+	VkImageUsageFlagBits TextureUsageToVk(TextureUsage p_Usage);
+
+	void CopyBufferToImage(VkBuffer p_Buffer, VkImage p_Image, uint32_t p_Width, uint32_t p_Height);
 }

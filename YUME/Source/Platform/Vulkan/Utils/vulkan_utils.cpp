@@ -101,41 +101,49 @@ namespace YUME::Utils
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.image = p_Image;
-
-		VkImageAspectFlags aspectMask = (p_NewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL ||
-			p_NewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
-			? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT
-			: VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange = ImageSubresourceRange(aspectMask);
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
 
 		VkPipelineStageFlags srcStage;
 		VkPipelineStageFlags dstStage;
 
-		if (p_CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED && p_NewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+		if (p_CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED && p_NewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) 
+		{
 			barrier.srcAccessMask = 0;
 			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
 			srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		}
-		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+		{
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
 			srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		}
-		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED && p_NewLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED && p_NewLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		{
 			barrier.srcAccessMask = 0;
 			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 			srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		}
-		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+		{
 			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			barrier.dstAccessMask = 0;
+
 			srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 		}
-		else {
+		else 
+		{
 			YM_CORE_ASSERT(false, "Unsupported layout transition!")
 		}
 
@@ -151,18 +159,6 @@ namespace YUME::Utils
 		EndSingleTimeCommand(commandBuffer);
 	}
 
-
-	VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags p_AspectMask)
-	{
-		VkImageSubresourceRange subImage{};
-		subImage.aspectMask = p_AspectMask;
-		subImage.baseMipLevel = 0;
-		subImage.levelCount = VK_REMAINING_MIP_LEVELS;
-		subImage.baseArrayLayer = 0;
-		subImage.layerCount = VK_REMAINING_ARRAY_LAYERS;
-
-		return subImage;
-	}
 
 	VkRenderingAttachmentInfo AttachmentInfo(VkImageView p_View, VkClearValue* p_Clear, VkImageLayout p_Layout)
 	{
@@ -222,5 +218,200 @@ namespace YUME::Utils
 		vkFreeCommandBuffers(device, commandPool, 1, &p_CommandBuffer);
 	}
 
+	VkFormat TextureFormatToVk(TextureFormat p_Format)
+	{
+		switch (p_Format)
+		{
+			using enum YUME::TextureFormat;
+
+			case None:				 return VK_FORMAT_UNDEFINED;
+			case R8_SRGB:			 return VK_FORMAT_R8_SRGB;
+			case R8_INT:			 return VK_FORMAT_R8_SINT;
+			case R8_UINT:			 return VK_FORMAT_R8_UINT;
+			case R32_INT:			 return VK_FORMAT_R32_SINT;
+
+			case RG8_SRGB:			 return VK_FORMAT_R8G8_SRGB;
+			case RG32_UINT:			 return VK_FORMAT_R32G32_UINT;
+
+			case RGB8_SRGB:			 return VK_FORMAT_R8G8B8_SRGB;
+
+			case RGBA8_SRGB:		 return VK_FORMAT_R8G8B8A8_SRGB;
+			case RGBA32_FLOAT:		 return VK_FORMAT_R32G32B32A32_SFLOAT;
+
+			case D16_UNORM:			 return VK_FORMAT_D16_UNORM;
+			case D32_FLOAT:			 return VK_FORMAT_D32_SFLOAT;
+			case D16_UNORM_S8_UINT:  return VK_FORMAT_D16_UNORM_S8_UINT;
+			case D24_UNORM_S8_UINT:  return VK_FORMAT_D24_UNORM_S8_UINT;
+			case D32_FLOAT_S8_UINT:  return VK_FORMAT_D32_SFLOAT_S8_UINT;
+
+			default:
+				YM_CORE_ERROR("Unknown texture format!")
+				return VK_FORMAT_UNDEFINED;
+		}
+	}
+
+	uint32_t TextureFormatChannels(TextureFormat p_Format)
+	{
+		switch (p_Format)
+		{
+			using enum YUME::TextureFormat;
+
+			case R8_SRGB:
+			case R8_INT:
+			case R8_UINT:
+			case R32_INT:
+				return 1;
+
+			case RG8_SRGB:
+			case RG32_UINT:
+				return 2;
+
+			case RGB8_SRGB:
+				return 3;
+
+			case RGBA8_SRGB:
+			case RGBA32_FLOAT:
+				return 4;
+
+			case D16_UNORM:
+			case D32_FLOAT:
+				return 1;
+
+			case D16_UNORM_S8_UINT:
+			case D24_UNORM_S8_UINT:
+			case D32_FLOAT_S8_UINT:
+				return 2;
+
+			default:
+				YM_CORE_ERROR("Unknown texture format!")
+				return 0;
+		}
+	}
+
+	uint32_t TextureFormatBytesPerChannel(TextureFormat p_Format)
+	{
+		switch (p_Format)
+		{
+			using enum YUME::TextureFormat;
+
+			case R8_SRGB:
+			case R8_INT:
+			case RG8_SRGB:
+			case R8_UINT:
+			case RGB8_SRGB:
+			case RGBA8_SRGB:
+				return 1;
+
+			case R32_INT:
+			case RG32_UINT:
+			case RGBA32_FLOAT:
+			case D32_FLOAT:
+			case D24_UNORM_S8_UINT:
+				return 4;
+
+			case D16_UNORM:			 return 2;
+			case D16_UNORM_S8_UINT:  return 3;
+			case D32_FLOAT_S8_UINT:  return 5;
+
+			default:
+				YM_CORE_ERROR("Unknown texture format!")
+				return 1;
+		}
+	}
+
+	VkFilter TextureFilterToVk(TextureFilter p_Filter)
+	{
+		switch (p_Filter)
+		{
+			case YUME::TextureFilter::LINEAR:  return VK_FILTER_LINEAR;
+			case YUME::TextureFilter::NEAREST: return VK_FILTER_NEAREST;
+			default: 
+				YM_CORE_WARN("Unknown texture filter, returning default...")
+				return VK_FILTER_LINEAR;
+		}
+	}
+
+	VkSamplerAddressMode TextureWrapToVk(TextureWrap p_Wrap)
+	{
+		switch (p_Wrap)
+		{
+			case YUME::TextureWrap::REPEAT:			 return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			case YUME::TextureWrap::MIRRORED_REPEAT: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			case YUME::TextureWrap::CLAMP_TO_EDGE:   return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			case YUME::TextureWrap::CLAMP_TO_BORDER: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+			default:
+				YM_CORE_WARN("Unknown texture wrap, returning default...")
+				return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		}
+	}
+
+	VkBorderColor TextureBorderColorToVk(TextureBorderColor p_BorderColor)
+	{
+		switch (p_BorderColor)
+		{
+			using enum YUME::TextureBorderColor;
+
+			case TRANSPARENT_BLACK_FLOAT:  return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+			case TRANSPARENT_BLACK_SRGB:   return VK_BORDER_COLOR_INT_TRANSPARENT_BLACK;
+			case OPAQUE_BLACK_FLOAT:	   return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+			case OPAQUE_BLACK_SRGB:		   return VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+			case OPAQUE_WHITE_FLOAT:	   return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+			case OPAQUE_WHITE_SRGB:		   return VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+			case CUSTOM_FLOAT:			   return VK_BORDER_COLOR_FLOAT_CUSTOM_EXT;
+			case CUSTOM_SRGB:			   return VK_BORDER_COLOR_INT_CUSTOM_EXT;
+			default:
+				YM_CORE_WARN("Unknown texture border color, returning default...")
+				return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		}
+	}
+
+	VkImageUsageFlagBits TextureUsageToVk(TextureUsage p_Usage)
+	{
+		switch (p_Usage)
+		{
+			using enum YUME::TextureUsage;
+
+			case TEXTURE_SAMPLED:			return VK_IMAGE_USAGE_SAMPLED_BIT;
+			case TEXTURE_COLOR_ATTACHMENT:  return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			case TEXTURE_DEPTH_STENCIL:		return VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+			default:
+				YM_CORE_ERROR("Unknown texture format!")
+				return (VkImageUsageFlagBits)0;
+		}
+	}
+
+	void CopyBufferToImage(VkBuffer p_Buffer, VkImage p_Image, uint32_t p_Width, uint32_t p_Height)
+	{
+		auto commandBuffer = BeginSingleTimeCommand();
+
+		VkBufferImageCopy region{};
+		region.bufferOffset = 0;
+		region.bufferRowLength = 0;
+		region.bufferImageHeight = 0;
+
+		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.baseArrayLayer = 0;
+		region.imageSubresource.layerCount = 1;
+
+		region.imageOffset = { 0, 0, 0 };
+		region.imageExtent = {
+			p_Width,
+			p_Height,
+			1
+		};
+
+		vkCmdCopyBufferToImage(
+			commandBuffer,
+			p_Buffer,
+			p_Image,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&region
+		);
+
+		EndSingleTimeCommand(commandBuffer);
+	}
 }
 

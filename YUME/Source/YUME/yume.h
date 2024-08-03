@@ -36,6 +36,8 @@
 #include "YUME/Renderer/uniform_buffer.h"
 #include "YUME/Renderer/vertex_array.h"
 #include "YUME/Renderer/pipeline.h"
+#include "YUME/Renderer/texture.h"
+#include "YUME/Renderer/texture_importer.h"
 // --------------------------
 
 

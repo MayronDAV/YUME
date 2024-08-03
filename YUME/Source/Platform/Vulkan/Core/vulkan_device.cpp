@@ -380,10 +380,12 @@ namespace YUME
 
 		YM_CORE_ASSERT(physDevice.Features.geometryShader == VK_TRUE, "Gemotry shader isn't supported!")
 		YM_CORE_ASSERT(physDevice.Features.tessellationShader == VK_TRUE, "Tesselation shader isn't supported!")
+		YM_CORE_ASSERT(physDevice.Features.samplerAnisotropy == VK_TRUE, "Anisotropy isn't supported!")
 
 		VkPhysicalDeviceFeatures physFeatures{ 0 };
 		physFeatures.geometryShader = VK_TRUE;
 		physFeatures.tessellationShader = VK_TRUE;
+		physFeatures.samplerAnisotropy = VK_TRUE;
 
 		auto queueCreateInfos = ConsolidateQueueCreateInfos(physDevice.QueueCreateInfos);
 
