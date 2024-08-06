@@ -10,6 +10,8 @@ namespace YUME
 {
 	Ref<VertexArray> VertexArray::Create()
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (Engine::GetAPI() == RenderAPI::Vulkan)
 			return CreateRef<VulkanVertexArray>();
 

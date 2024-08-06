@@ -9,6 +9,8 @@ namespace YUME
 
 	std::vector<VkDeviceQueueCreateInfo> ConsolidateQueueCreateInfos(const std::vector<VkDeviceQueueCreateInfo>& p_OriginalQueueInfos)
 	{
+		YM_PROFILE_FUNCTION()
+
 		std::unordered_map<uint32_t, VkDeviceQueueCreateInfo> queueInfoMap;
 		for (const auto& info : p_OriginalQueueInfos)
 		{
@@ -45,6 +47,8 @@ namespace YUME
 
 	VulkanPhysicalDevice::VulkanPhysicalDevice()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_TRACE("Getting gpus...")
 
 		auto instance = VulkanContext::GetInstance();
@@ -326,6 +330,8 @@ namespace YUME
 
 	VulkanDevice::~VulkanDevice()
 	{
+		YM_PROFILE_FUNCTION()
+
 		m_CommandPool.reset();
 		m_DescriptorPool->Destroy();
 
@@ -351,6 +357,8 @@ namespace YUME
 
 	void VulkanDevice::Init()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_TRACE("Creating vulkan device...")
 
 		m_PhysicalDevice = CreateScope<VulkanPhysicalDevice>();

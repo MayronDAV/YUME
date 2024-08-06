@@ -10,19 +10,20 @@ project "Sandbox"
 	files
 	{
 		"Source/**.h",
-		"Source/**.cpp"
+		"Source/**.cpp",
 	}
 
 	includedirs
 	{
 		"Source",
 		"%{wks.location}/YUME/Source",
-
+		"%{IncludeDir.optick}",
+		
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.imgui}/imgui",
 		"%{IncludeDir.imgui}/backends",
-		"%{IncludeDir.spdlog}"
+		"%{IncludeDir.spdlog}",
 	}
 
 	links 

@@ -10,6 +10,8 @@ namespace YUME
 {
 	RendererAPI* RendererAPI::Create()
 	{
+		YM_PROFILE_FUNCTION()
+
 		switch (Engine::GetAPI())
 		{
 			case YUME::RenderAPI::None:

@@ -2,6 +2,7 @@
 
 #include "YUME/Core/application.h"
 #include "YUME/Core/layer.h"
+#include "YUME/Core/log.h"
 
 // Events
 // --------------------------
@@ -40,6 +41,3 @@
 #include "YUME/Renderer/texture_importer.h"
 #include "YUME/Renderer/descriptor_set.h"
 // --------------------------
-
-
-#include "YUME/Core/log.h"

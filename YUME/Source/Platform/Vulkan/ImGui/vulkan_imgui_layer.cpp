@@ -33,6 +33,8 @@ namespace YUME
 {
 	void DrawImgui(VkCommandBuffer p_Cmd, const Ref<VulkanRenderPass>& p_RenderPass)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		auto extent = VulkanSwapchain::Get().GetExtent2D();
 
@@ -45,6 +47,8 @@ namespace YUME
 
 	VulkanImGuiLayer::~VulkanImGuiLayer()
 	{
+		YM_PROFILE_FUNCTION()
+
 		m_RenderPass.reset();
 
 		YM_CORE_TRACE("Destroying vulkan imgui descriptor pool...")
@@ -53,6 +57,8 @@ namespace YUME
 
 	void VulkanImGuiLayer::Init()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		auto& device = VulkanDevice::Get().GetDevice();
 		auto glfwWindow = (GLFWwindow*)Application::Get().GetWindow().GetNativeWindow();
@@ -147,6 +153,8 @@ namespace YUME
 
 	void VulkanImGuiLayer::NewFrame()
 	{
+		YM_PROFILE_FUNCTION()
+
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -154,6 +162,8 @@ namespace YUME
 
 	void VulkanImGuiLayer::Render()
 	{
+		YM_PROFILE_FUNCTION()
+
 		ImGui::Render();
 
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
@@ -174,6 +184,8 @@ namespace YUME
 
 	void VulkanImGuiLayer::OnResize_Impl(uint32_t p_Width, uint32_t p_Height)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 
 		auto* wd = &g_WindowData;
@@ -194,6 +206,8 @@ namespace YUME
 
 	void VulkanImGuiLayer::Clear()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_TRACE("Destroying vulkan imgui impl...")
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();

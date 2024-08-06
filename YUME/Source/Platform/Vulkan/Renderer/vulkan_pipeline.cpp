@@ -18,6 +18,8 @@ namespace YUME
 
 	VulkanPipeline::~VulkanPipeline()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_TRACE("Destroying vulkan vertex array...")
 
 		for (auto& buffer : m_VertexArrays)
@@ -36,6 +38,8 @@ namespace YUME
 
 	void VulkanPipeline::CleanUp()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_TRACE("Destroying vulkan pipeline...")
 		if (m_Pipeline != VK_NULL_HANDLE)
 			vkDestroyPipeline(VulkanDevice::Get().GetDevice(), m_Pipeline, VK_NULL_HANDLE);
@@ -43,6 +47,8 @@ namespace YUME
 
 	void VulkanPipeline::Init(const PipelineCreateInfo& p_CreateInfo)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(p_CreateInfo.Shader != nullptr)
 
 		m_Context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
@@ -210,6 +216,8 @@ namespace YUME
 
 	void VulkanPipeline::Invalidade()
 	{
+		YM_PROFILE_FUNCTION()
+
 		CleanUp();
 
 		Init(m_CreateInfo);
@@ -217,6 +225,8 @@ namespace YUME
 
 	void VulkanPipeline::Invalidade(const PipelineCreateInfo& p_CreateInfo)
 	{
+		YM_PROFILE_FUNCTION()
+
 		CleanUp();
 
 		Init(p_CreateInfo);
@@ -224,6 +234,8 @@ namespace YUME
 
 	void VulkanPipeline::Bind()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto commandBuffer = m_Context->GetCommandBuffer();
 
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);

@@ -10,6 +10,8 @@ namespace YUME
 {
 	VulkanRenderPass::~VulkanRenderPass()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto renderPass = m_RenderPass;
 		VulkanContext::PushFunction([renderPass]()
 		{
@@ -23,6 +25,7 @@ namespace YUME
 
 	void VulkanRenderPass::Init(bool p_ClearEnable)
 	{
+		YM_PROFILE_FUNCTION()
 		// TODO: Make it more configurable.
 
 		m_ClearEnable = p_ClearEnable;
@@ -76,6 +79,8 @@ namespace YUME
 
 	void VulkanRenderPass::Begin(VkCommandBuffer p_CommandBuffer, VkFramebuffer p_Frame, uint32_t p_Width, uint32_t p_Height, const glm::vec4& p_Color, bool p_ClearDepth)
 	{
+		YM_PROFILE_FUNCTION()
+
 		VkClearValue clearValue;
 		clearValue.color.float32[0] = p_Color.r;
 		clearValue.color.float32[1] = p_Color.g;
@@ -112,6 +117,8 @@ namespace YUME
 
 	void VulkanRenderPass::End(VkCommandBuffer p_CommandBuffer)
 	{
+		YM_PROFILE_FUNCTION()
+
 		vkCmdEndRenderPass(p_CommandBuffer);
 	}
 }

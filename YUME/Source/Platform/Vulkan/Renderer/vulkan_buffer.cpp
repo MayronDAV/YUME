@@ -12,6 +12,8 @@ namespace YUME
 
 	VulkanVertexBuffer::VulkanVertexBuffer(const void* p_Data, uint64_t p_SizeBytes, BufferUsage p_Usage)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (p_Usage == BufferUsage::STATIC)
 		{
 			YM_CORE_VERIFY(p_Data != nullptr)
@@ -40,6 +42,8 @@ namespace YUME
 
 	void VulkanVertexBuffer::Bind() const
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		auto commandBuffer = context->GetCommandBuffer();
 
@@ -50,6 +54,8 @@ namespace YUME
 
 	void VulkanVertexBuffer::Unbind() const
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		auto commandBuffer = context->GetCommandBuffer();
 
@@ -68,6 +74,8 @@ namespace YUME
 	VulkanIndexBuffer::VulkanIndexBuffer(const uint32_t* p_Indices, uint32_t p_Count)
 		: m_Count(p_Count)
 	{
+		YM_PROFILE_FUNCTION()
+
 		uint64_t sizeBytes = p_Count * sizeof(uint32_t);
 		m_Buffer = CreateScope<VulkanMemoryBuffer>(
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -81,6 +89,8 @@ namespace YUME
 
 	void VulkanIndexBuffer::Bind() const
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		auto commandBuffer = context->GetCommandBuffer();
 
@@ -90,6 +100,8 @@ namespace YUME
 	}
 	void VulkanIndexBuffer::Unbind() const
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		auto commandBuffer = context->GetCommandBuffer();
 

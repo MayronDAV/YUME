@@ -44,18 +44,13 @@ namespace YUME
 
 	VulkanWindow::~VulkanWindow()
 	{
-		try
-		{
-			Shutdown();
-		}
-		catch (const std::exception& e)
-		{
-			YM_CORE_ERROR("{}", e.what())
-		}
+		Shutdown();
 	}
 
 	void VulkanWindow::OnUpdate()
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (m_Data.Resized)
 		{
 			m_Context->OnResize();
@@ -90,6 +85,8 @@ namespace YUME
 
 	void VulkanWindow::Init(const WindowProps& p_Props)
 	{
+		YM_PROFILE_FUNCTION()
+
 		m_Data.Title = p_Props.Title;
 		m_Data.Width = p_Props.Width;
 		m_Data.Height = p_Props.Height;
@@ -105,7 +102,10 @@ namespace YUME
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-		m_Window = glfwCreateWindow((int)p_Props.Width, (int)p_Props.Height, m_Data.Title.c_str(), nullptr, nullptr);
+		{
+			YM_PROFILE_SCOPE("VulkanWindow::Init - glfwCreateWindow")
+			m_Window = glfwCreateWindow((int)p_Props.Width, (int)p_Props.Height, m_Data.Title.c_str(), nullptr, nullptr);
+		}
 		YM_CORE_ASSERT(m_Window)
 		m_Context->Init(m_Window);
 		++s_GLFWWindowCount;
@@ -207,6 +207,8 @@ namespace YUME
 
 	void VulkanWindow::Shutdown()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_WARN("{} window shutdown", m_Data.Title)
 		glfwDestroyWindow(m_Window);
 		--s_GLFWWindowCount;

@@ -144,6 +144,8 @@ namespace YUME
 	VulkanShader::VulkanShader(const std::string_view& p_ShaderPath)
 		: m_FilePath(p_ShaderPath)
 	{
+		YM_PROFILE_FUNCTION()
+
 		Utils::CreateDirectoryIfNeeded(s_CacheDirectory.string());
 
 		std::string source = ReadFile(p_ShaderPath);
@@ -172,6 +174,8 @@ namespace YUME
 
 	VulkanShader::~VulkanShader()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto shaderModules = m_ShaderModules;
 		auto layout = m_PipelineLayout;
 		auto descriptorSetLayouts = m_DescriptorSetLayouts;
@@ -199,6 +203,8 @@ namespace YUME
 
 	void VulkanShader::CleanUp()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto device = VulkanDevice::Get().GetDevice();
 
 		for (const auto& [stage, shaderModule] : m_ShaderModules)
@@ -214,6 +220,8 @@ namespace YUME
 
 	void VulkanShader::Bind()
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (auto pipeline = m_Pipeline.lock()) 
 		{
 			pipeline->Bind();
@@ -261,6 +269,8 @@ namespace YUME
 
 	std::string VulkanShader::ReadFile(const std::string_view& p_Filepath) const
 	{
+		YM_PROFILE_FUNCTION()
+
 		std::string result;
 		std::ifstream shaderFile{ p_Filepath.data(), std::ios::in | std::ios::binary};
 
@@ -282,6 +292,8 @@ namespace YUME
 
 	std::string VulkanShader::ProcessIncludeFiles(const std::string& p_Code) const
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto result = std::string();
 
 		const char* includeToken = "#include";
@@ -330,6 +342,8 @@ namespace YUME
 
 	VulkanShader::ShaderSource VulkanShader::PreProcess(const std::string& p_Source) const
 	{
+		YM_PROFILE_FUNCTION()
+
 		ShaderSource shaderSources;
 
 		const char* typeToken = "@type";
@@ -363,6 +377,8 @@ namespace YUME
 
 	void VulkanShader::CompileOrGetVulkanBinaries(const ShaderSource& p_ShaderSources)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto& shaderData = m_VulkanSPIRV;
 		shaderData.clear();
 		for (auto&& [stage, source] : p_ShaderSources)
@@ -448,6 +464,8 @@ namespace YUME
 
 	void VulkanShader::Reflect(ShaderType p_Stage, const std::vector<uint32_t>& p_ShaderData)
 	{
+		YM_PROFILE_FUNCTION()
+
 		spirv_cross::Compiler compiler(p_ShaderData);
 		spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
@@ -550,6 +568,8 @@ namespace YUME
 
 	void VulkanShader::CreateShaderModules()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto device = VulkanDevice::Get().GetDevice();
 
 		for (auto& [stage, code] : m_VulkanSPIRV)
@@ -576,6 +596,8 @@ namespace YUME
 
 	void VulkanShader::CreatePipelineLayout()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto device = VulkanDevice::Get().GetDevice();
 
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
@@ -611,6 +633,8 @@ namespace YUME
 
 	bool VulkanShader::UploadPushConstantData(const std::string& p_Name, const void* p_Data, size_t p_SizeBytes)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(p_Data != nullptr && p_SizeBytes > 0)
 
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());

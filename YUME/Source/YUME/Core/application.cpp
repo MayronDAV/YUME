@@ -22,6 +22,8 @@ namespace YUME
 
 	Application::Application()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_ASSERT(s_Instance == nullptr)
 		s_Instance = this;
 
@@ -42,12 +44,15 @@ namespace YUME
 		YUME::RendererCommand::Shutdown();
 
 		Engine::Release();
+
+		YM_PROFILE_SHUTDOWN()
 	}
 
 	void Application::Run()
 	{
 		while (m_Running)
 		{
+			YM_PROFILE_FRAME("Application::MainLoop")
 
 			double time = Clock::GetTime();
 			Timestep timestep = time - m_LastFrameTime;
@@ -55,6 +60,8 @@ namespace YUME
 
 			if (m_ReloadImGui)
 			{
+				YM_PROFILE_SCOPE("Appliation::Run - ReloadImGui")
+
 				m_LayerStack.PopOverlay(m_ImGuiLayer);
 				m_ImGuiLayer = ImGuiLayer::Create();
 				PushOverlay(m_ImGuiLayer);

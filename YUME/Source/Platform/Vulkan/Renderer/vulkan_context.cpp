@@ -4,6 +4,8 @@
 #include "Platform/Vulkan/Core/vulkan_device.h"
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 
+#include "optick.h"
+
 // Lib
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -75,6 +77,8 @@ namespace YUME
 
 	VulkanContext::~VulkanContext()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_TRACE("Destroying vulkan context...")
 
 		auto& device = VulkanDevice::Get().GetDevice();
@@ -119,6 +123,8 @@ namespace YUME
 
 	void VulkanContext::Init(void* p_Window)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(p_Window)
 		m_Window = (GLFWwindow*)p_Window;
 
@@ -145,6 +151,53 @@ namespace YUME
 		YM_CORE_TRACE("Creating vulkan logical device...")
 		VulkanDevice::Get().Init();
 
+		auto device = VulkanDevice::Get().GetDevice();
+		auto physicalDevice = VulkanDevice::Get().GetPhysicalDevice();
+		auto queue = VulkanDevice::Get().GetGraphicQueue();
+		auto graphicIndex = (uint32_t)VulkanDevice::Get().GetPhysicalDeviceStruct().Indices.Graphics;
+
+		Optick::VulkanFunctions vulkanFunctions{};
+		{
+			vulkanFunctions.vkGetPhysicalDeviceProperties = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties_>(
+				vkGetInstanceProcAddr(s_Instance, "vkGetPhysicalDeviceProperties"));
+			vulkanFunctions.vkCreateQueryPool = reinterpret_cast<PFN_vkCreateQueryPool_>(
+				vkGetDeviceProcAddr(device, "vkCreateQueryPool"));
+			vulkanFunctions.vkCreateCommandPool = reinterpret_cast<PFN_vkCreateCommandPool_>(
+				vkGetDeviceProcAddr(device, "vkCreateCommandPool"));
+			vulkanFunctions.vkAllocateCommandBuffers = reinterpret_cast<PFN_vkAllocateCommandBuffers_>(
+				vkGetDeviceProcAddr(device, "vkAllocateCommandBuffers"));
+			vulkanFunctions.vkCreateFence = reinterpret_cast<PFN_vkCreateFence_>(
+				vkGetDeviceProcAddr(device, "vkCreateFence"));
+			vulkanFunctions.vkCmdResetQueryPool = reinterpret_cast<PFN_vkCmdResetQueryPool_>(
+				vkGetDeviceProcAddr(device, "vkCmdResetQueryPool"));
+			vulkanFunctions.vkQueueSubmit = reinterpret_cast<PFN_vkQueueSubmit_>(
+				vkGetDeviceProcAddr(device, "vkQueueSubmit"));
+			vulkanFunctions.vkWaitForFences = reinterpret_cast<PFN_vkWaitForFences_>(
+				vkGetDeviceProcAddr(device, "vkWaitForFences"));
+			vulkanFunctions.vkResetCommandBuffer = reinterpret_cast<PFN_vkResetCommandBuffer_>(
+				vkGetDeviceProcAddr(device, "vkResetCommandBuffer"));
+			vulkanFunctions.vkCmdWriteTimestamp = reinterpret_cast<PFN_vkCmdWriteTimestamp_>(
+				vkGetDeviceProcAddr(device, "vkCmdWriteTimestamp"));
+			vulkanFunctions.vkGetQueryPoolResults = reinterpret_cast<PFN_vkGetQueryPoolResults_>(
+				vkGetDeviceProcAddr(device, "vkGetQueryPoolResults"));
+			vulkanFunctions.vkBeginCommandBuffer = reinterpret_cast<PFN_vkBeginCommandBuffer_>(
+				vkGetDeviceProcAddr(device, "vkBeginCommandBuffer"));
+			vulkanFunctions.vkEndCommandBuffer = reinterpret_cast<PFN_vkEndCommandBuffer_>(
+				vkGetDeviceProcAddr(device, "vkEndCommandBuffer"));
+			vulkanFunctions.vkResetFences = reinterpret_cast<PFN_vkResetFences_>(
+				vkGetDeviceProcAddr(device, "vkResetFences"));
+			vulkanFunctions.vkDestroyCommandPool = reinterpret_cast<PFN_vkDestroyCommandPool_>(
+				vkGetDeviceProcAddr(device, "vkDestroyCommandPool"));
+			vulkanFunctions.vkDestroyQueryPool = reinterpret_cast<PFN_vkDestroyQueryPool_>(
+				vkGetDeviceProcAddr(device, "vkDestroyQueryPool"));
+			vulkanFunctions.vkDestroyFence = reinterpret_cast<PFN_vkDestroyFence_>(
+				vkGetDeviceProcAddr(device, "vkDestroyFence"));
+			vulkanFunctions.vkFreeCommandBuffers = reinterpret_cast<PFN_vkFreeCommandBuffers_>(
+				vkGetDeviceProcAddr(device, "vkFreeCommandBuffers"));
+		}
+
+		YM_PROFILE_GPU_INIT_VULKAN(&device, &physicalDevice, &queue, &graphicIndex, 1, &vulkanFunctions)
+
 		m_CommandBuffers.Init(MAX_FRAMES_IN_FLIGHT);
 
 		YM_CORE_TRACE("Creating vulkan swapchain...")
@@ -167,6 +220,8 @@ namespace YUME
 
 	void VulkanContext::SwapBuffer()
 	{	
+		YM_PROFILE_FUNCTION()
+
 		if (m_HasDrawCommands)
 		{
 
@@ -182,6 +237,8 @@ namespace YUME
 			presentInfo.pImageIndices = &m_CurrentImageIndex;
 			presentInfo.pResults = nullptr; // Optional
 
+			YM_PROFILE_GPU_FLIP(VulkanSwapchain::Get().GetSwapChain())
+			OPTICK_CATEGORY("Present", Optick::Category::Wait)
 			auto& presentQueue = VulkanDevice::Get().GetPresentQueue();
 			auto res = vkQueuePresentKHR(presentQueue, &presentInfo);
 
@@ -201,10 +258,14 @@ namespace YUME
 
 		m_CurrentFrame = (m_CurrentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 		m_HasDrawCommands = false; // Reset the flag for the next frame
+
+		OPTICK_GPU_CONTEXT(m_CommandBuffers.Get(m_CurrentFrame))
 	}
 
 	void VulkanContext::RecreateSwapchain()
 	{
+		YM_PROFILE_FUNCTION()
+
 		// TODO: Make this class not block the main loop if the width or height is 0
 		// instead, just don't recreate and don't call other things like vkAcquireNextImageKHR.
 
@@ -260,6 +321,8 @@ namespace YUME
 
 	void VulkanContext::BeginFrame()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto& device = VulkanDevice::Get().GetDevice();
 		vkWaitForFences(device, 1, &m_InFlightFences[m_CurrentFrame], VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &m_InFlightFences[m_CurrentFrame]);
@@ -290,6 +353,8 @@ namespace YUME
 
 	void VulkanContext::EndFrame()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto images = VulkanSwapchain::Get().GetImages();
 		Utils::TransitionImageLayout(images[m_CurrentFrame], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
@@ -317,6 +382,8 @@ namespace YUME
 
 	void VulkanContext::CreateInstance()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_TRACE("Creating vulkan instance...")
 
 		VkApplicationInfo appInfo = {
@@ -408,6 +475,8 @@ namespace YUME
 
 	void VulkanContext::CreateSyncObjs()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto& device = VulkanDevice::Get().GetDevice();
 
 		m_SignalSemaphores.resize(MAX_FRAMES_IN_FLIGHT);

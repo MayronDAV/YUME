@@ -23,6 +23,7 @@
 	#endif
 #endif
 
+
 #define YM_NO_DLLINTERFACE_WARN 1
 
 #define YM_EXPAND_MACRO(x) x
@@ -40,8 +41,12 @@
 		#define YM_ALWAYS_INLINE __forceinline
 	#endif
 #else
+	#define YM_PROFILE
+
 	#define YM_ALWAYS_INLINE inline
 #endif
+
+
 
 #define YM_FORCE_INLINE YM_ALWAYS_INLINE
 

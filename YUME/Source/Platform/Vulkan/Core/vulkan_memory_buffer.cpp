@@ -22,6 +22,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Init(VkBufferUsageFlags p_Usage, VkMemoryPropertyFlags p_MemoryPropertyFlags, VkDeviceSize p_SizeBytes)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(p_SizeBytes > 0)
 
 		auto device = VulkanDevice::Get().GetDevice();
@@ -59,12 +61,16 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Resize(VkDeviceSize p_SizeBytes, const void* p_Data)
 	{
+		YM_PROFILE_FUNCTION()
+
 		Destroy(!m_DeleteWithoutQueue);
 		Init(m_UsageFlags, m_MemoryPropertyFlags, p_SizeBytes);
 	}
 
 	void VulkanMemoryBuffer::SetData(VkDeviceSize p_SizeBytes, const void* p_Data, VkDeviceSize p_Offset, bool p_AddBarrier)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(p_Data != nullptr && p_SizeBytes > 0)
 
 		auto device = VulkanDevice::Get().GetDevice();
@@ -183,6 +189,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Flush(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(p_SizeBytes > 0)
 
 		VkMappedMemoryRange mappedRange = {};
@@ -194,6 +202,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Invalidate(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(p_SizeBytes > 0)
 
 		VkMappedMemoryRange mappedRange = {};
@@ -205,6 +215,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Destroy(bool p_DeletionQueue) noexcept
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto device = VulkanDevice::Get().GetDevice();
 		auto buffer = m_Buffer;
 		auto memory = m_Memory;

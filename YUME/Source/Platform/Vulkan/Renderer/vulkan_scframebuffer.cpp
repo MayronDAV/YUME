@@ -9,6 +9,8 @@ namespace YUME
 {
 	void VulkanSCFramebuffer::CleanUp()
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (m_Framebuffer != VK_NULL_HANDLE)
 		{
 			YM_CORE_TRACE("Destroying vulkan swapchain framebuffer...")
@@ -18,6 +20,8 @@ namespace YUME
 
 	void VulkanSCFramebuffer::Init(VkRenderPass p_RenderPass, VkImageView p_ImageView, uint32_t p_Width, uint32_t p_Height)
 	{
+		YM_PROFILE_FUNCTION()
+
 		m_RenderPass = p_RenderPass;
 
 		VkFramebufferCreateInfo framebufferInfo{};
@@ -46,6 +50,8 @@ namespace YUME
 
 	void VulkanSCFramebuffer::Invalidate(VkImageView p_ImageView, uint32_t p_Width, uint32_t p_Height)
 	{
+		YM_PROFILE_FUNCTION()
+
 		CleanUp();
 
 		Init(m_RenderPass, p_ImageView, p_Width, p_Height);

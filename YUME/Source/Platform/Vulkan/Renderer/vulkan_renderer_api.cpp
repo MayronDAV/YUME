@@ -25,6 +25,8 @@ namespace YUME
 
 	void VulkanRendererAPI::SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 
 		VkViewport viewport{};
@@ -47,6 +49,8 @@ namespace YUME
 
 	void VulkanRendererAPI::Begin()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 
 		const auto& renderPass = m_Context->GetRenderPass();
@@ -62,6 +66,8 @@ namespace YUME
 
 	void VulkanRendererAPI::Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 
 		p_VertexArray->Bind();
@@ -70,6 +76,8 @@ namespace YUME
 
 	void VulkanRendererAPI::DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 
 		p_VertexArray->Bind();
@@ -78,6 +86,8 @@ namespace YUME
 
 	void VulkanRendererAPI::End()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 		m_Context->GetRenderPass()->End(commandBuffer);
 	}

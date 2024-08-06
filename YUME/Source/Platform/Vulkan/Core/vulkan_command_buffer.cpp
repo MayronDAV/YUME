@@ -10,11 +10,15 @@ namespace YUME
 {
 	VulkanCommandBuffer::~VulkanCommandBuffer()
 	{
+		YM_PROFILE_FUNCTION()
+
 		Free();
 	}
 
 	void VulkanCommandBuffer::Free(int p_Index)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (!m_CommandBuffers.empty())
 		{
 			YM_CORE_TRACE("Destroying vulkan command buffer...")
@@ -25,6 +29,8 @@ namespace YUME
 
 	void VulkanCommandBuffer::Free()
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (!m_CommandBuffers.empty())
 		{
 			YM_CORE_TRACE("Destroying vulkan command buffers...")
@@ -35,6 +41,8 @@ namespace YUME
 
 	void VulkanCommandBuffer::Reset() const
 	{
+		YM_PROFILE_FUNCTION()
+
 		for (auto& buffer : m_CommandBuffers)
 		{
 			vkResetCommandBuffer(buffer, 0);
@@ -44,11 +52,15 @@ namespace YUME
 
 	void VulkanCommandBuffer::Reset(int p_Index)
 	{
+		YM_PROFILE_FUNCTION()
+
 		vkResetCommandBuffer(m_CommandBuffers[p_Index], 0);
 	}
 
 	void VulkanCommandBuffer::Init(int p_Count)
 	{
+		YM_PROFILE_FUNCTION()
+
 		m_Count = p_Count;
 
 		auto commandPool = VulkanDevice::Get().GetCommandPool();
@@ -68,6 +80,8 @@ namespace YUME
 
 	void VulkanCommandBuffer::Begin(int p_Index)
 	{
+		YM_PROFILE_FUNCTION()
+
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -77,6 +91,8 @@ namespace YUME
 
 	void VulkanCommandBuffer::End(int p_Index)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto res = vkEndCommandBuffer(m_CommandBuffers[p_Index]);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
 	}

@@ -11,6 +11,8 @@ namespace YUME
 
 	Ref<VertexBuffer> VertexBuffer::Create(const void* p_Data, uint64_t p_SizeBytes, BufferUsage p_Usage)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (Engine::GetAPI() == RenderAPI::Vulkan)
 			return CreateRef<VulkanVertexBuffer>(p_Data, p_SizeBytes, p_Usage);
 
@@ -21,6 +23,8 @@ namespace YUME
 
 	Ref<IndexBuffer> IndexBuffer::Create(uint32_t* p_Indices, uint32_t p_Count)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (Engine::GetAPI() == RenderAPI::Vulkan)
 			return CreateRef<VulkanIndexBuffer>(p_Indices, p_Count);
 

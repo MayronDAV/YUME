@@ -137,8 +137,6 @@ class ExampleLayer : public YUME::Layer
 
 			m_DescriptorSet->Bind(0);
 			m_DescriptorSet->UploadUniform(0, m_CameraBuffer);
-	
-			//m_DescriptorSet->Bind(1);
 
 			int size = 25;
 			for (int x = 0; x < size; x++)

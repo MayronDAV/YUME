@@ -11,9 +11,16 @@ namespace YUME
 
 	Ref<Texture2D> TextureImporter::LoadTexture2D(const std::string& p_Path)
 	{
+		YM_PROFILE_FUNCTION()
+
 		int width, height, channels;
 		std::string path = p_Path;
-		stbi_uc* pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+		stbi_uc* pixels; 
+		{
+			YM_PROFILE_SCOPE("TextureImporter::LoadTexture2D - stbi_load")
+			pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+		}
+
 		if (pixels == nullptr)
 		{
 			YM_CORE_ERROR("Failed to load texture image!")
@@ -43,6 +50,8 @@ namespace YUME
 
 	Ref<Texture2D> TextureImporter::LoadTexture2D(const std::string& p_Path, const TextureSpecification& p_Spec)
 	{
+		YM_PROFILE_FUNCTION()
+
 		TextureSpecification spec = p_Spec;
 		int force_channel;
 		switch (spec.Format)
@@ -56,7 +65,12 @@ namespace YUME
 
 		int width, height, channels;
 		std::string path = p_Path;
-		stbi_uc* pixels = stbi_load(path.c_str(), &width, &height, &channels, force_channel);
+		stbi_uc* pixels;
+		{
+			YM_PROFILE_SCOPE("TextureImporter::LoadTexture2D - stbi_load")
+			pixels = stbi_load(path.c_str(), &width, &height, &channels, force_channel);
+		}
+
 		if (pixels == nullptr)
 		{
 			YM_CORE_ERROR("Failed to load texture image!")

@@ -73,6 +73,8 @@ namespace YUME
 
 	void VulkanVertexArray::AddVertexBuffer(const Ref<VertexBuffer>& p_VertexBuffer)
 	{
+		YM_PROFILE_FUNCTION()
+
 		const auto& layout = p_VertexBuffer->GetLayout();
 
 		VkVertexInputBindingDescription bindingDescription = {};

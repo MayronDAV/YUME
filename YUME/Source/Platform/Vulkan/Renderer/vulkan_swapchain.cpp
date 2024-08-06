@@ -16,6 +16,8 @@ namespace YUME
 
 	void VulkanSwapchain::CleanUp()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto device = VulkanDevice::Get().GetDevice();
 
 		YM_CORE_TRACE("Destroying vulkan image views...")
@@ -30,6 +32,8 @@ namespace YUME
 
 	void VulkanSwapchain::Invalidade(uint32_t p_Width, uint32_t p_Height)
 	{
+		YM_PROFILE_FUNCTION()
+
 		CleanUp();
 
 		Init(m_Vsync, m_Window, { p_Width, p_Height });
@@ -37,6 +41,8 @@ namespace YUME
 
 	void VulkanSwapchain::Init(bool p_Vsync, void* p_Window, VkExtent2D p_Extent)
 	{
+		YM_PROFILE_FUNCTION()
+
 		m_Vsync = p_Vsync;
 		m_Window = p_Window;
 

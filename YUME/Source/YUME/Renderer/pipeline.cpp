@@ -9,6 +9,8 @@ namespace YUME
 {
 	Ref<Pipeline> Pipeline::Create(const PipelineCreateInfo& p_CreateInfo)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (Engine::GetAPI() == RenderAPI::Vulkan)
 			return CreateRef<VulkanPipeline>(p_CreateInfo);
 

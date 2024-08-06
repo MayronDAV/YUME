@@ -16,6 +16,8 @@
 #include "YUME/Core/base.h"
 #include "YUME/Core/log.h"
 
+#include "YUME/Debug/instrumentor.h"
+
 #ifdef YM_PLATFORM_WINDOWS
 	#include <Windows.h>
 #endif

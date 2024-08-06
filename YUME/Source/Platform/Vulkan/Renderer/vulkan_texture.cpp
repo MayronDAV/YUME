@@ -17,6 +17,8 @@ namespace YUME
 
 	VulkanTexture2D::VulkanTexture2D(const TextureSpecification& p_Spec, const unsigned char* p_Data, uint32_t p_Size)
 	{
+		YM_PROFILE_FUNCTION()
+
 		Init(p_Spec);
 
 		auto stagingBuffer = new VulkanMemoryBuffer(
@@ -53,9 +55,9 @@ namespace YUME
 		samplerInfo.minLod = 0.0f;
 		samplerInfo.maxLod = 0.0f;
 
+		VkSamplerCustomBorderColorCreateInfoEXT borderColorCI{};
 		if (borderColor == VK_BORDER_COLOR_INT_CUSTOM_EXT)
-		{
-			VkSamplerCustomBorderColorCreateInfoEXT borderColorCI{};
+		{		
 			borderColorCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT;
 			borderColorCI.customBorderColor.int32[0] = (int32_t)p_Spec.BorderColor.x;
 			borderColorCI.customBorderColor.int32[1] = (int32_t)p_Spec.BorderColor.y;
@@ -66,7 +68,6 @@ namespace YUME
 		}
 		else if (borderColor == VK_BORDER_COLOR_FLOAT_CUSTOM_EXT)
 		{
-			VkSamplerCustomBorderColorCreateInfoEXT borderColorCI{};
 			borderColorCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT;
 			borderColorCI.customBorderColor.float32[0] = p_Spec.BorderColor.x;
 			borderColorCI.customBorderColor.float32[1] = p_Spec.BorderColor.y;
@@ -76,8 +77,10 @@ namespace YUME
 			samplerInfo.pNext = &borderColorCI;
 		}
 
-		if (vkCreateSampler(VulkanDevice::Get().GetDevice(), &samplerInfo, VK_NULL_HANDLE, &m_TextureSampler) != VK_SUCCESS) {
-			YM_CORE_ERROR("Failed to create texture sampler!");
+		if (vkCreateSampler(VulkanDevice::Get().GetDevice(), &samplerInfo, VK_NULL_HANDLE, &m_TextureSampler) != VK_SUCCESS)
+		{
+			YM_CORE_ERROR("Failed to create texture sampler!")
+			return;
 		}
 
 		TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -91,6 +94,8 @@ namespace YUME
 
 	VulkanTexture2D::~VulkanTexture2D()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto image = m_TextureImage;
 		auto imageView = m_TextureImageView;
 		auto memory = m_TextureImageMemory;
@@ -121,6 +126,8 @@ namespace YUME
 
 	void VulkanTexture2D::TransitionImage(VkImageLayout p_NewLayout)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (p_NewLayout != m_TextureImageLayout)
 		{
 			Utils::TransitionImageLayout(m_TextureImage, m_TextureImageLayout, p_NewLayout);
@@ -142,6 +149,8 @@ namespace YUME
 
 	void VulkanTexture2D::Init(const TextureSpecification& p_Spec)
 	{
+		YM_PROFILE_FUNCTION()
+
 		m_Specification = p_Spec;
 		m_Channels = Utils::TextureFormatChannels(p_Spec.Format);
 		m_VkFormat = Utils::TextureFormatToVk(p_Spec.Format);
@@ -155,6 +164,8 @@ namespace YUME
 	void VulkanTexture2D::CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
 		VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, VkDeviceMemory& p_ImageMemory)
 	{
+		YM_PROFILE_FUNCTION()
+
 		VkImageCreateInfo imageInfo{};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -182,6 +193,8 @@ namespace YUME
 
 	void VulkanTexture2D::AllocateImageMemory(VkImage& p_Image, VkDeviceMemory& p_ImageMemory, VkMemoryPropertyFlags p_Properties)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto device = VulkanDevice::Get().GetDevice();
 		
 		VkMemoryRequirements memRequirements;
@@ -202,6 +215,8 @@ namespace YUME
 
 	VkImageView VulkanTexture2D::CreateImageView(VkImage p_Image, VkFormat p_Format)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto device = VulkanDevice::Get().GetDevice();
 
 		VkImageViewCreateInfo viewInfo{};

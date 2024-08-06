@@ -24,6 +24,8 @@ namespace YUME
 
 		VkDescriptorPool GetPool()
 		{
+			YM_PROFILE_FUNCTION()
+
 			if (!FreeDescriptorPools.empty())
 			{
 				VkDescriptorPool pool = FreeDescriptorPools.back();
@@ -40,6 +42,8 @@ namespace YUME
 
 		void ResetUsedDescriptorPools()
 		{
+			YM_PROFILE_FUNCTION()
+
 			for (auto& pool : UsedDescriptorPools)
 			{
 				vkResetDescriptorPool(VulkanDevice::Get().GetDevice(), pool, 0);
@@ -54,6 +58,8 @@ namespace YUME
 
 	VulkanDescriptorSet::VulkanDescriptorSet(const Ref<Shader>& p_Shader)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (s_Data == nullptr) s_Data = new DescData();
 		if (s_Data->CurrentPool == VK_NULL_HANDLE)
 		{
@@ -88,6 +94,8 @@ namespace YUME
 
 	VulkanDescriptorSet::~VulkanDescriptorSet()
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (s_Data != nullptr)
 		{
 			auto usedDescriptorPools = s_Data->UsedDescriptorPools;
@@ -125,6 +133,8 @@ namespace YUME
 
 	void VulkanDescriptorSet::Bind(uint32_t p_Set)
 	{
+		YM_PROFILE_FUNCTION()
+
 		m_CurrentBindSet = p_Set;
 		CheckIfDescriptorSetIsUpdated();
 
@@ -145,6 +155,8 @@ namespace YUME
 
 	void VulkanDescriptorSet::Unbind()
 	{
+		YM_PROFILE_FUNCTION()
+
 		m_CurrentBindSet = -1;
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		auto commandBuffer = context->GetCommandBuffer();
@@ -163,6 +175,8 @@ namespace YUME
 
 	void VulkanDescriptorSet::UploadUniform(uint32_t p_Binding, const Ref<UniformBuffer>& p_UniformBuffer)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(m_CurrentBindSet >= 0, "Did you call Bind(uint32_t p_Set)?")
 		YM_CORE_VERIFY(!m_DescriptorSetLayouts.empty())
 		YM_CORE_VERIFY(!m_DescriptorSets.empty())
@@ -190,6 +204,8 @@ namespace YUME
 
 	void VulkanDescriptorSet::UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>& p_Texture)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(m_CurrentBindSet >= 0, "Did you call Bind(uint32_t p_Set)?")
 		YM_CORE_VERIFY(!m_DescriptorSetLayouts.empty())
 		YM_CORE_VERIFY(!m_DescriptorSets.empty())
@@ -217,6 +233,8 @@ namespace YUME
 
 	void VulkanDescriptorSet::CheckIfDescriptorSetIsUpdated()
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (m_CurrentBindSet >= 0 && m_DescriptorUpdated[m_CurrentBindSet])
 		{
 			m_DescriptorUpdated[m_CurrentBindSet] = false;

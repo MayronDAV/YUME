@@ -10,6 +10,8 @@ namespace YUME
 {
 	Ref<Texture2D> Texture2D::Create(const TextureSpecification& p_Spec)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (Engine::GetAPI() == RenderAPI::Vulkan)
 			return CreateRef<VulkanTexture2D>(p_Spec);
 
@@ -19,6 +21,8 @@ namespace YUME
 
 	Ref<Texture2D> Texture2D::Create(const TextureSpecification& p_Spec, const unsigned char* p_Data, uint32_t p_Size)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (Engine::GetAPI() == RenderAPI::Vulkan)
 			return CreateRef<VulkanTexture2D>(p_Spec, p_Data, p_Size);
 

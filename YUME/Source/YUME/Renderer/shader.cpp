@@ -11,6 +11,8 @@ namespace YUME
 {
 	Ref<Shader> Shader::Create(const std::string& p_ShaderPath)
 	{
+		YM_PROFILE_FUNCTION()
+
 		switch (Engine::GetAPI())
 		{
 			case RenderAPI::Vulkan: return CreateRef<VulkanShader>(p_ShaderPath);

@@ -92,6 +92,8 @@ namespace YUME::Utils
 
 	void TransitionImageLayout(VkImage p_Image, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto commandBuffer = BeginSingleTimeCommand();
 
 		VkImageMemoryBarrier barrier = {};
@@ -178,6 +180,8 @@ namespace YUME::Utils
 
 	VkCommandBuffer BeginSingleTimeCommand()
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto commandPool = VulkanDevice::Get().GetCommandPool();
 		auto& device = VulkanDevice::Get().GetDevice();
 
@@ -200,6 +204,8 @@ namespace YUME::Utils
 
 	void EndSingleTimeCommand(VkCommandBuffer p_CommandBuffer)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto commandPool = VulkanDevice::Get().GetCommandPool();
 		auto& device = VulkanDevice::Get().GetDevice();
 
@@ -383,6 +389,8 @@ namespace YUME::Utils
 
 	void CopyBufferToImage(VkBuffer p_Buffer, VkImage p_Image, uint32_t p_Width, uint32_t p_Height)
 	{
+		YM_PROFILE_FUNCTION()
+
 		auto commandBuffer = BeginSingleTimeCommand();
 
 		VkBufferImageCopy region{};

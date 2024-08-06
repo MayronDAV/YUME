@@ -6,11 +6,22 @@ project "YUME"
 	targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
 
+	pchheader "YUME/yumepch.h"
+	pchsource "Source/YUME/yumepch.cpp"
 
 	files
 	{
 		"Source/**.h",
 		"Source/**.cpp",
+
+		"%{IncludeDir.optick}/*.h",
+		"%{IncludeDir.optick}/*.cpp",
+	}
+
+	vpaths 
+	{
+		["Header Files/Thirdparty/Optick"] = "%{IncludeDir.optick}/*.h",
+		["Source Files/Thirdparty/Optick"] = "%{IncludeDir.optick}/*.cpp"
 	}
 
 	includedirs
@@ -25,6 +36,7 @@ project "YUME"
 		"%{IncludeDir.imgui}/imgui",
 		"%{IncludeDir.imgui}/backends",
 		"%{IncludeDir.stb}",
+		"%{IncludeDir.optick}",
 		"%{IncludeDir.Vulkan}",
 		"%{LibraryDir.VulkanSDK}"
 	}
@@ -39,8 +51,14 @@ project "YUME"
 		"%{Library.Vulkan}"
 	}
 
-	pchheader "YUME/yumepch.h"
-	pchsource "Source/YUME/yumepch.cpp"
+	defines
+	{
+		"YM_BUILD_DLL",
+		"OPTICK_EXPORT"
+	}
+
+	filter "files:../Thirdparty/optick/src/**.cpp"
+		flags { "NoPCH" }
 
 	local source = "%{wks.location}/bin/" .. outputdir .. "/YUME/YUME.dll"
 	local destination = "%{wks.location}/bin/" .. outputdir .. "/Sandbox"
@@ -53,7 +71,7 @@ project "YUME"
 		defines 
 		{
 			"YM_PLATFORM_WINDOWS",
-			"YM_BUILD_DLL"
+			
 		}
 
 		postbuildcommands
@@ -69,8 +87,7 @@ project "YUME"
 		
 		defines 
 		{
-			"YM_PLATFORM_LINUX",
-			"YM_BUILD_DLL"
+			"YM_PLATFORM_LINUX"
 		}
 
 		postbuildcommands 

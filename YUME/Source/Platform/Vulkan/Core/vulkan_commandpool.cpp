@@ -8,6 +8,8 @@ namespace YUME
 {
 	VulkanCommandPool::VulkanCommandPool(uint32_t p_QueueIndex, VkCommandPoolCreateFlags p_Flags)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_TRACE("Creating vulkan command pool...")
 		VkCommandPoolCreateInfo cmdPoolCI{};
 		cmdPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -19,12 +21,16 @@ namespace YUME
 
 	VulkanCommandPool::~VulkanCommandPool()
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_TRACE("Destroying vulkan command pool...")
 		vkDestroyCommandPool(VulkanDevice::Get().GetDevice(), m_Handle, nullptr);
 	}
 
 	void VulkanCommandPool::Reset()
 	{
+		YM_PROFILE_FUNCTION()
+
 		vkResetCommandPool(VulkanDevice::Get().GetDevice(), m_Handle, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
 	}
 }

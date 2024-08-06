@@ -67,6 +67,8 @@ namespace YUME
 
 	ImGuiLayer* ImGuiLayer::Create()
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (Engine::GetAPI() == RenderAPI::Vulkan)
 			return new VulkanImGuiLayer();
 
