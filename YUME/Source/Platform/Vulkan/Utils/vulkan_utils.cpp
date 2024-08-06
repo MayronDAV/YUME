@@ -413,5 +413,18 @@ namespace YUME::Utils
 
 		EndSingleTimeCommand(commandBuffer);
 	}
+
+	VkShaderStageFlagBits ShaderTypeToVK(ShaderType p_Type)
+	{
+		switch (p_Type)
+		{
+			case ShaderType::VERTEX: return VK_SHADER_STAGE_VERTEX_BIT;
+			case ShaderType::FRAGMENT: return VK_SHADER_STAGE_FRAGMENT_BIT;
+			default:
+				YM_CORE_ERROR("Unknown shader type")
+				return (VkShaderStageFlagBits)0;
+		}
+	}
+
 }
 

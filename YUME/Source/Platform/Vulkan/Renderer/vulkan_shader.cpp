@@ -12,6 +12,7 @@
 #include <spirv_cross/spirv_cross.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "vulkan_uniform_buffer.h"
+#include "vulkan_texture.h"
 
 
 
@@ -107,18 +108,6 @@ namespace YUME
 			}
 		}
 
-		static VkShaderStageFlagBits ShaderTypeToVK(ShaderType p_Type)
-		{
-			switch (p_Type)
-			{
-			case ShaderType::VERTEX: return VK_SHADER_STAGE_VERTEX_BIT;
-			case ShaderType::FRAGMENT: return VK_SHADER_STAGE_FRAGMENT_BIT;
-			default:
-				YM_CORE_ERROR("Unknown shader type")
-					return (VkShaderStageFlagBits)0;
-			}
-		}
-
 		static std::string_view ShaderStageToString(ShaderType p_Stage)
 		{
 			switch (p_Stage)
@@ -167,7 +156,6 @@ namespace YUME
 		CompileOrGetVulkanBinaries(shaderSources);
 		CreateShaderModules();
 		CreatePipelineLayout();
-		CreateDescriptorSet();
 
 		timer.Stop();
 		YM_CORE_WARN("Shader creation took {0} ms", timer.Elapsed())
@@ -186,8 +174,8 @@ namespace YUME
 	{
 		auto shaderModules = m_ShaderModules;
 		auto layout = m_PipelineLayout;
-		auto setLayouts = m_DescriptorSetLayouts;
-		VulkanContext::PushFunction([shaderModules, layout, setLayouts]()
+		auto descriptorSetLayouts = m_DescriptorSetLayouts;
+		VulkanContext::PushFunction([shaderModules, layout, descriptorSetLayouts]()
 		{
 			auto device = VulkanDevice::Get().GetDevice();
 
@@ -201,8 +189,8 @@ namespace YUME
 			YM_CORE_TRACE("Destroying vulkan pipeline layout...")
 			vkDestroyPipelineLayout(device, layout, VK_NULL_HANDLE);
 
-			YM_CORE_TRACE("Destroying vulkan descriptor set layouts...")
-			for (auto& setLayout : setLayouts)
+			YM_CORE_TRACE("Destroying vulkan descriptor set layout...")
+			for (const auto& [set, setLayout] : descriptorSetLayouts)
 			{
 				vkDestroyDescriptorSetLayout(device, setLayout, VK_NULL_HANDLE);
 			}
@@ -234,24 +222,10 @@ namespace YUME
 		{
 			YM_CORE_ERROR("Pipelie has deleted!")
 		}
-
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
-
-		vkCmdBindDescriptorSets(commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			m_PipelineLayout,
-			0,
-			1,
-			&m_DescriptorSet,
-			0,
-			nullptr
-		);
 	}
 
 	void VulkanShader::Unbind()
 	{
-		// Nothing
 	}
 
 	const std::string_view& VulkanShader::GetName() const
@@ -284,28 +258,6 @@ namespace YUME
 		UploadPushConstantData(p_Name, &p_Value, sizeof(int));
 	}
 
-	void VulkanShader::UploadUniformBuffer(const Ref<UniformBuffer>& p_UniformBuffer)
-	{
-		YM_CORE_VERIFY(!m_DescriptorSetLayouts.empty())
-
-		auto buffer = static_cast<VulkanUniformBuffer*>(p_UniformBuffer.get());
-
-		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = buffer->GetBuffer();
-		bufferInfo.offset = 0;
-		bufferInfo.range = VK_WHOLE_SIZE;
-
-		VkWriteDescriptorSet descriptorWrite = {};
-		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet = m_DescriptorSet;
-		descriptorWrite.dstBinding = buffer->GetBinding();
-		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrite.descriptorCount = 1;
-		descriptorWrite.pBufferInfo = &bufferInfo;
-
-		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), 1, &descriptorWrite, 0, nullptr);
-	}
 
 	std::string VulkanShader::ReadFile(const std::string_view& p_Filepath) const
 	{
@@ -499,7 +451,7 @@ namespace YUME
 		spirv_cross::Compiler compiler(p_ShaderData);
 		spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
-		YM_CORE_TRACE("OpenGLShader::Reflect - {0} {1}", Utils::ShaderStageToString(p_Stage), m_FilePath)
+		YM_CORE_TRACE("Vulkan::Reflect - {0} {1}", Utils::ShaderStageToString(p_Stage), m_FilePath)
 		YM_CORE_TRACE("    {0} uniform buffers", resources.uniform_buffers.size())
 		YM_CORE_TRACE("    {0} resources", resources.sampled_images.size())
 
@@ -525,18 +477,30 @@ namespace YUME
 			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
 			bindingInfo.pImmutableSamplers = nullptr;
 
-			VkDescriptorSetLayoutCreateInfo layoutInfo{};
-			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			layoutInfo.bindingCount = 1;
-			layoutInfo.pBindings = &bindingInfo;
+			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
+		}
 
-			VkDescriptorSetLayout descriptorSetLayout;
-			if (vkCreateDescriptorSetLayout(VulkanDevice::Get().GetDevice(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
-			{
-				YM_CORE_ERROR("Failed to create vulkan descriptor set layout!")
-			}
+		YM_CORE_TRACE("Sampled images:")
+		for (const auto& resource : resources.sampled_images)
+		{
+			const auto& bufferType = compiler.get_type(resource.base_type_id);
+			uint32_t set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
+			auto memberCount = (int)bufferType.member_types.size();
 
-			m_DescriptorSetLayouts.push_back(descriptorSetLayout);
+			YM_CORE_TRACE("  Name: {0}", resource.name)
+			YM_CORE_TRACE("    Set  = {0}", set)
+			YM_CORE_TRACE("    Binding = {0}", binding)
+			YM_CORE_TRACE("    Members = {0}", memberCount)
+
+			VkDescriptorSetLayoutBinding bindingInfo{};
+			bindingInfo.binding = binding;
+			bindingInfo.descriptorCount = 1;
+			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
+			bindingInfo.pImmutableSamplers = nullptr;
+
+			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
 		}
 
 		YM_CORE_TRACE("Push constant buffers:")
@@ -612,6 +576,23 @@ namespace YUME
 
 	void VulkanShader::CreatePipelineLayout()
 	{
+		auto device = VulkanDevice::Get().GetDevice();
+
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+		for (const auto& [set, layoutBindings] : m_DescriptorSetLayoutBindings)
+		{
+			VkDescriptorSetLayoutCreateInfo SetLayoutInfo{};
+			SetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			SetLayoutInfo.bindingCount = (uint32_t)layoutBindings.size();
+			SetLayoutInfo.pBindings = layoutBindings.data();
+
+			VkDescriptorSetLayout layout;
+			vkCreateDescriptorSetLayout(device, &SetLayoutInfo, VK_NULL_HANDLE, &layout);
+			descriptorSetLayouts.push_back(layout);
+			m_DescriptorSetLayouts[set] = layout;
+		}
+
+
 		std::vector<VkPushConstantRange> pushConstantRangeArray;
 		for (const auto& range : m_PushConstantRanges) {
 			pushConstantRangeArray.push_back(range.second);
@@ -619,31 +600,13 @@ namespace YUME
 
 		VkPipelineLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layoutInfo.setLayoutCount = (uint32_t)m_DescriptorSetLayouts.size();
-		layoutInfo.pSetLayouts = m_DescriptorSetLayouts.data();
+		layoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+		layoutInfo.pSetLayouts = descriptorSetLayouts.data();
 		layoutInfo.pushConstantRangeCount = (uint32_t)pushConstantRangeArray.size();
-		layoutInfo.pPushConstantRanges = pushConstantRangeArray.data();
+		layoutInfo.pPushConstantRanges = pushConstantRangeArray.data();	
 
-		auto device = VulkanDevice::Get().GetDevice();
-
-		auto  res = vkCreatePipelineLayout(device, &layoutInfo, VK_NULL_HANDLE, &m_PipelineLayout);
+		auto res = vkCreatePipelineLayout(device, &layoutInfo, VK_NULL_HANDLE, &m_PipelineLayout);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
-	}
-
-	void VulkanShader::CreateDescriptorSet()
-	{
-		if (!m_DescriptorSetLayouts.empty())
-		{
-			VkDescriptorSetAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = VulkanDevice::Get().GetDescriptorPool();
-			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = m_DescriptorSetLayouts.data();
-
-			if (vkAllocateDescriptorSets(VulkanDevice::Get().GetDevice(), &allocInfo, &m_DescriptorSet) != VK_SUCCESS) {
-				YM_CORE_ERROR("Failed to allocate vulkan descriptor sets!");
-			}
-		}
 	}
 
 	bool VulkanShader::UploadPushConstantData(const std::string& p_Name, const void* p_Data, size_t p_SizeBytes)

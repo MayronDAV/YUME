@@ -21,10 +21,7 @@ struct Camera
 	glm::mat4 View;
 };
 
-struct Light
-{
-	glm::vec4 Color;
-};
+
 
 class ExampleLayer : public YUME::Layer
 {
@@ -32,7 +29,7 @@ class ExampleLayer : public YUME::Layer
 		ExampleLayer()
 			: Layer("Example")
 		{
-			m_QuadShader = YUME::Shader::Create("assets/shaders/uniform_buffer_shader.glsl");
+			m_QuadShader = YUME::Shader::Create("assets/shaders/texture_shader.glsl");
 
 			YUME::PipelineCreateInfo pci{};
 			pci.Shader = m_QuadShader;
@@ -56,7 +53,7 @@ class ExampleLayer : public YUME::Layer
 				{ YUME::DataType::Float3, "a_Position"  },
 				{ YUME::DataType::Float4, "a_Color"	    },
 				{ YUME::DataType::Float2, "a_TexCoord"	}
-			});
+				});
 			m_VAO->AddVertexBuffer(VBO);
 
 			std::vector<uint32_t> indexData = {
@@ -69,9 +66,13 @@ class ExampleLayer : public YUME::Layer
 			m_QuadShader->AddVertexArray(m_VAO);
 
 			m_CameraBuffer = YUME::UniformBuffer::Create(sizeof(Camera));
-			m_LightBuffer = YUME::UniformBuffer::Create(sizeof(Light));
 
 			m_Texture = YUME::TextureImporter::LoadTexture2D("Resources/statue.jpg");
+			m_GrassTexture = YUME::TextureImporter::LoadTexture2D("Resources/green_grass.jpg");
+			uint8_t whiteData[4] = { 255, 255, 255, 255 };
+			m_WhiteTexture = YUME::Texture2D::Create({}, whiteData, sizeof(whiteData));
+
+			m_DescriptorSet = YUME::DescriptorSet::Create(m_QuadShader);
 		}
 
 		void OnUpdate(YUME::Timestep p_Ts) override
@@ -133,16 +134,27 @@ class ExampleLayer : public YUME::Layer
 			auto view = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
 			Camera data = { projection, view };
 			m_CameraBuffer->SetData(&data, sizeof(Camera));
-			m_QuadShader->UploadUniformBuffer(m_CameraBuffer);
 
-			//glm::vec4 color = { 0.1f, 0.1f, 0.1f, 1.0f };
-			//m_LightBuffer->SetData(&color, sizeof(Light));
-			//m_QuadShader->UploadUniformBuffer(m_LightBuffer);
+			m_DescriptorSet->Bind(0);
+			m_DescriptorSet->UploadUniform(0, m_CameraBuffer);
+	
+			//m_DescriptorSet->Bind(1);
 
-			float size = 5.0f;
-			for (float x = 0.0f; x < size; x++)
+			int size = 25;
+			for (int x = 0; x < size; x++)
 			{
-				for (float y = 0.0f; y < size; y++)
+				m_DescriptorSet->Bind(1);
+
+				if (x % 2 == 0)
+				{
+					m_DescriptorSet->UploadTexture2D(0, m_GrassTexture);
+				}
+				else
+				{
+					m_DescriptorSet->UploadTexture2D(0, m_WhiteTexture);
+				}
+
+				for (int y = 0; y < size; y++)
 				{
 					m_QuadShader->PushFloat3("Player.Position", { x + (x * 0.11f), y + (y * 0.11f), 0.0f });
 					m_QuadShader->PushFloat4("Player.Color", m_TileColor);
@@ -150,7 +162,9 @@ class ExampleLayer : public YUME::Layer
 				}
 			}
 
-			//m_QuadShader->UploadTexture2D(1, m_Texture);
+			m_DescriptorSet->Bind(1);
+			m_DescriptorSet->UploadTexture2D(0, m_Texture);
+
 			m_QuadShader->PushFloat3("Player.Position", { m_Position.x, m_Position.y, 0.0f });
 			m_QuadShader->PushFloat4("Player.Color", m_PlayerColor);
 			YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());
@@ -200,7 +214,6 @@ class ExampleLayer : public YUME::Layer
 		YUME::Ref<YUME::Shader> m_QuadShader;
 		YUME::Ref<YUME::VertexArray> m_VAO;
 		YUME::Ref<YUME::UniformBuffer> m_CameraBuffer;
-		YUME::Ref<YUME::UniformBuffer> m_LightBuffer;
 
 		bool m_Wireframe = false;
 
@@ -215,6 +228,10 @@ class ExampleLayer : public YUME::Layer
 		std::string m_CurrentKeyPressed = " ";
 
 		YUME::Ref<YUME::Texture2D> m_Texture;
+		YUME::Ref<YUME::Texture2D> m_GrassTexture;
+		YUME::Ref<YUME::Texture2D> m_WhiteTexture;
+
+		YUME::Ref<YUME::DescriptorSet> m_DescriptorSet;
 };
 
 

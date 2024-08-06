@@ -36,4 +36,6 @@ namespace YUME::Utils
 	VkImageUsageFlagBits TextureUsageToVk(TextureUsage p_Usage);
 
 	void CopyBufferToImage(VkBuffer p_Buffer, VkImage p_Image, uint32_t p_Width, uint32_t p_Height);
+
+	VkShaderStageFlagBits ShaderTypeToVK(ShaderType p_Type);
 }

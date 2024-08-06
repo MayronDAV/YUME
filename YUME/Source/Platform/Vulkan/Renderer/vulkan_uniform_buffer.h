@@ -11,19 +11,17 @@ namespace YUME
 	class YM_API VulkanUniformBuffer : public UniformBuffer
 	{
 		public:
-			VulkanUniformBuffer(uint32_t p_SizeBytes, uint32_t p_Binding = 0);
-			VulkanUniformBuffer(const void* p_Data, uint32_t p_SizeBytes, uint32_t p_Binding = 0);
+			VulkanUniformBuffer(uint32_t p_SizeBytes);
+			VulkanUniformBuffer(const void* p_Data, uint32_t p_SizeBytes);
 			~VulkanUniformBuffer() override = default;
 
 			void SetData(const void* p_Data, uint32_t p_SizeBytes, uint32_t p_Offset = 0) override;
 			
 			uint32_t GetOffset() const override { return m_Offset; }
-			uint32_t GetBinding() const override { return m_Binding; }
 			uint32_t GetSizeBytes() const { return m_SizeBytes; }
 			VkBuffer GetBuffer() { return m_Buffer->GetBuffer(); }
 
 		private:
-			uint32_t m_Binding = 0;
 			uint32_t m_Offset = 0;
 			uint32_t m_SizeBytes = 0;
 

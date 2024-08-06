@@ -34,6 +34,7 @@ namespace YUME
 			const std::string_view& GetName() const override;
 
 			VkPipelineLayout& GetLayout() { return m_PipelineLayout; }
+			const std::unordered_map<uint32_t, VkDescriptorSetLayout>& GetDescriptorSetLayouts() const { return m_DescriptorSetLayouts; }
 			std::vector<VkPipelineShaderStageCreateInfo>& GetShaderStages() { return m_ShaderStages; }
 
 			void AddVertexArray(const Ref<VertexArray>& p_VertexArray) override
@@ -53,8 +54,6 @@ namespace YUME
 			void PushMat4(const std::string& p_Name, const glm::mat4& p_Value) override;
 			void PushInt(const std::string& p_Name, int p_Value) override;
 
-			void UploadUniformBuffer(const Ref<UniformBuffer>& p_UniformBuffer) override;
-
 		private:
 			std::string ReadFile(const std::string_view& p_Filepath) const;
 			std::string ProcessIncludeFiles(const std::string& p_Code) const;
@@ -65,8 +64,6 @@ namespace YUME
 
 			void CreateShaderModules();
 			void CreatePipelineLayout();
-
-			void CreateDescriptorSet();
 
 			bool UploadPushConstantData(const std::string& p_Name, const void* p_Data, size_t p_SizeBytes);
 
@@ -87,7 +84,7 @@ namespace YUME
 			std::unordered_map<uint32_t, VkPushConstantRange> m_PushConstantRanges;
 			std::unordered_map<std::string, std::pair<VkShaderStageFlags, uint32_t>> m_MemberOffsets;
 
-			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
-			VkDescriptorSet m_DescriptorSet;
+			std::unordered_map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> m_DescriptorSetLayoutBindings;
+			std::unordered_map<uint32_t, VkDescriptorSetLayout> m_DescriptorSetLayouts;
 	};
 }

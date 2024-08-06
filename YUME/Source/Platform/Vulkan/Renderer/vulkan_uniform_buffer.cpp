@@ -9,8 +9,7 @@
 
 namespace YUME
 {
-	VulkanUniformBuffer::VulkanUniformBuffer(uint32_t p_SizeBytes, uint32_t p_Binding)
-		: m_Binding(p_Binding)
+	VulkanUniformBuffer::VulkanUniformBuffer(uint32_t p_SizeBytes)
 	{
 		m_Buffer = CreateScope<VulkanMemoryBuffer>(
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -19,8 +18,7 @@ namespace YUME
 		);
 	}
 
-	VulkanUniformBuffer::VulkanUniformBuffer(const void* p_Data, uint32_t p_SizeBytes, uint32_t p_Binding)
-		: m_Binding(p_Binding)
+	VulkanUniformBuffer::VulkanUniformBuffer(const void* p_Data, uint32_t p_SizeBytes)
 	{
 		m_Buffer = CreateScope<VulkanMemoryBuffer>(
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,

@@ -357,7 +357,9 @@ namespace YUME
 
 		std::vector<const char*> devExts = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME
+			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+			VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME
 		};
 		std::vector<const char*> requiredExts;
 
@@ -381,15 +383,28 @@ namespace YUME
 		YM_CORE_ASSERT(physDevice.Features.geometryShader == VK_TRUE, "Gemotry shader isn't supported!")
 		YM_CORE_ASSERT(physDevice.Features.tessellationShader == VK_TRUE, "Tesselation shader isn't supported!")
 		YM_CORE_ASSERT(physDevice.Features.samplerAnisotropy == VK_TRUE, "Anisotropy isn't supported!")
+		YM_CORE_ASSERT(physDevice.Features.wideLines == VK_TRUE, "Wide lines isn't supported!")
 
 		VkPhysicalDeviceFeatures physFeatures{ 0 };
 		physFeatures.geometryShader = VK_TRUE;
 		physFeatures.tessellationShader = VK_TRUE;
 		physFeatures.samplerAnisotropy = VK_TRUE;
+		physFeatures.wideLines = VK_TRUE;
 
 		auto queueCreateInfos = ConsolidateQueueCreateInfos(physDevice.QueueCreateInfos);
 
+
+		VkPhysicalDeviceCustomBorderColorFeaturesEXT customBorderColorFeatures{};
+		customBorderColorFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT;
+		customBorderColorFeatures.customBorderColors = VK_TRUE;
+
+		VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeatures{};
+		dynamicRenderingFeatures.pNext = &customBorderColorFeatures;
+		dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+		dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
+
 		VkDeviceCreateInfo deviceCreateInfo = {};
+		deviceCreateInfo.pNext = &dynamicRenderingFeatures;
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
 		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();

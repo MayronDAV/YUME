@@ -49,6 +49,7 @@ project "YUME"
 	filter "system:windows"
 		systemversion "latest"
 		buildoptions { "/wd4251" }
+		
 		defines 
 		{
 			"YM_PLATFORM_WINDOWS",
@@ -65,6 +66,7 @@ project "YUME"
 	filter "system:linux"
 		systemversion "latest"
 		buildoptions { "-Wno-effc++" }
+		
 		defines 
 		{
 			"YM_PLATFORM_LINUX",

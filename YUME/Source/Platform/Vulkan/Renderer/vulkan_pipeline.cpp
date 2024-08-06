@@ -49,10 +49,13 @@ namespace YUME
 		m_CreateInfo = p_CreateInfo;
 		m_Shader = p_CreateInfo.Shader;
 
+		auto shader = static_cast<VulkanShader*>(m_Shader.get());
+
+
 		size_t totalBindingSize = 0;
 		size_t totalInputAttribSize = 0;
 
-		for (size_t i = 0; i < m_VertexArrays.size(); i++) 
+		for (size_t i = 0; i < m_VertexArrays.size(); i++)
 		{
 			auto vkVAO = dynamic_cast<VulkanVertexArray*>(m_VertexArrays[i].get());
 			totalBindingSize += vkVAO->GetBindingDescription().size();
@@ -64,7 +67,7 @@ namespace YUME
 		bindingDescriptions.reserve(totalBindingSize);
 		attributeDescriptions.reserve(totalInputAttribSize);
 
-		for (size_t i = 0; i < m_VertexArrays.size(); i++) 
+		for (size_t i = 0; i < m_VertexArrays.size(); i++)
 		{
 			auto vkVAO = dynamic_cast<VulkanVertexArray*>(m_VertexArrays[i].get());
 			const auto& bindingDescs = vkVAO->GetBindingDescription();
@@ -79,7 +82,6 @@ namespace YUME
 		vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
 		vertexInputInfo.vertexAttributeDescriptionCount = (uint32_t)attributeDescriptions.size();
 		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
 		
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -126,6 +128,7 @@ namespace YUME
 		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
 		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+
 		if (p_CreateInfo.TransparencyEnabled)
 		{
 			colorBlendAttachment.blendEnable = VK_TRUE;
@@ -181,9 +184,7 @@ namespace YUME
 		colorBlending.blendConstants[1] = 1.0f;
 		colorBlending.blendConstants[2] = 1.0f;
 		colorBlending.blendConstants[3] = 1.0f;
-
-
-		auto shader = dynamic_cast<VulkanShader*>(m_Shader.get());
+		
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.stageCount = (uint32_t)shader->GetShaderStages().size();
@@ -196,7 +197,8 @@ namespace YUME
 		pipelineInfo.pDepthStencilState = nullptr; // Optional
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
-		pipelineInfo.layout = shader->GetLayout();
+		auto layout = shader->GetLayout();
+		pipelineInfo.layout = layout;
 		pipelineInfo.renderPass = m_Context->GetRenderPass()->Get();
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional

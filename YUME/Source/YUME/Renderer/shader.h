@@ -11,6 +11,7 @@
 
 // Lib
 #include <glm/glm.hpp>
+#include "texture.h"
 
 
 
@@ -32,8 +33,6 @@ namespace YUME
 			virtual void PushFloat4(const std::string& p_Name, const glm::vec4& p_Value) = 0;
 			virtual void PushMat4(const std::string& p_Name, const glm::mat4& p_Value) = 0;
 			virtual void PushInt(const std::string& p_Name, int p_Value) = 0;
-
-			virtual void UploadUniformBuffer(const Ref<UniformBuffer>& p_UniformBuffer) = 0;
 
 			virtual void AddVertexArray(const Ref<VertexArray>& p_VertexArray) = 0;
 			virtual void SetPipeline(const Ref<Pipeline>& p_Pipeline) = 0;

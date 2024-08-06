@@ -38,6 +38,7 @@
 #include "YUME/Renderer/pipeline.h"
 #include "YUME/Renderer/texture.h"
 #include "YUME/Renderer/texture_importer.h"
+#include "YUME/Renderer/descriptor_set.h"
 // --------------------------
 
 
