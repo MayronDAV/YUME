@@ -5,7 +5,7 @@
 #include "YUME/Core/timestep.h"
 
 #include "YUME/Renderer/renderer_command.h"
-#include "YUME/Renderer/renderer3D.h"
+#include "YUME/Renderer/renderer.h"
 #include "YUME/Utils/clock.h"
 
 #include "YUME/Core/engine.h"
@@ -33,7 +33,7 @@ namespace YUME
 		m_Window->SetEventCallback(YM_BIND_EVENT_FN(Application::OnEvent));
 
 		RendererCommand::Init(m_Window->GetContext());
-		Renderer3D::Init();
+		Renderer::Init();
 
 		m_ImGuiLayer = ImGuiLayer::Create();
 		PushOverlay(m_ImGuiLayer);
@@ -42,6 +42,7 @@ namespace YUME
 	Application::~Application()
 	{
 		YUME::RendererCommand::Shutdown();
+		Renderer::Shutdown();
 
 		Engine::Release();
 

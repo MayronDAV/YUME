@@ -69,6 +69,11 @@ namespace YUME
 		m_Buffer->SetData(p_SizeBytes, p_Data);
 	}
 
+	void VulkanVertexBuffer::Flush()
+	{
+		m_Buffer->Flush();
+	}
+
 
 
 	VulkanIndexBuffer::VulkanIndexBuffer(const uint32_t* p_Indices, uint32_t p_Count)

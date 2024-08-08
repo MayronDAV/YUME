@@ -5,9 +5,11 @@
 
 namespace YUME
 {
-	class YM_API Renderer3D
+	class YM_API Renderer
 	{
 		public:
 			static void Init();
+
+			static void Shutdown();
 	};
 }

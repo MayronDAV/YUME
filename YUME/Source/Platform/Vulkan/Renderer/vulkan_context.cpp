@@ -224,7 +224,6 @@ namespace YUME
 
 		if (m_HasDrawCommands)
 		{
-
 			VkPresentInfoKHR presentInfo{};
 			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 			VkSemaphore waitSemaphores[] = { m_WaitSemaphores[m_CurrentFrame] };

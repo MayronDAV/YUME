@@ -193,11 +193,16 @@ namespace YUME
 
 		YM_CORE_VERIFY(p_SizeBytes > 0)
 
+		Map();
+
 		VkMappedMemoryRange mappedRange = {};
+		mappedRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
 		mappedRange.memory = m_Memory;
 		mappedRange.offset = p_Offset;
 		mappedRange.size = p_SizeBytes;
 		vkFlushMappedMemoryRanges(VulkanDevice::Get().GetDevice(), 1, &mappedRange);
+
+		UnMap();
 	}
 
 	void VulkanMemoryBuffer::Invalidate(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)

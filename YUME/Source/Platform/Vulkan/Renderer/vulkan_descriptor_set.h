@@ -18,6 +18,7 @@ namespace YUME
 
 			void UploadUniform(uint32_t p_Binding, const Ref<UniformBuffer>& p_UniformBuffer) override;
 			void UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>& p_Texture) override;
+			void UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>* p_TextureData, uint32_t p_Count) override;
 
 		private:
 			void CheckIfDescriptorSetIsUpdated();

@@ -481,16 +481,19 @@ namespace YUME
 			uint32_t set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
 			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
 			auto memberCount = (int)bufferType.member_types.size();
+			const auto& Type = compiler.get_type(resource.type_id);
+			auto descriptorCount = (Type.array.size() > 0) ? Type.array[0] : 1;
 
 			YM_CORE_TRACE("  Name: {0}", resource.name)
 			YM_CORE_TRACE("    Size = {0}", bufferSize)
 			YM_CORE_TRACE("    Set  = {0}", set)
 			YM_CORE_TRACE("    Binding = {0}", binding)
 			YM_CORE_TRACE("    Members = {0}", memberCount)
+			YM_CORE_TRACE("    Descriptor Count = {0}", descriptorCount)
 
 			VkDescriptorSetLayoutBinding bindingInfo{};
 			bindingInfo.binding = binding;
-			bindingInfo.descriptorCount = 1;
+			bindingInfo.descriptorCount = descriptorCount;
 			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
 			bindingInfo.pImmutableSamplers = nullptr;
@@ -505,15 +508,18 @@ namespace YUME
 			uint32_t set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
 			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
 			auto memberCount = (int)bufferType.member_types.size();
+			const auto& Type = compiler.get_type(resource.type_id);
+			auto descriptorCount = (Type.array.size() > 0) ? Type.array[0] : 1;
 
 			YM_CORE_TRACE("  Name: {0}", resource.name)
 			YM_CORE_TRACE("    Set  = {0}", set)
 			YM_CORE_TRACE("    Binding = {0}", binding)
 			YM_CORE_TRACE("    Members = {0}", memberCount)
+			YM_CORE_TRACE("    Descriptor Count = {0}", descriptorCount)
 
 			VkDescriptorSetLayoutBinding bindingInfo{};
 			bindingInfo.binding = binding;
-			bindingInfo.descriptorCount = 1;
+			bindingInfo.descriptorCount = descriptorCount;
 			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
 			bindingInfo.pImmutableSamplers = nullptr;

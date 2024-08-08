@@ -84,7 +84,8 @@ namespace YUME
 			allocInfo.descriptorSetCount = 1;
 			allocInfo.pSetLayouts = &m_DescriptorSetLayouts[(uint32_t)i];
 
-			if (vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSets[i]) != VK_SUCCESS)
+			auto res = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSets[i]);
+			if ( res != VK_SUCCESS)
 			{
 				YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
 			}
@@ -225,6 +226,42 @@ namespace YUME
 		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		descriptorWrite.descriptorCount = 1;
 		descriptorWrite.pImageInfo = &imageInfo;
+
+		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), 1, &descriptorWrite, 0, nullptr);
+
+		m_DescriptorUpdated[m_CurrentBindSet] = true;
+	}
+
+	void VulkanDescriptorSet::UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>* p_TextureData, uint32_t p_Count)
+	{
+		YM_PROFILE_FUNCTION()
+
+		YM_CORE_VERIFY(m_CurrentBindSet >= 0, "Did you call Bind(uint32_t p_Set)?")
+		YM_CORE_VERIFY(!m_DescriptorSetLayouts.empty())
+		YM_CORE_VERIFY(!m_DescriptorSets.empty())
+
+		std::vector<VkDescriptorImageInfo> imageInfos;
+
+		for (size_t i = 0; i < p_Count; ++i)
+		{
+			auto texture = static_cast<VulkanTexture2D*>(p_TextureData[i].get());
+
+			VkDescriptorImageInfo imageInfo{};
+			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo.imageView = texture->GetImageView();
+			imageInfo.sampler = texture->GetImageSampler();
+
+			imageInfos.push_back(imageInfo);
+		}
+
+		VkWriteDescriptorSet descriptorWrite = {};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = m_DescriptorSets[m_CurrentBindSet];
+		descriptorWrite.dstBinding = p_Binding;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrite.descriptorCount = p_Count;
+		descriptorWrite.pImageInfo = imageInfos.data();
 
 		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), 1, &descriptorWrite, 0, nullptr);
 

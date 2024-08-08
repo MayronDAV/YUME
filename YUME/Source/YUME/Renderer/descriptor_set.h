@@ -18,6 +18,7 @@ namespace YUME
 
 			virtual void UploadUniform(uint32_t p_Binding, const Ref<UniformBuffer>& p_UniformBuffer) = 0;
 			virtual void UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>& p_Texture) = 0;
+			virtual void UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>* p_TextureData, uint32_t p_Count) = 0;
 
 			static Ref<DescriptorSet> Create(const Ref<Shader>& p_Shader);
 	};

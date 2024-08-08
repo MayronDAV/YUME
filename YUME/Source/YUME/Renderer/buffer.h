@@ -137,6 +137,8 @@ namespace YUME
 
 			virtual void SetData(const void* p_Data, uint64_t p_SizeBytes) = 0;
 
+			virtual void Flush() {};
+
 			static Ref<VertexBuffer> Create(const void* p_Data, uint64_t p_SizeBytes, BufferUsage p_Usage = BufferUsage::STATIC);
 	};
 

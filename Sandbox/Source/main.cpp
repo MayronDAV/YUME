@@ -29,56 +29,13 @@ class ExampleLayer : public YUME::Layer
 		ExampleLayer()
 			: Layer("Example")
 		{
-			m_QuadShader = YUME::Shader::Create("assets/shaders/texture_shader.glsl");
-
-			YUME::PipelineCreateInfo pci{};
-			pci.Shader = m_QuadShader;
-			pci.BlendMode = YUME::BlendMode::SrcAlphaOneMinusSrcAlpha;
-			pci.TransparencyEnabled = true;
-			m_GraphicPipeline = YUME::Pipeline::Create(pci);
-
-			m_QuadShader->SetPipeline(m_GraphicPipeline);
-
-			m_VAO = YUME::VertexArray::Create();
-
-			const std::vector<Vertex> vertices = {
-				{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
-				{{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-				{{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-				{{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-			};
-
-			auto VBO = YUME::VertexBuffer::Create(vertices.data(), vertices.size() * sizeof(Vertex));
-			VBO->SetLayout({
-				{ YUME::DataType::Float3, "a_Position"  },
-				{ YUME::DataType::Float4, "a_Color"	    },
-				{ YUME::DataType::Float2, "a_TexCoord"	}
-				});
-			m_VAO->AddVertexBuffer(VBO);
-
-			std::vector<uint32_t> indexData = {
-				0, 1, 2, 0, 2, 3
-			};
-
-			auto EBO = YUME::IndexBuffer::Create(indexData.data(), (uint32_t)indexData.size());
-			m_VAO->SetIndexBuffer(EBO);
-
-			m_QuadShader->AddVertexArray(m_VAO);
-
-			m_CameraBuffer = YUME::UniformBuffer::Create(sizeof(Camera));
-
 			m_Texture = YUME::TextureImporter::LoadTexture2D("Resources/statue.jpg");
 			m_GrassTexture = YUME::TextureImporter::LoadTexture2D("Resources/green_grass.jpg");
-			uint8_t whiteData[4] = { 255, 255, 255, 255 };
-			m_WhiteTexture = YUME::Texture2D::Create({}, whiteData, sizeof(whiteData));
-
-			m_DescriptorSet = YUME::DescriptorSet::Create(m_QuadShader);
 		}
 
 		void OnUpdate(YUME::Timestep p_Ts) override
 		{
 			float speed = 5.0f * (float)p_Ts;
-			m_Position.z = 10.0f;
 
 			glm::vec3 direction(0.0f);
 			if (YUME::Input::IsKeyPressed(YUME::Key::W))
@@ -107,11 +64,11 @@ class ExampleLayer : public YUME::Layer
 
 			if (m_Wireframe)
 			{
-				m_GraphicPipeline->SetPolygonMode(YUME::PolygonMode::LINE);
+				YUME::Renderer2D::SetPolygonMode(YUME::PolygonMode::LINE);
 			}
 			else
 			{
-				m_GraphicPipeline->SetPolygonMode(YUME::PolygonMode::FILL);
+				YUME::Renderer2D::SetPolygonMode(YUME::PolygonMode::FILL);
 			}
 
 			if (m_UpdateColor)
@@ -122,52 +79,27 @@ class ExampleLayer : public YUME::Layer
 			}
 			YUME::RendererCommand::ClearColor(m_Color);
 
-			YUME::RendererCommand::Begin();
+			YUME::Renderer2D::BeginScene();
 
-			m_QuadShader->Bind();
-
-			uint32_t width = YUME::Application::Get().GetWindow().GetWidth();
-			uint32_t height = YUME::Application::Get().GetWindow().GetHeight();
-			float aspectRatio = (float)width / (float)height;
-
-			glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
-			auto view = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
-			Camera data = { projection, view };
-			m_CameraBuffer->SetData(&data, sizeof(Camera));
-
-			m_DescriptorSet->Bind(0);
-			m_DescriptorSet->UploadUniform(0, m_CameraBuffer);
-
-			int size = 25;
-			for (int x = 0; x < size; x++)
+			int size = 10;
+			for (int x = -(size / 2); x < (size / 2); x++)
 			{
-				m_DescriptorSet->Bind(1);
-
-				if (x % 2 == 0)
+				for (int y = -(size / 2); y < (size / 2); y++)
 				{
-					m_DescriptorSet->UploadTexture2D(0, m_GrassTexture);
-				}
-				else
-				{
-					m_DescriptorSet->UploadTexture2D(0, m_WhiteTexture);
-				}
-
-				for (int y = 0; y < size; y++)
-				{
-					m_QuadShader->PushFloat3("Player.Position", { x + (x * 0.11f), y + (y * 0.11f), 0.0f });
-					m_QuadShader->PushFloat4("Player.Color", m_TileColor);
-					YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());
+					if ((std::abs(y) % 2) == 0)
+					{
+						YUME::Renderer2D::DrawQuad({ (float)x + ((float)x * 0.11f), (float)y + ((float)y * 0.11f), 0 }, { 1, 1 }, m_TileColor, m_GrassTexture);
+					}
+					else
+					{
+						YUME::Renderer2D::DrawQuad({ (float)x + ((float)x * 0.11f), (float)y + ((float)y * 0.11f), 0 }, { 1, 1 }, m_TileColor);
+					}
 				}
 			}
 
-			m_DescriptorSet->Bind(1);
-			m_DescriptorSet->UploadTexture2D(0, m_Texture);
+			YUME::Renderer2D::DrawQuad(m_Position, {1, 1}, m_PlayerColor, m_Texture);
 
-			m_QuadShader->PushFloat3("Player.Position", { m_Position.x, m_Position.y, 0.0f });
-			m_QuadShader->PushFloat4("Player.Color", m_PlayerColor);
-			YUME::RendererCommand::DrawIndexed(m_VAO, m_VAO->GetIndexCount());
-
-			YUME::RendererCommand::End();
+			YUME::Renderer2D::EndScene();
 		}
 
 		void OnImGuiRender() override
@@ -180,7 +112,15 @@ class ExampleLayer : public YUME::Layer
 			ImGui::Begin("Editor");
 			ImGui::DragFloat3("Player.Position", glm::value_ptr(m_Position), 1.0f);
 			ImGui::ColorEdit4("Player.Color", glm::value_ptr(m_PlayerColor));
-			ImGui::ColorEdit4("Tile Color", glm::value_ptr(m_TileColor));		
+			ImGui::ColorEdit4("Tile Color", glm::value_ptr(m_TileColor));
+			ImGui::ColorEdit4("Background", glm::value_ptr(m_Color));
+			ImGui::End();
+
+			ImGui::Begin("Render Stats");
+			ImGui::Text("Quad Count: %d", YUME::Renderer2D::GetStats().QuadCount);
+			ImGui::Text("Total Index Count: %d", YUME::Renderer2D::GetStats().GetTotalIndexCount());
+			ImGui::Text("Total Vertex Count: %d", YUME::Renderer2D::GetStats().GetTotalVertexCount());
+			ImGui::Text("Draw calls: %d", YUME::Renderer2D::GetStats().DrawCalls);
 			ImGui::End();
 		}
 
@@ -208,17 +148,10 @@ class ExampleLayer : public YUME::Layer
 	private:
 		glm::vec4 m_Color{0, 0, 0, 1};
 		bool m_UpdateColor = false;
-		YUME::Ref<YUME::Pipeline> m_GraphicPipeline;
-		YUME::Ref<YUME::Shader> m_QuadShader;
-		YUME::Ref<YUME::VertexArray> m_VAO;
-		YUME::Ref<YUME::UniformBuffer> m_CameraBuffer;
 
 		bool m_Wireframe = false;
 
-		glm::vec3 m_Position = { 0.3f, 0.4f, 0.0f };
-		glm::vec3 m_Front = { 0.0f, 0.0f, -1.0f };
-		glm::vec3 m_Right = { 1.0f, 0.0f, 0.0f };
-		glm::vec3 m_Up = { 0.0f, 1.0f, 0.0f };
+		glm::vec3 m_Position = { -0.5f, -0.5f, 0 };
 
 		glm::vec4 m_PlayerColor = { 0.7f, 0.3f, 0.5f, 1.0f };
 		glm::vec4 m_TileColor = { 0.5f, 0.3f, 0.7f, 1.0f };
@@ -228,8 +161,6 @@ class ExampleLayer : public YUME::Layer
 		YUME::Ref<YUME::Texture2D> m_Texture;
 		YUME::Ref<YUME::Texture2D> m_GrassTexture;
 		YUME::Ref<YUME::Texture2D> m_WhiteTexture;
-
-		YUME::Ref<YUME::DescriptorSet> m_DescriptorSet;
 };
 
 

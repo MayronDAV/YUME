@@ -25,6 +25,8 @@ namespace YUME
 
 			void SetData(const void* p_Data, uint64_t p_SizeBytes) override;
 
+			void Flush() override;
+
 		private:
 			Scope<VulkanMemoryBuffer> m_Buffer;
 			BufferLayout m_Layout{};
