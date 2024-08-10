@@ -1,6 +1,7 @@
 #pragma once
 
 #include "YUME/Core/base.h"
+#include "vulkan_base.h"
 #include "YUME/Core/singleton.h"
 #include "vulkan_commandpool.h"
 #include "vulkan_descriptor_pool.h"
@@ -81,6 +82,8 @@ namespace YUME
 
 	class YM_API VulkanDevice : public ThreadSafeSingleton<VulkanDevice>
 	{
+		friend class ThreadSafeSingleton<VulkanDevice>;
+
 		public:
 			VulkanDevice() = default;
 			~VulkanDevice();
@@ -106,6 +109,16 @@ namespace YUME
 			void ResetDescriptorPool() { m_DescriptorPool->Reset(); }
 			void ResetCommandPool() { m_CommandPool->Reset(); }
 
+		#ifdef USE_VMA_ALLOCATOR
+			VmaAllocator GetAllocator() const
+			{
+				return m_Allocator;
+			}
+
+			VmaPool GetOrCreateSmallAllocPool(uint32_t p_MemTypeIndex);
+		#endif
+
+
 		private:
 			Scope<VulkanPhysicalDevice> m_PhysicalDevice;
 
@@ -123,7 +136,11 @@ namespace YUME
 			Ref<VulkanCommandPool> m_CommandPool;
 			Ref<VulkanDescriptorPool> m_DescriptorPool;
 
-			friend class ThreadSafeSingleton<VulkanDevice>;
+		#ifdef USE_VMA_ALLOCATOR
+			VmaAllocator m_Allocator = VK_NULL_HANDLE;
+			std::unordered_map<uint32_t, VmaPool> m_SmallAllocPools;
+		#endif
+			
 		
 	};
 }

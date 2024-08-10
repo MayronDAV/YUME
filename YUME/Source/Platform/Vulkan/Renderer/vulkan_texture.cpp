@@ -98,17 +98,29 @@ namespace YUME
 
 		auto image = m_TextureImage;
 		auto imageView = m_TextureImageView;
-		auto memory = m_TextureImageMemory;
 		auto sampler = m_TextureSampler;
-		VulkanContext::PushFunction([image, imageView, memory, sampler]()
+#ifdef USE_VMA_ALLOCATOR
+		auto alloc = m_Allocation;
+		VulkanContext::PushFunction([image, imageView, sampler, alloc]()
+#else
+		auto memory = m_TextureImageMemory;
+		VulkanContext::PushFunction([image, imageView, sampler, memory]()
+#endif
 		{
+			YM_CORE_TRACE("Destroying vulkan texture image...")
+
 			auto device = VulkanDevice::Get().GetDevice();
 
 			vkDestroySampler(device, sampler, VK_NULL_HANDLE);
+
 			vkDestroyImageView(device, imageView, VK_NULL_HANDLE);
 
+#ifdef USE_VMA_ALLOCATOR		
+			vmaDestroyImage(VulkanDevice::Get().GetAllocator(), image, alloc);
+#else
 			vkDestroyImage(device, image, VK_NULL_HANDLE);
 			vkFreeMemory(device, memory, VK_NULL_HANDLE);
+#endif
 		});
 	}
 
@@ -156,13 +168,24 @@ namespace YUME
 		m_VkFormat = Utils::TextureFormatToVk(p_Spec.Format);
 		m_BytesPerChannel = Utils::TextureFormatBytesPerChannel(p_Spec.Format);
 
+#ifdef USE_VMA_ALLOCATOR
+		CreateImage(p_Spec.Width, p_Spec.Height, m_VkFormat,
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | Utils::TextureUsageToVk(p_Spec.Usage),
+			m_TextureImage, m_Allocation);
+#else
 		CreateImage(p_Spec.Width, p_Spec.Height, m_VkFormat,
 			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | Utils::TextureUsageToVk(p_Spec.Usage),
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_TextureImage, m_TextureImageMemory);
+#endif
 	}
 
+#ifdef USE_VMA_ALLOCATOR
+	void VulkanTexture2D::CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
+		VkImageUsageFlags p_Usage, VkImage& p_Image, VmaAllocation& p_Allocation)
+#else
 	void VulkanTexture2D::CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
 		VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, VkDeviceMemory& p_ImageMemory)
+#endif
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -182,15 +205,56 @@ namespace YUME
 		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageInfo.flags = 0;
 
+#ifdef USE_VMA_ALLOCATOR
+		VmaAllocationCreateInfo allocInfovma = {};
+		allocInfovma.flags = 0;
+		allocInfovma.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+		allocInfovma.requiredFlags = 0;
+		allocInfovma.preferredFlags = 0;
+		allocInfovma.memoryTypeBits = 0;
+		allocInfovma.pool = nullptr;
+		allocInfovma.pUserData = nullptr;
+
+	#ifdef USE_SMALL_VMA_POOL
+		uint32_t bytesPerPixel = 8;
+		uint32_t imageSize = imageInfo.extent.width * imageInfo.extent.height * imageInfo.extent.depth * bytesPerPixel;
+
+		// If mipmaps are used, calculate the size for each level and sum them up
+		for (uint32_t mipLevel = 1; mipLevel < imageInfo.mipLevels; ++mipLevel)
+		{
+			imageSize += std::max(1u, imageInfo.extent.width >> mipLevel) * std::max(1u, imageInfo.extent.height >> mipLevel) * imageInfo.extent.depth * bytesPerPixel;
+		}
+
+		// If there are multiple array layers, multiply by the layer count
+		imageSize *= imageInfo.arrayLayers;
+
+		if (imageSize <= SMALL_ALLOCATION_MAX_SIZE)
+		{
+			uint32_t mem_type_index = 0;
+			vmaFindMemoryTypeIndexForImageInfo(VulkanDevice::Get().GetAllocator(), &imageInfo, &allocInfovma, &mem_type_index);
+			allocInfovma.pool = VulkanDevice::Get().GetOrCreateSmallAllocPool(mem_type_index);
+		}
+	#endif
+
+		VmaAllocationInfo alloc_info = {};
+		if (vmaCreateImage(VulkanDevice::Get().GetAllocator(), &imageInfo, &allocInfovma, &p_Image, &p_Allocation, &alloc_info) != VK_SUCCESS)
+		{
+			YM_CORE_ERROR("Failed to create texture image!")
+			return;
+		}
+#else
 		if (vkCreateImage(VulkanDevice::Get().GetDevice(), &imageInfo, VK_NULL_HANDLE, &p_Image) != VK_SUCCESS)
 		{
 			YM_CORE_ERROR("Failed to create texture image!")
 			return;
 		}
 
+
 		AllocateImageMemory(p_Image, p_ImageMemory, p_Properties);
+#endif
 	}
 
+#ifndef USE_VMA_ALLOCATOR
 	void VulkanTexture2D::AllocateImageMemory(VkImage& p_Image, VkDeviceMemory& p_ImageMemory, VkMemoryPropertyFlags p_Properties)
 	{
 		YM_PROFILE_FUNCTION()
@@ -212,6 +276,7 @@ namespace YUME
 
 		vkBindImageMemory(device, p_Image, p_ImageMemory, 0);
 	}
+#endif
 
 	VkImageView VulkanTexture2D::CreateImageView(VkImage p_Image, VkFormat p_Format)
 	{

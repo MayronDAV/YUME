@@ -1,6 +1,7 @@
 #pragma once
 #include "YUME/Core/base.h"
-#include <YUME/Renderer/texture.h>
+#include "YUME/Renderer/texture.h"
+#include "camera.h"
 
 // Lib
 #include <glm/glm.hpp>
@@ -15,7 +16,7 @@ namespace YUME
 			static void Init();
 			static void Shutdown();
 
-			static void BeginScene();
+			static void BeginScene(const Camera& p_Camera, const glm::mat4& p_Transform);
 			static void EndScene();
 
 			static void SetPolygonMode(PolygonMode p_Mode);

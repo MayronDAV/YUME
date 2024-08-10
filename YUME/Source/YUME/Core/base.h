@@ -6,14 +6,14 @@
 
 
 #ifdef YM_PLATFORM_WINDOWS
-	#ifdef YM_BUILD_DLL
+	#ifdef YM_EXPORT
 		#define YM_API __declspec(dllexport)
 	#else
 		#define YM_API __declspec(dllimport)
 	#endif
 #else
 	#if YM_PLATFORM_LINUX
-		#ifdef YM_BUILD_DLL
+		#ifdef YM_EXPORT
 			#define YM_API __attribute__((visibility("default")))
 		#else
 			#define YM_API

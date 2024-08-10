@@ -19,3 +19,6 @@
 [submodule "Thirdparty/optick"]
 	path = Thirdparty/optick
 	url = https://github.com/MayronDAV/optick.git
+[submodule "Thirdparty/VulkanMemoryAllocator"]
+	path = Thirdparty/VulkanMemoryAllocator
+	url = https://github.com/MayronDAV/VulkanMemoryAllocator.git

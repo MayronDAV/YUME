@@ -116,9 +116,9 @@ namespace YUME
 
 		Ref<IndexBuffer> quadIB = IndexBuffer::Create(quadIndices, Renderer2Ddata::MaxIndices);
 		s_RenderData->QuadVertexArray->SetIndexBuffer(quadIB);
+		delete[] quadIndices;
 	
 		s_RenderData->QuadShader->AddVertexArray(s_RenderData->QuadVertexArray);
-
 
 		s_RenderData->QuadVertexPositions[0] = { -0.5f, -0.5f, 0.0f, 1.0f };
 		s_RenderData->QuadVertexPositions[1] = {  0.5f, -0.5f, 0.0f, 1.0f };
@@ -143,29 +143,25 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		if (s_RenderData)
+		{
+			YM_CORE_TRACE("Destroying render 2d data...")
 			delete s_RenderData;
+		}
 	}
 
-	void Renderer2D::BeginScene()
+	void Renderer2D::BeginScene(const Camera& p_Camera, const glm::mat4& p_Transform)
 	{
 		YM_PROFILE_FUNCTION()
 
 		s_RenderData->QuadPipeline->SetPolygonMode(s_RenderData->PolygonMode);
 
-		uint32_t width = Application::Get().GetWindow().GetWidth();
-		uint32_t height = Application::Get().GetWindow().GetHeight();
-		float aspectRatio = (float)width / (float)height;
-		glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
-		auto view = glm::lookAt(glm::vec3{ 0, 0, 10 }, glm::vec3{ 0, 0, -1 }, glm::vec3{ 0, 1, 0 });
-
-		s_RenderData->CameraBuffer = { projection * view };
+		s_RenderData->CameraBuffer.ViewProjection = p_Camera.GetProjection() * glm::inverse(p_Transform);
 		s_RenderData->CameraUniformBuffer->SetData(&s_RenderData->CameraBuffer, sizeof(Renderer2Ddata::CameraData));
-
-		ResetStats();
 
 		RendererCommand::Begin();
 
 		StartBatch();
+		ResetStats();
 	}
 
 	void Renderer2D::EndScene()
@@ -224,6 +220,11 @@ namespace YUME
 		glm::mat4 transform = glm::translate(glm::mat4(1.0f), p_Position);
 		transform = glm::scale(transform, { p_Size.x, p_Size.y, 1.0f });
 
+		YM_PROFILE_TAG("ID", s_RenderData->Stats.QuadCount)
+		YM_PROFILE_TAG("QuadIndexCount", s_RenderData->QuadIndexCount)
+		YM_PROFILE_TAG("Color", (float*)glm::value_ptr(p_Color))
+		YM_PROFILE_TAG("TexIndex", textureIndex)
+
 		for (int i = 0; i < quadVertexCount; i++)
 		{
 			QuadVertex vertex{};
@@ -231,6 +232,9 @@ namespace YUME
 			vertex.Color = p_Color;
 			vertex.TexCoord = QuadTexCoords[i];
 			vertex.TexIndex = textureIndex;
+
+			YM_PROFILE_TAG("vertex.Position", glm::value_ptr(vertex.Position))
+			YM_PROFILE_TAG("vertex.TexIndex", glm::value_ptr(vertex.TexCoord))
 			
 			s_RenderData->QuadVertexBufferBase.push_back(vertex);
 		}
@@ -253,8 +257,15 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
+		YM_PROFILE_TAG("QuadIndexCount", s_RenderData->QuadIndexCount)
+		YM_PROFILE_TAG("QuadVertexArray->GetIndexCount()", s_RenderData->QuadVertexArray->GetIndexCount())
+		YM_PROFILE_TAG("QuadVertexBufferBase", s_RenderData->QuadVertexBufferBase.size())
+		YM_PROFILE_TAG("TextureSlotIndex", s_RenderData->TextureSlotIndex)
+
 		if (s_RenderData->QuadIndexCount > 0)
 		{
+			YM_PROFILE_SCOPE("QuadFlush")
+
 			s_RenderData->QuadVertexBuffer->SetData(s_RenderData->QuadVertexBufferBase.data(), s_RenderData->QuadVertexBufferBase.size() * sizeof(QuadVertex));
 			s_RenderData->QuadShader->Bind();
 
@@ -266,8 +277,6 @@ namespace YUME
 
 			RendererCommand::DrawIndexed(s_RenderData->QuadVertexArray, s_RenderData->QuadIndexCount);
 			s_RenderData->Stats.DrawCalls++;
-
-			s_RenderData->QuadVertexBuffer->Flush();
 		}
 	}
 

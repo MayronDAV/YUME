@@ -41,4 +41,5 @@
 #include "YUME/Renderer/texture_importer.h"
 #include "YUME/Renderer/descriptor_set.h"
 #include "YUME/Renderer/renderer2D.h"
+#include "YUME/Renderer/camera.h"
 // --------------------------

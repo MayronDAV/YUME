@@ -348,6 +348,16 @@ namespace YUME
 			cacheFile.close();
 		}
 
+		#ifdef USE_VMA_ALLOCATOR
+			for (auto& pool : m_SmallAllocPools)
+			{
+				vmaDestroyPool(m_Allocator, pool.second);
+			}
+			m_SmallAllocPools.clear();
+
+			vmaDestroyAllocator(m_Allocator);
+		#endif
+
 		YM_CORE_TRACE("Destroying vulkan pipeline cache...")
 		vkDestroyPipelineCache(m_Device, m_PipelineCache, VK_NULL_HANDLE);
 
@@ -429,6 +439,46 @@ namespace YUME
 		vkGetDeviceQueue(m_Device, physDevice.Indices.Compute, 0, &m_ComputeQueue);
 		vkGetDeviceQueue(m_Device, physDevice.Indices.Transfer, 0, &m_TransferQueue);
 
+#ifdef USE_VMA_ALLOCATOR
+		VmaAllocatorCreateInfo allocatorInfo = {};
+		allocatorInfo.physicalDevice = GetPhysicalDevice();
+		allocatorInfo.device = m_Device;
+		allocatorInfo.instance = VulkanContext::GetInstance();
+		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+
+		VmaVulkanFunctions fn;
+		fn.vkAllocateMemory = (PFN_vkAllocateMemory)vkAllocateMemory;
+		fn.vkBindBufferMemory = (PFN_vkBindBufferMemory)vkBindBufferMemory;
+		fn.vkBindImageMemory = (PFN_vkBindImageMemory)vkBindImageMemory;
+		fn.vkCmdCopyBuffer = (PFN_vkCmdCopyBuffer)vkCmdCopyBuffer;
+		fn.vkCreateBuffer = (PFN_vkCreateBuffer)vkCreateBuffer;
+		fn.vkCreateImage = (PFN_vkCreateImage)vkCreateImage;
+		fn.vkDestroyBuffer = (PFN_vkDestroyBuffer)vkDestroyBuffer;
+		fn.vkDestroyImage = (PFN_vkDestroyImage)vkDestroyImage;
+		fn.vkFlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges)vkFlushMappedMemoryRanges;
+		fn.vkFreeMemory = (PFN_vkFreeMemory)vkFreeMemory;
+		fn.vkGetBufferMemoryRequirements = (PFN_vkGetBufferMemoryRequirements)vkGetBufferMemoryRequirements;
+		fn.vkGetImageMemoryRequirements = (PFN_vkGetImageMemoryRequirements)vkGetImageMemoryRequirements;
+		fn.vkGetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties)vkGetPhysicalDeviceMemoryProperties;
+		fn.vkGetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties)vkGetPhysicalDeviceProperties;
+		fn.vkInvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges)vkInvalidateMappedMemoryRanges;
+		fn.vkMapMemory = (PFN_vkMapMemory)vkMapMemory;
+		fn.vkUnmapMemory = (PFN_vkUnmapMemory)vkUnmapMemory;
+		fn.vkGetDeviceImageMemoryRequirements = (PFN_vkGetDeviceImageMemoryRequirements)vkGetDeviceImageMemoryRequirements;
+		fn.vkGetDeviceBufferMemoryRequirements = (PFN_vkGetDeviceBufferMemoryRequirements)vkGetDeviceBufferMemoryRequirements;
+		fn.vkBindImageMemory2KHR = nullptr;
+		fn.vkBindBufferMemory2KHR = nullptr;
+		fn.vkGetPhysicalDeviceMemoryProperties2KHR = nullptr;
+		fn.vkGetImageMemoryRequirements2KHR = nullptr;
+		fn.vkGetBufferMemoryRequirements2KHR = nullptr;
+		fn.vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)vkGetInstanceProcAddr;
+		fn.vkGetDeviceProcAddr = (PFN_vkGetDeviceProcAddr)vkGetDeviceProcAddr;
+		allocatorInfo.pVulkanFunctions = &fn;
+		allocatorInfo.preferredLargeHeapBlockSize = 64 * 1024 * 1024;
+		auto result = vmaCreateAllocator(&allocatorInfo, &m_Allocator);
+		YM_CORE_VERIFY(result == VK_SUCCESS)
+#endif
+
 		m_CommandPool = CreateRef<VulkanCommandPool>(physDevice.Indices.Graphics, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 		m_DescriptorPool = CreateRef<VulkanDescriptorPool>();
 		m_DescriptorPool->Init(100, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
@@ -462,5 +512,33 @@ namespace YUME
 		}
 
 	}
+
+#ifdef USE_VMA_ALLOCATOR
+	VmaPool VulkanDevice::GetOrCreateSmallAllocPool(uint32_t p_MemTypeIndex)
+	{
+		if (m_SmallAllocPools.find(p_MemTypeIndex) != m_SmallAllocPools.end())
+			return m_SmallAllocPools[p_MemTypeIndex];
+
+		YM_CORE_INFO("Creating VMA small objects pool for memory type index {0}", p_MemTypeIndex)
+
+		VmaPoolCreateInfo pci;
+		pci.memoryTypeIndex = p_MemTypeIndex;
+		pci.flags = VMA_POOL_CREATE_IGNORE_BUFFER_IMAGE_GRANULARITY_BIT;
+		pci.blockSize = 0;
+		pci.minBlockCount = 0;
+		pci.maxBlockCount = SIZE_MAX;
+		pci.priority = 0.5f;
+		pci.minAllocationAlignment = 0;
+		pci.pMemoryAllocateNext = nullptr;
+		VmaPool pool = VK_NULL_HANDLE;
+
+		auto res = vmaCreatePool(m_Allocator, &pci, &pool);
+		YM_CORE_VERIFY(res == VK_SUCCESS)
+
+		m_SmallAllocPools[p_MemTypeIndex] = pool;
+
+		return pool;
+	}
+#endif
 
 }

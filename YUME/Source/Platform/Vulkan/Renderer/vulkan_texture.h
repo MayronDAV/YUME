@@ -1,5 +1,6 @@
 #pragma once
 #include "YUME/Renderer/texture.h"
+#include "Platform/Vulkan/Core/vulkan_base.h"
 
 // Lib
 #include <vulkan/vulkan.h>
@@ -37,9 +38,15 @@ namespace YUME
 
 		private:
 			void Init(const TextureSpecification& p_Spec);
-			void CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
-				VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, VkDeviceMemory& p_ImageMemory);
-			void AllocateImageMemory(VkImage& p_Image, VkDeviceMemory& p_ImageMemory, VkMemoryPropertyFlags p_Properties);
+
+#ifdef USE_VMA_ALLOCATOR
+		void CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
+			VkImageUsageFlags p_Usage, VkImage& p_Image, VmaAllocation& p_Allocation);
+#else
+		void CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
+			VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, VkDeviceMemory& p_ImageMemory);
+		void AllocateImageMemory(VkImage& p_Image, VkDeviceMemory& p_ImageMemory, VkMemoryPropertyFlags p_Properties);
+#endif
 			VkImageView CreateImageView(VkImage p_Image, VkFormat p_Format);
 
 		private:
@@ -53,10 +60,15 @@ namespace YUME
 
 			VkImage m_TextureImage = VK_NULL_HANDLE;
 			VkImageView m_TextureImageView = VK_NULL_HANDLE;
-			VkSampler m_TextureSampler = VK_NULL_HANDLE;
-			VkDeviceMemory m_TextureImageMemory = VK_NULL_HANDLE;
+			VkSampler m_TextureSampler = VK_NULL_HANDLE;			
 
 			VkFormat m_VkFormat = VK_FORMAT_R8G8B8A8_SRGB;
 			VkImageLayout m_TextureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		#ifdef USE_VMA_ALLOCATOR
+			VmaAllocation m_Allocation = VK_NULL_HANDLE;
+		#else
+			VkDeviceMemory m_TextureImageMemory = VK_NULL_HANDLE;
+		#endif
 	};
 }

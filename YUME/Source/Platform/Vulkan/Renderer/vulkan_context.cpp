@@ -157,44 +157,24 @@ namespace YUME
 		auto graphicIndex = (uint32_t)VulkanDevice::Get().GetPhysicalDeviceStruct().Indices.Graphics;
 
 		Optick::VulkanFunctions vulkanFunctions{};
-		{
-			vulkanFunctions.vkGetPhysicalDeviceProperties = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties_>(
-				vkGetInstanceProcAddr(s_Instance, "vkGetPhysicalDeviceProperties"));
-			vulkanFunctions.vkCreateQueryPool = reinterpret_cast<PFN_vkCreateQueryPool_>(
-				vkGetDeviceProcAddr(device, "vkCreateQueryPool"));
-			vulkanFunctions.vkCreateCommandPool = reinterpret_cast<PFN_vkCreateCommandPool_>(
-				vkGetDeviceProcAddr(device, "vkCreateCommandPool"));
-			vulkanFunctions.vkAllocateCommandBuffers = reinterpret_cast<PFN_vkAllocateCommandBuffers_>(
-				vkGetDeviceProcAddr(device, "vkAllocateCommandBuffers"));
-			vulkanFunctions.vkCreateFence = reinterpret_cast<PFN_vkCreateFence_>(
-				vkGetDeviceProcAddr(device, "vkCreateFence"));
-			vulkanFunctions.vkCmdResetQueryPool = reinterpret_cast<PFN_vkCmdResetQueryPool_>(
-				vkGetDeviceProcAddr(device, "vkCmdResetQueryPool"));
-			vulkanFunctions.vkQueueSubmit = reinterpret_cast<PFN_vkQueueSubmit_>(
-				vkGetDeviceProcAddr(device, "vkQueueSubmit"));
-			vulkanFunctions.vkWaitForFences = reinterpret_cast<PFN_vkWaitForFences_>(
-				vkGetDeviceProcAddr(device, "vkWaitForFences"));
-			vulkanFunctions.vkResetCommandBuffer = reinterpret_cast<PFN_vkResetCommandBuffer_>(
-				vkGetDeviceProcAddr(device, "vkResetCommandBuffer"));
-			vulkanFunctions.vkCmdWriteTimestamp = reinterpret_cast<PFN_vkCmdWriteTimestamp_>(
-				vkGetDeviceProcAddr(device, "vkCmdWriteTimestamp"));
-			vulkanFunctions.vkGetQueryPoolResults = reinterpret_cast<PFN_vkGetQueryPoolResults_>(
-				vkGetDeviceProcAddr(device, "vkGetQueryPoolResults"));
-			vulkanFunctions.vkBeginCommandBuffer = reinterpret_cast<PFN_vkBeginCommandBuffer_>(
-				vkGetDeviceProcAddr(device, "vkBeginCommandBuffer"));
-			vulkanFunctions.vkEndCommandBuffer = reinterpret_cast<PFN_vkEndCommandBuffer_>(
-				vkGetDeviceProcAddr(device, "vkEndCommandBuffer"));
-			vulkanFunctions.vkResetFences = reinterpret_cast<PFN_vkResetFences_>(
-				vkGetDeviceProcAddr(device, "vkResetFences"));
-			vulkanFunctions.vkDestroyCommandPool = reinterpret_cast<PFN_vkDestroyCommandPool_>(
-				vkGetDeviceProcAddr(device, "vkDestroyCommandPool"));
-			vulkanFunctions.vkDestroyQueryPool = reinterpret_cast<PFN_vkDestroyQueryPool_>(
-				vkGetDeviceProcAddr(device, "vkDestroyQueryPool"));
-			vulkanFunctions.vkDestroyFence = reinterpret_cast<PFN_vkDestroyFence_>(
-				vkGetDeviceProcAddr(device, "vkDestroyFence"));
-			vulkanFunctions.vkFreeCommandBuffers = reinterpret_cast<PFN_vkFreeCommandBuffers_>(
-				vkGetDeviceProcAddr(device, "vkFreeCommandBuffers"));
-		}
+		vulkanFunctions.vkGetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties_)vkGetPhysicalDeviceProperties;
+		vulkanFunctions.vkCreateQueryPool = (PFN_vkCreateQueryPool_)vkCreateQueryPool;
+		vulkanFunctions.vkCreateCommandPool = (PFN_vkCreateCommandPool_)vkCreateCommandPool;
+		vulkanFunctions.vkAllocateCommandBuffers = (PFN_vkAllocateCommandBuffers_)vkAllocateCommandBuffers;
+		vulkanFunctions.vkCreateFence = (PFN_vkCreateFence_)vkCreateFence;
+		vulkanFunctions.vkCmdResetQueryPool = (PFN_vkCmdResetQueryPool_)vkCmdResetQueryPool;
+		vulkanFunctions.vkQueueSubmit = (PFN_vkQueueSubmit_)vkQueueSubmit;
+		vulkanFunctions.vkWaitForFences = (PFN_vkWaitForFences_)vkWaitForFences;
+		vulkanFunctions.vkResetCommandBuffer = (PFN_vkResetCommandBuffer_)vkResetCommandBuffer;
+		vulkanFunctions.vkCmdWriteTimestamp = (PFN_vkCmdWriteTimestamp_)vkCmdWriteTimestamp;
+		vulkanFunctions.vkGetQueryPoolResults = (PFN_vkGetQueryPoolResults_)vkGetQueryPoolResults;
+		vulkanFunctions.vkBeginCommandBuffer = (PFN_vkBeginCommandBuffer_)vkBeginCommandBuffer;
+		vulkanFunctions.vkEndCommandBuffer = (PFN_vkEndCommandBuffer_)vkEndCommandBuffer;
+		vulkanFunctions.vkResetFences = (PFN_vkResetFences_)vkResetFences;
+		vulkanFunctions.vkDestroyCommandPool = (PFN_vkDestroyCommandPool_)vkDestroyCommandPool;
+		vulkanFunctions.vkDestroyQueryPool = (PFN_vkDestroyQueryPool_)vkDestroyQueryPool;
+		vulkanFunctions.vkDestroyFence = (PFN_vkDestroyFence_)vkDestroyFence;
+		vulkanFunctions.vkFreeCommandBuffers = (PFN_vkFreeCommandBuffers_)vkFreeCommandBuffers;
 
 		YM_PROFILE_GPU_INIT_VULKAN(&device, &physicalDevice, &queue, &graphicIndex, 1, &vulkanFunctions)
 

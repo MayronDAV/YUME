@@ -8,6 +8,7 @@
 
 
 
+
 namespace YUME
 {
 	VulkanMemoryBuffer::VulkanMemoryBuffer(VkBufferUsageFlags p_Usage, VkMemoryPropertyFlags p_MemoryProperyFlags, VkDeviceSize p_SizeBytes)
@@ -37,6 +38,25 @@ namespace YUME
 		bufferInfo.usage = p_Usage;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+#ifdef USE_VMA_ALLOCATOR
+		bool isMappable = (p_MemoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
+
+		VmaAllocationCreateInfo vmaAllocInfo = {};
+		vmaAllocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+		vmaAllocInfo.flags = isMappable ? VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT : 0;
+		vmaAllocInfo.preferredFlags = p_MemoryPropertyFlags;
+
+	#ifdef USE_SMALL_VMA_POOL
+		if (bufferInfo.size <= SMALL_ALLOCATION_MAX_SIZE)
+		{
+			uint32_t mem_type_index = 0;
+			vmaFindMemoryTypeIndexForBufferInfo(VulkanDevice::Get().GetAllocator(), &bufferInfo, &vmaAllocInfo, &mem_type_index);
+			vmaAllocInfo.pool = VulkanDevice::Get().GetOrCreateSmallAllocPool(mem_type_index);
+		}
+	#endif
+
+		vmaCreateBuffer(VulkanDevice::Get().GetAllocator(), &bufferInfo, &vmaAllocInfo, &m_Buffer, &m_Allocation, nullptr);
+#else
 		if (vkCreateBuffer(device, &bufferInfo, VK_NULL_HANDLE, &m_Buffer) != VK_SUCCESS)
 		{
 			YM_CORE_ERROR("Failed to create vertex buffer!")
@@ -57,6 +77,7 @@ namespace YUME
 		}
 
 		vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
+#endif
 	}
 
 	void VulkanMemoryBuffer::Resize(VkDeviceSize p_SizeBytes, const void* p_Data)
@@ -83,6 +104,61 @@ namespace YUME
 		}
 		else
 		{
+#ifdef USE_VMA_ALLOCATOR
+			VmaAllocationCreateInfo vmaAllocInfo = {};
+			vmaAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+			vmaAllocInfo.preferredFlags = m_MemoryPropertyFlags;
+			vmaAllocInfo.flags = 0;
+
+			VkBufferCreateInfo bufferCreateInfo{};
+			bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			bufferCreateInfo.size = p_SizeBytes;
+			bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			VkBuffer stagingBuffer;
+			VmaAllocation stagingAlloc;
+
+	#ifdef USE_SMALL_VMA_POOL
+			if (bufferCreateInfo.size <= SMALL_ALLOCATION_MAX_SIZE)
+			{
+				uint32_t mem_type_index = 0;
+				vmaFindMemoryTypeIndexForBufferInfo(VulkanDevice::Get().GetAllocator(), &bufferCreateInfo, &vmaAllocInfo, &mem_type_index);
+				vmaAllocInfo.pool = VulkanDevice::Get().GetOrCreateSmallAllocPool(mem_type_index);
+			}
+	#endif
+
+			vmaCreateBuffer(VulkanDevice::Get().GetAllocator(), &bufferCreateInfo, &vmaAllocInfo, &stagingBuffer, &stagingAlloc, nullptr);
+
+			// Copy data to staging buffer
+			uint8_t* destData;
+			{
+				auto res = vmaMapMemory(VulkanDevice::Get().GetAllocator(), stagingAlloc, (void**)&destData);
+				if (res != VK_SUCCESS)
+				{
+					YM_CORE_CRITICAL("Failed to map buffer")
+					vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), stagingBuffer, stagingAlloc);
+					return;
+				}
+
+				memcpy(destData, p_Data, p_SizeBytes);
+				vmaUnmapMemory(VulkanDevice::Get().GetAllocator(), stagingAlloc);
+			}
+
+			VkCommandBuffer commandBuffer = Utils::BeginSingleTimeCommand();
+
+			VkBufferCopy copyRegion = {};
+			copyRegion.size = p_SizeBytes;
+			vkCmdCopyBuffer(
+				commandBuffer,
+				stagingBuffer,
+				m_Buffer,
+				1,
+				&copyRegion);
+
+			Utils::EndSingleTimeCommand(commandBuffer);
+			vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), stagingBuffer, stagingAlloc);
+
+#else
 			VkBufferCreateInfo stagingBufferInfo = {};
 			stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 			stagingBufferInfo.size = p_SizeBytes;
@@ -93,7 +169,7 @@ namespace YUME
 			if (vkCreateBuffer(device, &stagingBufferInfo, VK_NULL_HANDLE, &stagingBuffer) != VK_SUCCESS)
 			{
 				YM_CORE_ERROR("Failed to create vertex buffer!")
-				return;
+					return;
 			}
 
 			VkMemoryRequirements stagingMemRequirements;
@@ -107,7 +183,7 @@ namespace YUME
 			VkDeviceMemory stagingBufferMemory;
 			if (vkAllocateMemory(device, &stagingAllocInfo, VK_NULL_HANDLE, &stagingBufferMemory) != VK_SUCCESS) {
 				YM_CORE_ERROR("Failed to allocate staging buffer memory!")
-				vkDestroyBuffer(device, stagingBuffer, VK_NULL_HANDLE);
+					vkDestroyBuffer(device, stagingBuffer, VK_NULL_HANDLE);
 				return;
 			}
 
@@ -134,6 +210,7 @@ namespace YUME
 
 			vkDestroyBuffer(device, stagingBuffer, VK_NULL_HANDLE);
 			vkFreeMemory(device, stagingBufferMemory, VK_NULL_HANDLE);
+#endif
 		}
 
 		if (p_AddBarrier)
@@ -168,7 +245,13 @@ namespace YUME
 	{
 		YM_CORE_VERIFY(p_SizeBytes > 0)
 
-		if (vkMapMemory(VulkanDevice::Get().GetDevice(), m_Memory, p_Offset, p_SizeBytes, 0, &m_Mapped) != VK_SUCCESS)
+	#ifdef USE_VMA_ALLOCATOR
+			auto res = vmaMapMemory(VulkanDevice::Get().GetAllocator(), m_Allocation, (void**)&m_Mapped);
+	#else
+			auto res = vkMapMemory(VulkanDevice::Get().GetDevice(), m_Memory, p_Offset, p_SizeBytes, 0, &m_Mapped);
+	#endif
+
+		if (res != VK_SUCCESS)
 		{
 			YM_CORE_ERROR("Failed to map memory!")
 			Destroy(false);
@@ -179,7 +262,12 @@ namespace YUME
 	{
 		if (m_Mapped)
 		{
-			vkUnmapMemory(VulkanDevice::Get().GetDevice(), m_Memory);
+		#ifdef USE_VMA_ALLOCATOR
+			vmaUnmapMemory(VulkanDevice::Get().GetAllocator(), m_Allocation);
+		#else
+			vkUnmapMemory(VulkanDevice::Device(), m_Memory);
+		#endif
+
 			m_Mapped = nullptr;
 			return;
 		}
@@ -193,6 +281,9 @@ namespace YUME
 
 		YM_CORE_VERIFY(p_SizeBytes > 0)
 
+#ifdef USE_VMA_ALLOCATOR
+		vmaFlushAllocation(VulkanDevice::Get().GetAllocator(), m_Allocation, p_Offset, p_SizeBytes);
+#else
 		Map();
 
 		VkMappedMemoryRange mappedRange = {};
@@ -203,6 +294,7 @@ namespace YUME
 		vkFlushMappedMemoryRanges(VulkanDevice::Get().GetDevice(), 1, &mappedRange);
 
 		UnMap();
+#endif
 	}
 
 	void VulkanMemoryBuffer::Invalidate(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
@@ -211,39 +303,62 @@ namespace YUME
 
 		YM_CORE_VERIFY(p_SizeBytes > 0)
 
+#ifdef USE_VMA_ALLOCATOR
+		vmaInvalidateAllocation(VulkanDevice::Get().GetAllocator(), m_Allocation, p_Offset, p_SizeBytes);
+#else
 		VkMappedMemoryRange mappedRange = {};
 		mappedRange.memory = m_Memory;
 		mappedRange.offset = p_Offset;
 		mappedRange.size = p_SizeBytes;
 		vkInvalidateMappedMemoryRanges(VulkanDevice::Get().GetDevice(), 1, &mappedRange);
+#endif
 	}
 
 	void VulkanMemoryBuffer::Destroy(bool p_DeletionQueue) noexcept
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto device = VulkanDevice::Get().GetDevice();
-		auto buffer = m_Buffer;
-		auto memory = m_Memory;
+		auto buffer = m_Buffer;	
+		
 
 		if (p_DeletionQueue)
 		{
+	#ifdef USE_VMA_ALLOCATOR
+			auto alloc = m_Allocation;
+			VulkanContext::PushFunction([buffer, alloc]()
+			{
+				YM_CORE_TRACE("Destroying vulkan vertex buffer...")
+				vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), buffer, alloc);
+			});
+	#else
+			auto memory = m_Memory;
 			VulkanContext::PushFunction([device, buffer, memory]()
 			{
 				YM_CORE_TRACE("Destroying vulkan vertex buffer")
+
+				auto device = VulkanDevice::Get().GetDevice();
 
 				if (buffer != VK_NULL_HANDLE)
 					vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
 				if (memory != VK_NULL_HANDLE)
 					vkFreeMemory(device, memory, VK_NULL_HANDLE);
 			});
+	#endif
 		}
 		else
 		{
+			YM_CORE_TRACE("Destroying vulkan vertex buffer...")
+
+	#ifdef USE_VMA_ALLOCATOR			
+			vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), buffer, m_Allocation);
+	#else
+			auto device = VulkanDevice::Get().GetDevice();
+
 			if (buffer != VK_NULL_HANDLE)
 				vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
 			if (memory != VK_NULL_HANDLE)
 				vkFreeMemory(device, memory, VK_NULL_HANDLE);
+	#endif
 		}
 	}
 }

@@ -16,6 +16,8 @@ project "YUME"
 
 		"%{IncludeDir.optick}/*.h",
 		"%{IncludeDir.optick}/*.cpp",
+
+		"%{IncludeDir.vma}/*.h",
 	}
 
 	vpaths 
@@ -37,6 +39,7 @@ project "YUME"
 		"%{IncludeDir.imgui}/backends",
 		"%{IncludeDir.stb}",
 		"%{IncludeDir.optick}",
+		"%{IncludeDir.vma}",
 		"%{IncludeDir.Vulkan}",
 		"%{LibraryDir.VulkanSDK}"
 	}
@@ -53,7 +56,7 @@ project "YUME"
 
 	defines
 	{
-		"YM_BUILD_DLL",
+		"YM_EXPORT",
 		"OPTICK_EXPORT"
 	}
 

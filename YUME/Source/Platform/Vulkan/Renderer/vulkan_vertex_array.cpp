@@ -12,27 +12,30 @@ namespace YUME
 		{
 			switch (p_Type)
 			{
-				case YUME::DataType::Float:  return VK_FORMAT_R32_SFLOAT;
-				case YUME::DataType::Float2: return VK_FORMAT_R32G32_SFLOAT;
-				case YUME::DataType::Float3: return VK_FORMAT_R32G32B32_SFLOAT;
-				case YUME::DataType::Float4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+				using enum YUME::DataType;
 
-				case YUME::DataType::Mat3:   return VK_FORMAT_R32G32B32_SFLOAT;
-				case YUME::DataType::Mat4:   return VK_FORMAT_R32G32B32A32_SFLOAT;
+				case Float:  return VK_FORMAT_R32_SFLOAT;
+				case Float2: return VK_FORMAT_R32G32_SFLOAT;
+				case Float3: return VK_FORMAT_R32G32B32_SFLOAT;
+				case Float4: return VK_FORMAT_R32G32B32A32_SFLOAT;
 
-				case YUME::DataType::UInt:   return VK_FORMAT_R32_UINT;
-				case YUME::DataType::UInt2:  return VK_FORMAT_R32G32_UINT;
+				case Mat3:   return VK_FORMAT_R32G32B32_SFLOAT;
+				case Mat4:   return VK_FORMAT_R32G32B32A32_SFLOAT;
 
-				case YUME::DataType::Int:    return VK_FORMAT_R32_SINT;
-				case YUME::DataType::Int2:   return VK_FORMAT_R32G32_SINT;
-				case YUME::DataType::Int3:   return VK_FORMAT_R32G32B32_SINT;
-				case YUME::DataType::Int4:   return VK_FORMAT_R32G32B32A32_SINT;
+				case UInt:   return VK_FORMAT_R32_UINT;
+				case UInt2:  return VK_FORMAT_R32G32_UINT;
 
-				case YUME::DataType::Bool:   return VK_FORMAT_R8_UINT;
+				case Int:    return VK_FORMAT_R32_SINT;
+				case Int2:   return VK_FORMAT_R32G32_SINT;
+				case Int3:   return VK_FORMAT_R32G32B32_SINT;
+				case Int4:   return VK_FORMAT_R32G32B32A32_SINT;
+
+				case Bool:   return VK_FORMAT_R8_UINT;
+
+				default:
+					YM_CORE_ASSERT(false, "Unknown DataType!")
+					return (VkFormat)0;
 			}
-
-			YM_CORE_ASSERT(false, "Unknown DataType!")
-				return (VkFormat)0;
 		}
 	}
 
@@ -55,7 +58,8 @@ namespace YUME
 	{
 		for (const auto& vertexBuffer : m_VertexBuffers)
 		{
-			vertexBuffer->Bind();
+			if (vertexBuffer != nullptr)
+				vertexBuffer->Bind();
 		}
 		if (m_IndexBuffer != nullptr)
 			m_IndexBuffer->Bind();
@@ -65,7 +69,8 @@ namespace YUME
 	{
 		for (const auto& vertexBuffer : m_VertexBuffers)
 		{
-			vertexBuffer->Unbind();
+			if (vertexBuffer != nullptr)
+				vertexBuffer->Unbind();
 		}
 		if (m_IndexBuffer != nullptr)
 			m_IndexBuffer->Unbind();

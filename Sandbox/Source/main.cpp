@@ -8,20 +8,6 @@
 
 
 
-struct Vertex
-{
-	glm::vec3 Position;
-	glm::vec4 Color;
-	glm::vec2 TexCoord;
-};
-
-struct Camera
-{
-	glm::mat4 Projection;
-	glm::mat4 View;
-};
-
-
 
 class ExampleLayer : public YUME::Layer
 {
@@ -79,12 +65,17 @@ class ExampleLayer : public YUME::Layer
 			}
 			YUME::RendererCommand::ClearColor(m_Color);
 
-			YUME::Renderer2D::BeginScene();
+			uint32_t width = YUME::Application::Get().GetWindow().GetWidth();
+			uint32_t height = YUME::Application::Get().GetWindow().GetHeight();
+			float aspectRatio = (float)width / (float)height;
+			auto projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
+			auto transform = glm::translate(glm::mat4(1.0f), m_Position);
 
-			int size = 10;
-			for (int x = -(size / 2); x < (size / 2); x++)
+			YUME::Renderer2D::BeginScene(YUME::Camera(projection), transform);
+
+			for (int x = -(m_TileCount / 2); x < (m_TileCount / 2); x++)
 			{
-				for (int y = -(size / 2); y < (size / 2); y++)
+				for (int y = -(m_TileCount / 2); y < (m_TileCount / 2); y++)
 				{
 					if ((std::abs(y) % 2) == 0)
 					{
@@ -97,7 +88,9 @@ class ExampleLayer : public YUME::Layer
 				}
 			}
 
-			YUME::Renderer2D::DrawQuad(m_Position, {1, 1}, m_PlayerColor, m_Texture);
+			auto playerPos = m_Position;
+			playerPos.z = 0.0f;
+			YUME::Renderer2D::DrawQuad(playerPos, {1, 1}, m_PlayerColor, m_Texture);
 
 			YUME::Renderer2D::EndScene();
 		}
@@ -114,6 +107,7 @@ class ExampleLayer : public YUME::Layer
 			ImGui::ColorEdit4("Player.Color", glm::value_ptr(m_PlayerColor));
 			ImGui::ColorEdit4("Tile Color", glm::value_ptr(m_TileColor));
 			ImGui::ColorEdit4("Background", glm::value_ptr(m_Color));
+			ImGui::InputInt("Tile Count", &m_TileCount);
 			ImGui::End();
 
 			ImGui::Begin("Render Stats");
@@ -151,7 +145,7 @@ class ExampleLayer : public YUME::Layer
 
 		bool m_Wireframe = false;
 
-		glm::vec3 m_Position = { -0.5f, -0.5f, 0 };
+		glm::vec3 m_Position = { 0.0f, 0.0f, 10.0f };
 
 		glm::vec4 m_PlayerColor = { 0.7f, 0.3f, 0.5f, 1.0f };
 		glm::vec4 m_TileColor = { 0.5f, 0.3f, 0.7f, 1.0f };
@@ -161,6 +155,8 @@ class ExampleLayer : public YUME::Layer
 		YUME::Ref<YUME::Texture2D> m_Texture;
 		YUME::Ref<YUME::Texture2D> m_GrassTexture;
 		YUME::Ref<YUME::Texture2D> m_WhiteTexture;
+
+		int m_TileCount = 25;
 };
 
 
