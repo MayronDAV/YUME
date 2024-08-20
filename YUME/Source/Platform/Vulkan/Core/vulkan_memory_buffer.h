@@ -14,7 +14,7 @@ namespace YUME
 		public:
 			VulkanMemoryBuffer() = default;
 			VulkanMemoryBuffer(VkBufferUsageFlags p_Usage, VkMemoryPropertyFlags p_MemoryProperyFlags, VkDeviceSize p_SizeBytes);
-			virtual ~VulkanMemoryBuffer();
+			~VulkanMemoryBuffer();
 
 			void Init(VkBufferUsageFlags p_Usage, VkMemoryPropertyFlags p_MemoryProperyFlags, VkDeviceSize p_SizeBytes);
 			void Resize(VkDeviceSize p_SizeBytes, const void* p_Data);

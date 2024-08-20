@@ -51,13 +51,11 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto& commandBuffer = m_Context->GetCommandBuffer();
-
-		const auto& renderPass = m_Context->GetRenderPass();
-		auto& framebuffer = m_Context->GetSwapchainFramebuffer();
-
 		auto extent = VulkanSwapchain::Get().GetExtent2D();
-		renderPass->Begin(commandBuffer, framebuffer.Get(), extent.width, extent.height, m_Color);
+		m_Context->GetRenderPass()->SetClearColor(m_Color);
+		m_Context->GetRenderPass()->SetViewport(extent.width, extent.height);
+
+		m_Context->GetRenderPass()->Begin(m_Context->GetFramebuffer());
 
 		m_Context->HasDrawCommands(true);
 
@@ -88,8 +86,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto& commandBuffer = m_Context->GetCommandBuffer();
-		m_Context->GetRenderPass()->End(commandBuffer);
+		m_Context->GetRenderPass()->End();
 	}
 
 }

@@ -90,7 +90,17 @@ namespace YUME::Utils
 		}
 	}
 
-	void TransitionImageLayout(VkImage p_Image, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout)
+	static bool HasDepthComponent(VkFormat p_Format) 
+	{
+		return  p_Format == VK_FORMAT_D16_UNORM ||
+				p_Format == VK_FORMAT_D32_SFLOAT ||
+				p_Format == VK_FORMAT_D16_UNORM_S8_UINT ||
+				p_Format == VK_FORMAT_D24_UNORM_S8_UINT ||
+				p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT;
+	}
+
+
+	void TransitionImageLayout(VkImage p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -103,7 +113,20 @@ namespace YUME::Utils
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.image = p_Image;
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		
+		if (p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT || p_Format == VK_FORMAT_D24_UNORM_S8_UINT)
+		{
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		else if (HasDepthComponent(p_Format))
+		{
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		}
+		else
+		{
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+
 		barrier.subresourceRange.baseMipLevel = 0;
 		barrier.subresourceRange.levelCount = 1;
 		barrier.subresourceRange.baseArrayLayer = 0;
@@ -144,9 +167,51 @@ namespace YUME::Utils
 			srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 		}
+		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_UNDEFINED && p_NewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) 
+		{
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+			srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		}
+		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+		{
+			barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+			srcStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		}
+		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+		{
+			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+			srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+		{
+			barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+			srcStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else if (p_CurrentLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && p_NewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+		{
+			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+			srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
 		else 
 		{
 			YM_CORE_ASSERT(false, "Unsupported layout transition!")
+			EndSingleTimeCommand(commandBuffer);
+			return;
 		}
 
 		vkCmdPipelineBarrier(
@@ -377,9 +442,9 @@ namespace YUME::Utils
 		{
 			using enum YUME::TextureUsage;
 
-			case TEXTURE_SAMPLED:			return VK_IMAGE_USAGE_SAMPLED_BIT;
-			case TEXTURE_COLOR_ATTACHMENT:  return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-			case TEXTURE_DEPTH_STENCIL:		return VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			case TEXTURE_SAMPLED:					return VK_IMAGE_USAGE_SAMPLED_BIT;
+			case TEXTURE_COLOR_ATTACHMENT:			return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			case TEXTURE_DEPTH_STENCIL_ATTACHMENT:  return VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
 			default:
 				YM_CORE_ERROR("Unknown texture format!")

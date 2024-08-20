@@ -3,8 +3,11 @@
 
 #include "Platform/Vulkan/Core/vulkan_device.h"
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
-
+#include "Platform/Vulkan/ImGui/vulkan_imgui_layer.h"
+#include "YUME/Core/application.h"
 #include "optick.h"
+#include "YUME/Renderer/texture.h"
+#include "vulkan_texture.h"
 
 // Lib
 #define GLFW_INCLUDE_VULKAN
@@ -85,8 +88,9 @@ namespace YUME
 		vkDeviceWaitIdle(device);
 
 		YM_CORE_TRACE("Destroying vulkan swapchain framebuffer...")
-		for (auto framebuffer : m_SCFramebuffers) {
-			framebuffer.CleanUp();
+		for (auto framebuffer : m_Framebuffers)
+		{
+			framebuffer->CleanUp();
 		}
 
 		VulkanSwapchain::Release();
@@ -103,7 +107,7 @@ namespace YUME
 
 		m_CommandBuffers.Free();
 
-		m_RenderPass.reset();
+		m_RenderPass->CleanUp();
 
 		m_MainDeletionQueue.Flush();
 	
@@ -184,15 +188,32 @@ namespace YUME
 		VulkanSwapchain::Get().Init(false /* Vsync */, m_Window);
 
 		YM_CORE_TRACE("Creating vulkan renderpass...")
-		m_RenderPass = CreateRef<VulkanRenderPass>();
-		m_RenderPass->Init();
+		auto extent = VulkanSwapchain::Get().GetExtent2D();
 
-		for (const auto& imageView : VulkanSwapchain::Get().GetImageViews())
+		TextureSpecification txSpec{};
+		txSpec.Width = extent.width;
+		txSpec.Height = extent.height;
+		txSpec.Usage = TextureUsage::TEXTURE_COLOR_ATTACHMENT;
+
+		RenderPassSpecification spec{};
+		spec.Attachments.push_back(CreateRef<VulkanTexture2D>(txSpec));
+		m_RenderPass = CreateRef<VulkanRenderPass>(spec);
+
+		auto& images = VulkanSwapchain::Get().GetImages();
+		auto& imageViews = VulkanSwapchain::Get().GetImageViews();
+		
+
+		for (size_t i = 0; i < images.size(); i++)
 		{
 			YM_CORE_TRACE("Creating vulkan swapchain framebuffer...")
-			VulkanSCFramebuffer framebuffer;
-			framebuffer.Init(m_RenderPass->Get(), imageView);
-			m_SCFramebuffers.push_back(framebuffer);
+
+			RenderPassFramebufferSpec fbSpec{};
+			fbSpec.Attachments.push_back(CreateRef<VulkanTexture2D>(images[i], imageViews[i], VulkanSwapchain::Get().GetFormat().format, extent.width, extent.height));
+			fbSpec.RenderPass = m_RenderPass;
+			fbSpec.Width = extent.width;
+			fbSpec.Height = extent.height;
+
+			m_Framebuffers.push_back(CreateRef<VulkanRenderPassFramebuffer>(fbSpec));
 		}
 
 		CreateSyncObjs();
@@ -278,10 +299,18 @@ namespace YUME
 		vkDeviceWaitIdle(device);
 
 		VulkanSwapchain::Get().Invalidade(actualExtent.width, actualExtent.height);
-		for (auto i = 0; i < VulkanSwapchain::Get().GetImageViews().size(); i++)
+
+		auto& images = VulkanSwapchain::Get().GetImages();
+		auto& imageViews = VulkanSwapchain::Get().GetImageViews();
+		for (size_t i = 0; i < images.size(); i++)
 		{
-			m_SCFramebuffers[i].Invalidate(VulkanSwapchain::Get().GetImageViews()[i], actualExtent.width, actualExtent.height);
+			std::vector<Ref<Texture2D>> attachments;
+			attachments.push_back(CreateRef<VulkanTexture2D>(images[i], imageViews[i], VulkanSwapchain::Get().GetFormat().format, actualExtent.width, actualExtent.height));
+
+			m_Framebuffers[i]->OnResize(actualExtent.width, actualExtent.height, attachments);
 		}
+
+		//Application::Get().GetImGuiLayer()->OnResize(actualExtent.width, actualExtent.height);
 
 		m_ViewportResized = false;
 	}
@@ -323,7 +352,7 @@ namespace YUME
 		m_CurrentImageIndex = imageIndex;
 
 		auto images = VulkanSwapchain::Get().GetImages();
-		Utils::TransitionImageLayout(images[m_CurrentFrame], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		Utils::TransitionImageLayout(images[m_CurrentFrame], VulkanSwapchain::Get().GetFormat().format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 		m_CommandBuffers.Reset(m_CurrentFrame);
 
@@ -335,7 +364,7 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		auto images = VulkanSwapchain::Get().GetImages();
-		Utils::TransitionImageLayout(images[m_CurrentFrame], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		Utils::TransitionImageLayout(images[m_CurrentFrame], VulkanSwapchain::Get().GetFormat().format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 		m_CommandBuffers.End(m_CurrentFrame);
 
@@ -461,7 +490,6 @@ namespace YUME
 		m_SignalSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 		m_WaitSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 		m_InFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
 
 		VkSemaphoreCreateInfo semaphoreCreateInfo = {};
 		semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;

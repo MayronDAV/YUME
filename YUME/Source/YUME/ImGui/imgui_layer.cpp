@@ -43,6 +43,11 @@ namespace YUME
 		}
 	}
 
+	void ImGuiLayer::OnResize(uint32_t p_Width, uint32_t p_Height)
+	{
+		OnResize_Impl(p_Width, p_Height);
+	}
+
 	void ImGuiLayer::Begin()
 	{
 		NewFrame();

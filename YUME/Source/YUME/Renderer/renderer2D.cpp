@@ -28,7 +28,7 @@ namespace YUME
 		// ----------------------------
 		// QUAD stuff
 
-		static const uint32_t MaxQuads = 10000;
+		static const uint32_t MaxQuads = 100;
 		static const uint32_t MaxVertices = MaxQuads * 4;
 		static const uint32_t MaxIndices = MaxQuads * 6;
 		static const uint8_t MaxTextureSlots = 32;
@@ -138,22 +138,11 @@ namespace YUME
 		s_RenderData->CameraUniformBuffer = UniformBuffer::Create(sizeof(Renderer2Ddata::CameraData));
 	}
 
-	void Renderer2D::Shutdown()
-	{
-		YM_PROFILE_FUNCTION()
-
-		if (s_RenderData)
-		{
-			YM_CORE_TRACE("Destroying render 2d data...")
-			delete s_RenderData;
-		}
-	}
-
 	void Renderer2D::BeginScene(const Camera& p_Camera, const glm::mat4& p_Transform)
 	{
 		YM_PROFILE_FUNCTION()
 
-		s_RenderData->QuadPipeline->SetPolygonMode(s_RenderData->PolygonMode);
+			s_RenderData->QuadPipeline->SetPolygonMode(s_RenderData->PolygonMode);
 
 		s_RenderData->CameraBuffer.ViewProjection = p_Camera.GetProjection() * glm::inverse(p_Transform);
 		s_RenderData->CameraUniformBuffer->SetData(&s_RenderData->CameraBuffer, sizeof(Renderer2Ddata::CameraData));
@@ -171,6 +160,59 @@ namespace YUME
 		Flush();
 
 		RendererCommand::End();
+	}
+	
+	void Renderer2D::StartBatch()
+	{
+		YM_PROFILE_FUNCTION()
+
+		s_RenderData->QuadIndexCount = 0;
+		s_RenderData->TextureSlotIndex = 1;
+
+		s_RenderData->QuadVertexBufferBase.clear();
+	}
+
+	void Renderer2D::Flush()
+	{
+		YM_PROFILE_FUNCTION()
+
+		if (s_RenderData->QuadIndexCount)
+		{
+			YM_PROFILE_SCOPE("QuadFlush")
+
+			s_RenderData->QuadShader->Bind();
+			
+			s_RenderData->QuadDescriptorSet->Bind(0);
+			s_RenderData->QuadDescriptorSet->UploadUniform(0, s_RenderData->CameraUniformBuffer);
+
+			s_RenderData->QuadDescriptorSet->Bind(1);
+			s_RenderData->QuadDescriptorSet->UploadTexture2D(0, s_RenderData->TextureSlots.data(), (uint32_t)s_RenderData->TextureSlots.size());
+
+			s_RenderData->QuadVertexBuffer->SetData(s_RenderData->QuadVertexBufferBase.data(), s_RenderData->QuadVertexBufferBase.size() * sizeof(QuadVertex));
+			RendererCommand::DrawIndexed(s_RenderData->QuadVertexArray, s_RenderData->QuadIndexCount);
+
+			s_RenderData->Stats.DrawCalls++;
+		}
+	}
+
+	void Renderer2D::FlushAndReset()
+	{
+		YM_PROFILE_FUNCTION()
+
+		Flush();
+
+		StartBatch();
+	}
+
+	void Renderer2D::Shutdown()
+	{
+		YM_PROFILE_FUNCTION()
+
+		if (s_RenderData)
+		{
+			YM_CORE_TRACE("Destroying render 2d data...")
+			delete s_RenderData;
+		}
 	}
 
 	void Renderer2D::SetPolygonMode(PolygonMode p_Mode)
@@ -251,50 +293,5 @@ namespace YUME
 	void Renderer2D::ResetStats()
 	{
 		memset(&s_RenderData->Stats, 0, sizeof(Statistics));
-	}
-
-	void Renderer2D::Flush()
-	{
-		YM_PROFILE_FUNCTION()
-
-		YM_PROFILE_TAG("QuadIndexCount", s_RenderData->QuadIndexCount)
-		YM_PROFILE_TAG("QuadVertexArray->GetIndexCount()", s_RenderData->QuadVertexArray->GetIndexCount())
-		YM_PROFILE_TAG("QuadVertexBufferBase", s_RenderData->QuadVertexBufferBase.size())
-		YM_PROFILE_TAG("TextureSlotIndex", s_RenderData->TextureSlotIndex)
-
-		if (s_RenderData->QuadIndexCount > 0)
-		{
-			YM_PROFILE_SCOPE("QuadFlush")
-
-			s_RenderData->QuadVertexBuffer->SetData(s_RenderData->QuadVertexBufferBase.data(), s_RenderData->QuadVertexBufferBase.size() * sizeof(QuadVertex));
-			s_RenderData->QuadShader->Bind();
-
-			s_RenderData->QuadDescriptorSet->Bind(0);
-			s_RenderData->QuadDescriptorSet->UploadUniform(0, s_RenderData->CameraUniformBuffer);
-
-			s_RenderData->QuadDescriptorSet->Bind(1);
-			s_RenderData->QuadDescriptorSet->UploadTexture2D(0, s_RenderData->TextureSlots.data(), (uint32_t)s_RenderData->TextureSlots.size());
-
-			RendererCommand::DrawIndexed(s_RenderData->QuadVertexArray, s_RenderData->QuadIndexCount);
-			s_RenderData->Stats.DrawCalls++;
-		}
-	}
-
-	void Renderer2D::StartBatch()
-	{
-		YM_PROFILE_FUNCTION()
-
-		s_RenderData->QuadIndexCount = 0;
-		s_RenderData->QuadVertexBufferBase.clear();
-		s_RenderData->TextureSlotIndex = 1;
-	}
-
-	void Renderer2D::FlushAndReset()
-	{
-		YM_PROFILE_FUNCTION()
-
-		Flush();
-
-		StartBatch();
 	}
 }

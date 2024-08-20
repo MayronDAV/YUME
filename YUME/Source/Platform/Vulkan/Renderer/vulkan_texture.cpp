@@ -13,6 +13,9 @@ namespace YUME
 	VulkanTexture2D::VulkanTexture2D(const TextureSpecification& p_Spec)
 	{
 		Init(p_Spec);
+
+		//TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		//TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
 	VulkanTexture2D::VulkanTexture2D(const TextureSpecification& p_Spec, const unsigned char* p_Data, uint32_t p_Size)
@@ -32,57 +35,6 @@ namespace YUME
 		stagingBuffer->SetDeleteWithoutQueue(true);
 		delete stagingBuffer;
 
-		m_TextureImageView = CreateImageView(m_TextureImage, m_VkFormat);
-
-		VkSamplerCreateInfo samplerInfo{};
-		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		samplerInfo.pNext = VK_NULL_HANDLE;
-		samplerInfo.magFilter = Utils::TextureFilterToVk(p_Spec.MagFilter);
-		samplerInfo.minFilter = Utils::TextureFilterToVk(p_Spec.MinFilter);
-		samplerInfo.addressModeU = Utils::TextureWrapToVk(p_Spec.WrapU);
-		samplerInfo.addressModeV = Utils::TextureWrapToVk(p_Spec.WrapV);
-		samplerInfo.addressModeW = Utils::TextureWrapToVk(p_Spec.WrapW);
-		samplerInfo.anisotropyEnable = VK_TRUE;
-		auto properties = VulkanDevice::Get().GetPhysicalDeviceStruct().Properties;
-		samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-		auto borderColor = Utils::TextureBorderColorToVk(p_Spec.BorderColorFlag);
-		samplerInfo.borderColor = borderColor;
-		samplerInfo.unnormalizedCoordinates = VK_FALSE;
-		samplerInfo.compareEnable = VK_FALSE;
-		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		samplerInfo.mipLodBias = 0.0f;
-		samplerInfo.minLod = 0.0f;
-		samplerInfo.maxLod = 0.0f;
-
-		VkSamplerCustomBorderColorCreateInfoEXT borderColorCI{};
-		if (borderColor == VK_BORDER_COLOR_INT_CUSTOM_EXT)
-		{		
-			borderColorCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT;
-			borderColorCI.customBorderColor.int32[0] = (int32_t)p_Spec.BorderColor.x;
-			borderColorCI.customBorderColor.int32[1] = (int32_t)p_Spec.BorderColor.y;
-			borderColorCI.customBorderColor.int32[2] = (int32_t)p_Spec.BorderColor.z;
-			borderColorCI.customBorderColor.int32[3] = (int32_t)p_Spec.BorderColor.w;
-			borderColorCI.format = m_VkFormat;
-			samplerInfo.pNext = &borderColorCI;
-		}
-		else if (borderColor == VK_BORDER_COLOR_FLOAT_CUSTOM_EXT)
-		{
-			borderColorCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT;
-			borderColorCI.customBorderColor.float32[0] = p_Spec.BorderColor.x;
-			borderColorCI.customBorderColor.float32[1] = p_Spec.BorderColor.y;
-			borderColorCI.customBorderColor.float32[2] = p_Spec.BorderColor.z;
-			borderColorCI.customBorderColor.float32[3] = p_Spec.BorderColor.w;
-			borderColorCI.format = m_VkFormat;
-			samplerInfo.pNext = &borderColorCI;
-		}
-
-		if (vkCreateSampler(VulkanDevice::Get().GetDevice(), &samplerInfo, VK_NULL_HANDLE, &m_TextureSampler) != VK_SUCCESS)
-		{
-			YM_CORE_ERROR("Failed to create texture sampler!")
-			return;
-		}
-
 		TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
@@ -90,11 +42,20 @@ namespace YUME
 
 	VulkanTexture2D::VulkanTexture2D(VkImage p_Image, VkImageView p_ImageView, VkFormat p_Format, uint32_t p_Width, uint32_t p_Height)
 	{
+		m_TextureImage = p_Image;
+		m_TextureImageView = p_ImageView;
+		m_VkFormat = p_Format;
+		m_Specification.Width = p_Width;
+		m_Specification.Height = p_Height;
+		m_ShouldDestroy = false;
 	}
 
 	VulkanTexture2D::~VulkanTexture2D()
 	{
 		YM_PROFILE_FUNCTION()
+
+		if (!m_ShouldDestroy)
+			return;
 
 		auto image = m_TextureImage;
 		auto imageView = m_TextureImageView;
@@ -126,14 +87,26 @@ namespace YUME
 
 	void VulkanTexture2D::SetData(const unsigned char* p_Data, uint32_t p_Size)
 	{
+		auto stagingBuffer = new VulkanMemoryBuffer(
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, p_Size);
+
+		stagingBuffer->SetData(p_Size, p_Data);
+
+		TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		Utils::CopyBufferToImage(stagingBuffer->GetBuffer(), m_TextureImage, m_Specification.Width, m_Specification.Height);
+
+		stagingBuffer->SetDeleteWithoutQueue(true);
+		delete stagingBuffer;
 	}
 
 	void VulkanTexture2D::Bind(uint32_t p_Slot) const
 	{
+		// Do nothing
 	}
 
 	void VulkanTexture2D::Unbind(uint32_t p_Slot) const
 	{
+		// Do nothing
 	}
 
 	void VulkanTexture2D::TransitionImage(VkImageLayout p_NewLayout)
@@ -142,7 +115,7 @@ namespace YUME
 
 		if (p_NewLayout != m_TextureImageLayout)
 		{
-			Utils::TransitionImageLayout(m_TextureImage, m_TextureImageLayout, p_NewLayout);
+			Utils::TransitionImageLayout(m_TextureImage, m_VkFormat, m_TextureImageLayout, p_NewLayout);
 			m_TextureImageLayout = p_NewLayout;
 		}
 	}
@@ -167,21 +140,86 @@ namespace YUME
 		m_Channels = Utils::TextureFormatChannels(p_Spec.Format);
 		m_VkFormat = Utils::TextureFormatToVk(p_Spec.Format);
 		m_BytesPerChannel = Utils::TextureFormatBytesPerChannel(p_Spec.Format);
+		auto usageFlagBits = Utils::TextureUsageToVk(p_Spec.Usage);
 
 #ifdef USE_VMA_ALLOCATOR
 		CreateImage(p_Spec.Width, p_Spec.Height, m_VkFormat,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | Utils::TextureUsageToVk(p_Spec.Usage),
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usageFlagBits,
 			m_TextureImage, m_Allocation);
 #else
 		CreateImage(p_Spec.Width, p_Spec.Height, m_VkFormat,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | Utils::TextureUsageToVk(p_Spec.Usage),
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usageFlagBits,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_TextureImage, m_TextureImageMemory);
 #endif
+
+		m_TextureImageView = CreateImageView(m_TextureImage, m_VkFormat);
+
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.pNext = VK_NULL_HANDLE;
+		samplerInfo.magFilter = Utils::TextureFilterToVk(p_Spec.MagFilter);
+		samplerInfo.minFilter = Utils::TextureFilterToVk(p_Spec.MinFilter);
+		samplerInfo.addressModeU = Utils::TextureWrapToVk(p_Spec.WrapU);
+		samplerInfo.addressModeV = Utils::TextureWrapToVk(p_Spec.WrapV);
+		samplerInfo.addressModeW = Utils::TextureWrapToVk(p_Spec.WrapW);
+
+		auto borderColor = Utils::TextureBorderColorToVk(p_Spec.BorderColorFlag);
+		VkSamplerCustomBorderColorCreateInfoEXT borderColorCI{};
+		if (m_TextureImageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		{
+			samplerInfo.anisotropyEnable = VK_TRUE;
+			auto properties = VulkanDevice::Get().GetPhysicalDeviceStruct().Properties;
+			samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+			samplerInfo.compareEnable = VK_FALSE;
+			samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+			samplerInfo.borderColor = borderColor;
+
+			if (borderColor == VK_BORDER_COLOR_INT_CUSTOM_EXT)
+			{
+				borderColorCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT;
+				borderColorCI.customBorderColor.int32[0] = (int32_t)p_Spec.BorderColor.x;
+				borderColorCI.customBorderColor.int32[1] = (int32_t)p_Spec.BorderColor.y;
+				borderColorCI.customBorderColor.int32[2] = (int32_t)p_Spec.BorderColor.z;
+				borderColorCI.customBorderColor.int32[3] = (int32_t)p_Spec.BorderColor.w;
+				borderColorCI.format = m_VkFormat;
+				samplerInfo.pNext = &borderColorCI;
+			}
+			else if (borderColor == VK_BORDER_COLOR_FLOAT_CUSTOM_EXT)
+			{
+				borderColorCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT;
+				borderColorCI.customBorderColor.float32[0] = p_Spec.BorderColor.x;
+				borderColorCI.customBorderColor.float32[1] = p_Spec.BorderColor.y;
+				borderColorCI.customBorderColor.float32[2] = p_Spec.BorderColor.z;
+				borderColorCI.customBorderColor.float32[3] = p_Spec.BorderColor.w;
+				borderColorCI.format = m_VkFormat;
+				samplerInfo.pNext = &borderColorCI;
+			}
+		}
+		else
+		{
+			samplerInfo.anisotropyEnable = VK_FALSE;
+			samplerInfo.maxAnisotropy = 0.0f;
+			samplerInfo.compareEnable = VK_TRUE;
+			samplerInfo.compareOp = VK_COMPARE_OP_LESS;
+			samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+		}
+
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerInfo.mipLodBias = 0.0f;
+		samplerInfo.minLod = 0.0f;
+		samplerInfo.maxLod = 0.0f;
+
+		if (vkCreateSampler(VulkanDevice::Get().GetDevice(), &samplerInfo, VK_NULL_HANDLE, &m_TextureSampler) != VK_SUCCESS)
+		{
+			YM_CORE_ERROR("Failed to create texture sampler!")
+			return;
+		}
 	}
 
 #ifdef USE_VMA_ALLOCATOR
 	void VulkanTexture2D::CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
-		VkImageUsageFlags p_Usage, VkImage& p_Image, VmaAllocation& p_Allocation)
+		VkImageUsageFlags p_Usage, VkImage& p_Image, VmaAllocation& p_Allocation) const
 #else
 	void VulkanTexture2D::CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
 		VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, VkDeviceMemory& p_ImageMemory)
@@ -269,14 +307,24 @@ namespace YUME
 		allocInfo.allocationSize = memRequirements.size;
 		allocInfo.memoryTypeIndex = VulkanDevice::Get().FindMemoryType(memRequirements.memoryTypeBits, p_Properties);
 
-		if (vkAllocateMemory(device, &allocInfo, nullptr, &p_ImageMemory) != VK_SUCCESS) {
+		if (vkAllocateMemory(device, &allocInfo, nullptr, &p_ImageMemory) != VK_SUCCESS)
+		{
 			YM_CORE_ERROR("Failed to allocate texture image memory!")
-				return;
+			return;
 		}
 
 		vkBindImageMemory(device, p_Image, p_ImageMemory, 0);
 	}
 #endif
+
+	static bool HasDepthComponent(VkFormat p_Format)
+	{
+		return  p_Format == VK_FORMAT_D16_UNORM ||
+			p_Format == VK_FORMAT_D32_SFLOAT ||
+			p_Format == VK_FORMAT_D16_UNORM_S8_UINT ||
+			p_Format == VK_FORMAT_D24_UNORM_S8_UINT ||
+			p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT;
+	}
 
 	VkImageView VulkanTexture2D::CreateImageView(VkImage p_Image, VkFormat p_Format)
 	{
@@ -289,14 +337,28 @@ namespace YUME
 		viewInfo.image = p_Image;
 		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 		viewInfo.format = p_Format;
-		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		
+		if (p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT || p_Format == VK_FORMAT_D24_UNORM_S8_UINT)
+		{
+			viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		else if (HasDepthComponent(p_Format))
+		{
+			viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		}
+		else
+		{
+			viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+
 		viewInfo.subresourceRange.baseMipLevel = 0;
 		viewInfo.subresourceRange.levelCount = 1;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
 
 		VkImageView imageView;
-		if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+		if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS)
+		{
 			YM_CORE_ERROR("Failed to create texture image view!")
 			return nullptr;
 		}

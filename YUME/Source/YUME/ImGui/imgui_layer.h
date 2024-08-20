@@ -21,6 +21,8 @@ namespace YUME
 
 			// Imgui
 
+			void OnResize(uint32_t p_Width, uint32_t p_Height);
+
 			void BlockEvents(bool p_Block) { m_BlockEvents = p_Block; }
 
 			void Begin();

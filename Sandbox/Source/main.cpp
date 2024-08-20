@@ -16,6 +16,7 @@ class ExampleLayer : public YUME::Layer
 			: Layer("Example")
 		{
 			m_Texture = YUME::TextureImporter::LoadTexture2D("Resources/statue.jpg");
+			m_NokotanTexture = YUME::TextureImporter::LoadTexture2D("Resources/nokotan.jpg");
 			m_GrassTexture = YUME::TextureImporter::LoadTexture2D("Resources/green_grass.jpg");
 		}
 
@@ -72,6 +73,8 @@ class ExampleLayer : public YUME::Layer
 			auto transform = glm::translate(glm::mat4(1.0f), m_Position);
 
 			YUME::Renderer2D::BeginScene(YUME::Camera(projection), transform);
+
+			YUME::Renderer2D::DrawQuad({ -(m_TileCount / 2) - 2, -(m_TileCount / 2) - 2, 0}, {1, 1}, m_TileColor, m_NokotanTexture);
 
 			for (int x = -(m_TileCount / 2); x < (m_TileCount / 2); x++)
 			{
@@ -153,10 +156,11 @@ class ExampleLayer : public YUME::Layer
 		std::string m_CurrentKeyPressed = " ";
 
 		YUME::Ref<YUME::Texture2D> m_Texture;
+		YUME::Ref<YUME::Texture2D> m_NokotanTexture;
 		YUME::Ref<YUME::Texture2D> m_GrassTexture;
 		YUME::Ref<YUME::Texture2D> m_WhiteTexture;
 
-		int m_TileCount = 25;
+		int m_TileCount = 11;
 };
 
 

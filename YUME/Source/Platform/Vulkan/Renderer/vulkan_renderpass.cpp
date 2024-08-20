@@ -3,49 +3,62 @@
 #include "Platform/Vulkan/Core/vulkan_device.h"
 #include "vulkan_swapchain.h"
 #include "Platform/Vulkan/Renderer/vulkan_context.h"
+#include "YUME/Core/application.h"
+#include "Platform/Vulkan/Utils/vulkan_utils.h"
+#include "YUME/Renderer/texture.h"
+#include "Platform/Vulkan/Renderer/vulkan_texture.h"
+
+#include "YUME/Renderer/renderpass_framebuffer.h"
+#include "Platform/Vulkan/Renderer/vulkan_renderpass_framebuffer.h"
 
 
 
 namespace YUME
 {
-	VulkanRenderPass::~VulkanRenderPass()
+	VulkanRenderPass::VulkanRenderPass(const RenderPassSpecification& p_Spec)
+		: m_ClearEnable(p_Spec.ClearEnable)
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto renderPass = m_RenderPass;
-		VulkanContext::PushFunction([renderPass]()
+		std::vector<VkAttachmentDescription> attachmentDescs;
+
+		for (const auto& attachment : p_Spec.Attachments)
 		{
-			if (renderPass != VK_NULL_HANDLE)
+			auto spec = attachment->GetSpecification();
+
+			VkAttachmentDescription attachmentDesc{};
+
+			if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT)
 			{
-				YM_CORE_TRACE("Destroying vulkan renderpass")
-				vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), renderPass, VK_NULL_HANDLE);
+				attachmentDesc.format = Utils::TextureFormatToVk(spec.Format);
+				attachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				if (m_ClearEnable)
+				{
+					attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				}
+				else
+				{
+					attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				}
+
+				attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			}
-		});
-	}
+			else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
+			{
+				YM_CORE_VERIFY(false, "NOT IMPLEMENTED!")
+			}
+			else
+			{
+				YM_CORE_CRITICAL("Unsupported texture usage!")
+				continue;
+			}
 
-	void VulkanRenderPass::Init(bool p_ClearEnable)
-	{
-		YM_PROFILE_FUNCTION()
-		// TODO: Make it more configurable.
-
-		m_ClearEnable = p_ClearEnable;
-
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format = VulkanSwapchain::Get().GetFormat().format;
-		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		if (p_ClearEnable)
-		{
-			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachmentDescs.push_back(attachmentDesc);
 		}
-		else
-		{
-			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		}
-		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		VkAttachmentReference colorAttachmentRef{};
 		colorAttachmentRef.attachment = 0;
@@ -66,8 +79,8 @@ namespace YUME
 
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1;
-		renderPassInfo.pAttachments = &colorAttachment;
+		renderPassInfo.attachmentCount = (uint32_t)attachmentDescs.size();
+		renderPassInfo.pAttachments = attachmentDescs.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
 		renderPassInfo.dependencyCount = 1;
@@ -77,17 +90,52 @@ namespace YUME
 		YM_CORE_VERIFY(res == VK_SUCCESS)
 	}
 
-	void VulkanRenderPass::Begin(VkCommandBuffer p_CommandBuffer, VkFramebuffer p_Frame, uint32_t p_Width, uint32_t p_Height, const glm::vec4& p_Color, bool p_ClearDepth)
+	VulkanRenderPass::~VulkanRenderPass()
 	{
 		YM_PROFILE_FUNCTION()
 
-		VkClearValue clearValue;
-		clearValue.color.float32[0] = p_Color.r;
-		clearValue.color.float32[1] = p_Color.g;
-		clearValue.color.float32[2] = p_Color.b;
-		clearValue.color.float32[3] = p_Color.a;
+		CleanUp(true);
+	}
 
-		if (p_ClearDepth)
+	void VulkanRenderPass::CleanUp(bool p_DeletionQueue) noexcept
+	{
+		if (!p_DeletionQueue)
+		{
+			if (m_RenderPass != VK_NULL_HANDLE)
+			{
+				YM_CORE_TRACE("Destroying vulkan renderpass")
+					vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), m_RenderPass, VK_NULL_HANDLE);
+			}
+		}
+		else
+		{
+			auto renderpass = m_RenderPass;
+			VulkanContext::PushFunction([renderpass]()
+			{
+				if (renderpass != VK_NULL_HANDLE)
+				{
+					YM_CORE_TRACE("Destroying vulkan renderpass")
+						vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), renderpass, VK_NULL_HANDLE);
+				}
+			});
+		}
+	}
+
+	void VulkanRenderPass::Begin(const Ref<RenderPassFramebuffer>& p_Frame)
+	{
+		YM_PROFILE_FUNCTION()
+
+		YM_CORE_VERIFY(p_Frame != nullptr)
+		auto framebuffer = std::dynamic_pointer_cast<VulkanRenderPassFramebuffer>(p_Frame)->Get();
+		YM_CORE_VERIFY(framebuffer != VK_NULL_HANDLE)
+
+		VkClearValue clearValue;
+		clearValue.color.float32[0] = m_ClearColor.r;
+		clearValue.color.float32[1] = m_ClearColor.g;
+		clearValue.color.float32[2] = m_ClearColor.b;
+		clearValue.color.float32[3] = m_ClearColor.a;
+
+		if (m_ClearDepth)
 		{
 			clearValue.depthStencil = VkClearDepthStencilValue{ 1.0f, 0 };
 		}
@@ -96,11 +144,11 @@ namespace YUME
 		rpBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		rpBegin.pNext = VK_NULL_HANDLE;
 		rpBegin.renderPass = m_RenderPass;
-		rpBegin.framebuffer = p_Frame;
+		rpBegin.framebuffer = framebuffer;
 		rpBegin.renderArea.offset.x = 0;
 		rpBegin.renderArea.offset.y = 0;
-		rpBegin.renderArea.extent.width = p_Width;
-		rpBegin.renderArea.extent.height = p_Height;
+		rpBegin.renderArea.extent.width = m_Width;
+		rpBegin.renderArea.extent.height = m_Height;
 		if (m_ClearEnable)
 		{
 			rpBegin.clearValueCount = 1;
@@ -112,13 +160,15 @@ namespace YUME
 			rpBegin.pClearValues = nullptr;
 		}
 
-		vkCmdBeginRenderPass(p_CommandBuffer, &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
+		auto& commandBuffer = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext())->GetCommandBuffer();
+		vkCmdBeginRenderPass(commandBuffer, &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
 	}
 
-	void VulkanRenderPass::End(VkCommandBuffer p_CommandBuffer)
+	void VulkanRenderPass::End()
 	{
 		YM_PROFILE_FUNCTION()
 
-		vkCmdEndRenderPass(p_CommandBuffer);
+		auto& commandBuffer = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext())->GetCommandBuffer();
+		vkCmdEndRenderPass(commandBuffer);
 	}
 }

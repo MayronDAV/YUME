@@ -20,7 +20,7 @@ namespace YUME::Utils
 
 	VkCullModeFlags CullModeToVk(CullMode p_Mode);
 
-	void TransitionImageLayout(VkImage p_Image, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout);
+	void TransitionImageLayout(VkImage p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout);
 
 	VkRenderingAttachmentInfo AttachmentInfo(VkImageView p_View, VkClearValue* p_Clear, VkImageLayout p_Layout);
 

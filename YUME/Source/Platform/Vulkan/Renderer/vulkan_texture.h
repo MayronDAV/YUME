@@ -14,7 +14,7 @@ namespace YUME
 		public:
 			explicit VulkanTexture2D(const TextureSpecification& p_Spec = {});
 			VulkanTexture2D(const TextureSpecification& p_Spec, const unsigned char* p_Data, uint32_t p_Size);
-			VulkanTexture2D(VkImage p_Image, VkImageView p_ImageView, VkFormat p_Format, uint32_t p_Width, uint32_t p_Height);
+			VulkanTexture2D(VkImage p_Image, VkImageView p_ImageView, VkFormat p_Format = VK_FORMAT_R8G8B8A8_SRGB, uint32_t p_Width = 1, uint32_t p_Height = 1);
 			~VulkanTexture2D() override;
 
 			void Bind(uint32_t p_Slot = 0) const override;
@@ -41,7 +41,7 @@ namespace YUME
 
 #ifdef USE_VMA_ALLOCATOR
 		void CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
-			VkImageUsageFlags p_Usage, VkImage& p_Image, VmaAllocation& p_Allocation);
+			VkImageUsageFlags p_Usage, VkImage& p_Image, VmaAllocation& p_Allocation) const;
 #else
 		void CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
 			VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, VkDeviceMemory& p_ImageMemory);
@@ -70,5 +70,7 @@ namespace YUME
 		#else
 			VkDeviceMemory m_TextureImageMemory = VK_NULL_HANDLE;
 		#endif
+
+			bool m_ShouldDestroy = true;
 	};
 }

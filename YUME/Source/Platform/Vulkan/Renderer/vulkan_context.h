@@ -3,8 +3,8 @@
 #include "YUME/Core/base.h"
 #include "YUME/Renderer/graphics_context.h"
 #include "Platform/Vulkan/Renderer/vulkan_swapchain.h"
-#include "Platform/Vulkan/Renderer/vulkan_renderpass.h"
-#include "Platform/Vulkan/Renderer/vulkan_scframebuffer.h"
+#include "vulkan_renderpass.h"
+#include "vulkan_renderpass_framebuffer.h"
 #include "Platform/Vulkan/Core/vulkan_command_buffer.h"
 
 #include "YUME/Utils/deletion_queue.h"
@@ -55,8 +55,8 @@ namespace YUME
 			VkFence& GetInFlightFence() { return m_InFlightFences[m_CurrentFrame]; }
 			VkCommandBuffer& GetCommandBuffer() { return m_CommandBuffers.Get(m_CurrentFrame); }
 			Ref<VulkanRenderPass>& GetRenderPass() { return m_RenderPass; }
-			VulkanSCFramebuffer& GetSwapchainFramebuffer() { return m_SCFramebuffers[m_CurrentImageIndex]; }
-			std::vector<VulkanSCFramebuffer>& GetSwapchainFramebufferList() { return m_SCFramebuffers; }
+			Ref<VulkanRenderPassFramebuffer> GetFramebuffer() { return m_Framebuffers[m_CurrentImageIndex]; }
+			std::vector<Ref<VulkanRenderPassFramebuffer>>& GetFramebuffersList() { return m_Framebuffers; }
 
 			static void PushFunction(const std::function<void()>& p_Function)
 			{
@@ -90,11 +90,8 @@ namespace YUME
 			uint32_t m_CurrentFrame = 0;
 			uint32_t m_ImagesCount = 0;
 
-			// RenderPass
 			Ref<VulkanRenderPass> m_RenderPass;
-			
-			// Swapchain framebuffers
-			std::vector<VulkanSCFramebuffer> m_SCFramebuffers;
+			std::vector<Ref<VulkanRenderPassFramebuffer>> m_Framebuffers;
 
 			std::vector<VkSemaphore> m_SignalSemaphores;
 			std::vector<VkSemaphore> m_WaitSemaphores;

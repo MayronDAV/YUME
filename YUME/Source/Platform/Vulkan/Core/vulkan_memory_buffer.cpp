@@ -94,8 +94,6 @@ namespace YUME
 
 		YM_CORE_VERIFY(p_Data != nullptr && p_SizeBytes > 0)
 
-		auto device = VulkanDevice::Get().GetDevice();
-
 		if (m_MemoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
 		{
 			Map(p_SizeBytes, p_Offset);
@@ -105,6 +103,8 @@ namespace YUME
 		else
 		{
 #ifdef USE_VMA_ALLOCATOR
+			auto allocator = VulkanDevice::Get().GetAllocator();
+
 			VmaAllocationCreateInfo vmaAllocInfo = {};
 			vmaAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 			vmaAllocInfo.preferredFlags = m_MemoryPropertyFlags;
@@ -122,26 +122,26 @@ namespace YUME
 			if (bufferCreateInfo.size <= SMALL_ALLOCATION_MAX_SIZE)
 			{
 				uint32_t mem_type_index = 0;
-				vmaFindMemoryTypeIndexForBufferInfo(VulkanDevice::Get().GetAllocator(), &bufferCreateInfo, &vmaAllocInfo, &mem_type_index);
+				vmaFindMemoryTypeIndexForBufferInfo(allocator, &bufferCreateInfo, &vmaAllocInfo, &mem_type_index);
 				vmaAllocInfo.pool = VulkanDevice::Get().GetOrCreateSmallAllocPool(mem_type_index);
 			}
 	#endif
 
-			vmaCreateBuffer(VulkanDevice::Get().GetAllocator(), &bufferCreateInfo, &vmaAllocInfo, &stagingBuffer, &stagingAlloc, nullptr);
+			vmaCreateBuffer(allocator, &bufferCreateInfo, &vmaAllocInfo, &stagingBuffer, &stagingAlloc, nullptr);
 
 			// Copy data to staging buffer
 			uint8_t* destData;
 			{
-				auto res = vmaMapMemory(VulkanDevice::Get().GetAllocator(), stagingAlloc, (void**)&destData);
+				auto res = vmaMapMemory(allocator, stagingAlloc, (void**)&destData);
 				if (res != VK_SUCCESS)
 				{
 					YM_CORE_CRITICAL("Failed to map buffer")
-					vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), stagingBuffer, stagingAlloc);
+					vmaDestroyBuffer(allocator, stagingBuffer, stagingAlloc);
 					return;
 				}
 
 				memcpy(destData, p_Data, p_SizeBytes);
-				vmaUnmapMemory(VulkanDevice::Get().GetAllocator(), stagingAlloc);
+				vmaUnmapMemory(allocator, stagingAlloc);
 			}
 
 			VkCommandBuffer commandBuffer = Utils::BeginSingleTimeCommand();
@@ -156,9 +156,11 @@ namespace YUME
 				&copyRegion);
 
 			Utils::EndSingleTimeCommand(commandBuffer);
-			vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), stagingBuffer, stagingAlloc);
+			vmaDestroyBuffer(allocator, stagingBuffer, stagingAlloc);
 
 #else
+			auto device = VulkanDevice::Get().GetDevice();
+
 			VkBufferCreateInfo stagingBufferInfo = {};
 			stagingBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 			stagingBufferInfo.size = p_SizeBytes;
@@ -243,6 +245,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::Map(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
 	{
+		YM_PROFILE_FUNCTION()
+
 		YM_CORE_VERIFY(p_SizeBytes > 0)
 
 	#ifdef USE_VMA_ALLOCATOR
@@ -260,6 +264,8 @@ namespace YUME
 
 	void VulkanMemoryBuffer::UnMap()
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (m_Mapped)
 		{
 		#ifdef USE_VMA_ALLOCATOR
@@ -273,6 +279,7 @@ namespace YUME
 		}
 
 		YM_CORE_ERROR("Did you call Map()?")
+		Destroy(false);
 	}
 
 	void VulkanMemoryBuffer::Flush(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
