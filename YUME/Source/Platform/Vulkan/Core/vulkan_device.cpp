@@ -376,7 +376,6 @@ namespace YUME
 		std::vector<const char*> devExts = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
-			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 			VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME
 		};
 		std::vector<const char*> requiredExts;
@@ -416,13 +415,8 @@ namespace YUME
 		customBorderColorFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT;
 		customBorderColorFeatures.customBorderColors = VK_TRUE;
 
-		VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeatures{};
-		dynamicRenderingFeatures.pNext = &customBorderColorFeatures;
-		dynamicRenderingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
-		dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
-
 		VkDeviceCreateInfo deviceCreateInfo = {};
-		deviceCreateInfo.pNext = &dynamicRenderingFeatures;
+		deviceCreateInfo.pNext = &customBorderColorFeatures;
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
 		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -475,6 +469,7 @@ namespace YUME
 		fn.vkGetDeviceProcAddr = (PFN_vkGetDeviceProcAddr)vkGetDeviceProcAddr;
 		allocatorInfo.pVulkanFunctions = &fn;
 		allocatorInfo.preferredLargeHeapBlockSize = 64 * 1024 * 1024;
+
 		auto result = vmaCreateAllocator(&allocatorInfo, &m_Allocator);
 		YM_CORE_VERIFY(result == VK_SUCCESS)
 #endif
@@ -516,7 +511,7 @@ namespace YUME
 #ifdef USE_VMA_ALLOCATOR
 	VmaPool VulkanDevice::GetOrCreateSmallAllocPool(uint32_t p_MemTypeIndex)
 	{
-		if (m_SmallAllocPools.find(p_MemTypeIndex) != m_SmallAllocPools.end())
+		if (m_SmallAllocPools.contains(p_MemTypeIndex))
 			return m_SmallAllocPools[p_MemTypeIndex];
 
 		YM_CORE_INFO("Creating VMA small objects pool for memory type index {0}", p_MemTypeIndex)
