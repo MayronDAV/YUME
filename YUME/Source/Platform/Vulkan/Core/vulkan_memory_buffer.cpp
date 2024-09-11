@@ -271,7 +271,7 @@ namespace YUME
 		#ifdef USE_VMA_ALLOCATOR
 			vmaUnmapMemory(VulkanDevice::Get().GetAllocator(), m_Allocation);
 		#else
-			vkUnmapMemory(VulkanDevice::Device(), m_Memory);
+			vkUnmapMemory(VulkanDevice::Get().GetDevice(), m_Memory);
 		#endif
 
 			m_Mapped = nullptr;
@@ -326,6 +326,7 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		auto buffer = m_Buffer;	
+		auto device = VulkanDevice::Get().GetDevice();
 		
 
 		if (p_DeletionQueue)
@@ -343,8 +344,6 @@ namespace YUME
 			{
 				YM_CORE_TRACE("Destroying vulkan vertex buffer")
 
-				auto device = VulkanDevice::Get().GetDevice();
-
 				if (buffer != VK_NULL_HANDLE)
 					vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
 				if (memory != VK_NULL_HANDLE)
@@ -359,12 +358,10 @@ namespace YUME
 	#ifdef USE_VMA_ALLOCATOR			
 			vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), buffer, m_Allocation);
 	#else
-			auto device = VulkanDevice::Get().GetDevice();
-
 			if (buffer != VK_NULL_HANDLE)
 				vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
-			if (memory != VK_NULL_HANDLE)
-				vkFreeMemory(device, memory, VK_NULL_HANDLE);
+			if (m_Memory != VK_NULL_HANDLE)
+				vkFreeMemory(device, m_Memory, VK_NULL_HANDLE);
 	#endif
 		}
 	}
