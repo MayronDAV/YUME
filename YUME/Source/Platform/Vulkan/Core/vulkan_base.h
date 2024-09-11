@@ -5,7 +5,8 @@
 #define USE_VMA_ALLOCATOR
 //#define USE_SMALL_VMA_POOL
 #ifdef USE_VMA_ALLOCATOR
-	#ifdef YM_DEBUG
+	//#define VMA_DEBUG
+	#if defined(VMA_DEBUG) && defined(YM_DEBUG)
 		#define VMA_DEBUG_MARGIN 16
 		#define VMA_DEBUG_DETECT_CORRUPTION 1
 
