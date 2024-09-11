@@ -9,7 +9,7 @@
 
 namespace YUME
 {
-	class YM_API VulkanTexture2D : public Texture2D
+	class VulkanTexture2D : public Texture2D
 	{
 		public:
 			explicit VulkanTexture2D(const TextureSpecification& p_Spec = {});

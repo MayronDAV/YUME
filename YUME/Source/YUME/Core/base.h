@@ -51,35 +51,13 @@
 #define YM_FORCE_INLINE YM_ALWAYS_INLINE
 
 #define YM_NONCOPYABLE(class_name)                     \
-    class_name(const class_name&)            = delete; \
-    class_name& operator=(const class_name&) = delete;
+	class_name(const class_name&)            = delete; \
+	class_name& operator=(const class_name&) = delete;
 
 #define YM_NONCOPYABLEANDMOVE(class_name)              \
-    class_name(const class_name&)            = delete; \
-    class_name& operator=(const class_name&) = delete; \
-    class_name(class_name&&)                 = delete; \
-    class_name& operator=(class_name&&)      = delete;
+	class_name(const class_name&)            = delete; \
+	class_name& operator=(const class_name&) = delete; \
+	class_name(class_name&&)                 = delete; \
+	class_name& operator=(class_name&&)      = delete;
 
 #include "YUME/Core/assert.h"
-
-namespace YUME
-{
-	template<typename T>
-	using Scope = std::unique_ptr<T>;
-	template<typename T, typename ... Args>
-	constexpr Scope<T> CreateScope(Args&& ... p_Args)
-	{
-		return std::make_unique<T>(std::forward<Args>(p_Args)...);
-	}
-
-	template<typename T>
-	using Ref = std::shared_ptr<T>;
-	template<typename T, typename ... Args>
-	constexpr Ref<T> CreateRef(Args&& ... p_Args)
-	{
-		return std::make_shared<T>(std::forward<Args>(p_Args)...);
-	}
-
-	template<typename T>
-	using WeakRef = std::weak_ptr<T>;
-}

@@ -44,6 +44,7 @@ namespace YUME
 
 	VulkanVertexArray::~VulkanVertexArray() 
 	{
+		
 		for (auto& vertexBuffer : m_VertexBuffers)
 		{
 			if (vertexBuffer != nullptr)
@@ -58,8 +59,8 @@ namespace YUME
 	{
 		for (const auto& vertexBuffer : m_VertexBuffers)
 		{
-			if (vertexBuffer != nullptr)
-				vertexBuffer->Bind();
+			//if (vertexBuffer != nullptr)
+			vertexBuffer->Bind();
 		}
 		if (m_IndexBuffer != nullptr)
 			m_IndexBuffer->Bind();

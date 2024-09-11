@@ -21,7 +21,7 @@ struct GLFWwindow;
 
 namespace YUME
 {
-	class YM_API VulkanContext : public GraphicsContext
+	class VulkanContext : public GraphicsContext
 	{
 		public:
 			~VulkanContext() override;

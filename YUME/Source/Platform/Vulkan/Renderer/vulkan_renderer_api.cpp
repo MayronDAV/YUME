@@ -68,7 +68,8 @@ namespace YUME
 
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 
-		p_VertexArray->Bind();
+		if (p_VertexArray != nullptr)
+			p_VertexArray->Bind();
 		vkCmdDraw(commandBuffer, p_VertexCount, 1, 0, 0);
 	}
 

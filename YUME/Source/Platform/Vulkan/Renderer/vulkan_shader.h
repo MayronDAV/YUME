@@ -16,7 +16,7 @@
 namespace YUME
 {
 
-	class YM_API VulkanShader : public Shader
+	class VulkanShader : public Shader
 	{
 		private:
 			using ShaderSource = std::unordered_map<ShaderType, std::string>;
@@ -39,8 +39,8 @@ namespace YUME
 
 			void AddVertexArray(const Ref<VertexArray>& p_VertexArray) override
 			{
-				if (auto pipeline = m_Pipeline.lock())
-					dynamic_cast<VulkanPipeline*>(pipeline.get())->AddVertexArray(p_VertexArray);
+				if (Ref<Pipeline> pipeline = m_Pipeline.lock())
+					pipeline.As<VulkanPipeline>()->AddVertexArray(p_VertexArray);
 				else
 				{
 					YM_CORE_ERROR("Pipeline has deleted!")

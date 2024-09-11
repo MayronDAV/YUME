@@ -1,5 +1,6 @@
 #pragma once
 #include "YUME/Core/base.h"
+#include "YUME/Core/reference.h"
 #include "YUME/Renderer/texture.h"
 #include "YUME/Renderer/renderpass.h"
 

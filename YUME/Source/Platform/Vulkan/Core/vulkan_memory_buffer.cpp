@@ -88,11 +88,38 @@ namespace YUME
 		Init(m_UsageFlags, m_MemoryPropertyFlags, p_SizeBytes);
 	}
 
-	void VulkanMemoryBuffer::SetData(VkDeviceSize p_SizeBytes, const void* p_Data, VkDeviceSize p_Offset, bool p_AddBarrier)
+	void VulkanMemoryBuffer::SetData(VkDeviceSize p_SizeBytes, const void* p_Data, VkDeviceSize p_Offset)
 	{
 		YM_PROFILE_FUNCTION()
-
 		YM_CORE_VERIFY(p_Data != nullptr && p_SizeBytes > 0)
+
+		if (p_SizeBytes != m_SizeBytes)
+		{
+			auto buffer = m_Buffer;
+			auto device = VulkanDevice::Get().GetDevice();
+
+		#ifdef USE_VMA_ALLOCATOR
+			auto alloc = m_Allocation;
+			VulkanContext::PushFunctionToFrameEnd([device, buffer, alloc]()
+			{
+				vkDeviceWaitIdle(device);
+				vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), buffer, alloc);
+			});
+		#else
+			auto memory = m_Memory;
+			VulkanContext::PushFunctionToFrameEnd([device, buffer, memory]()
+			{
+				vkDeviceWaitIdle(device);
+
+				if (buffer != VK_NULL_HANDLE)
+					vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
+				if (memory != VK_NULL_HANDLE)
+					vkFreeMemory(device, memory, VK_NULL_HANDLE);
+			});
+		#endif
+
+			Init(m_UsageFlags, m_MemoryPropertyFlags, p_SizeBytes);
+		}
 
 		if (m_MemoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
 		{
@@ -214,33 +241,6 @@ namespace YUME
 			vkFreeMemory(device, stagingBufferMemory, VK_NULL_HANDLE);
 #endif
 		}
-
-		if (p_AddBarrier)
-		{
-			auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-			auto commandBuffer = context->GetCommandBuffer();
-
-			VkBufferMemoryBarrier bufferBarrier = {};
-			bufferBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-			bufferBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			bufferBarrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-			bufferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			bufferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			bufferBarrier.buffer = m_Buffer;
-			bufferBarrier.offset = 0;
-			bufferBarrier.size = VK_WHOLE_SIZE;
-
-			vkCmdPipelineBarrier(
-				commandBuffer,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-				0, 0,
-				nullptr,
-				1,
-				&bufferBarrier,
-				0,
-				nullptr
-			);
-		}
 	}
 
 	void VulkanMemoryBuffer::Map(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
@@ -250,7 +250,7 @@ namespace YUME
 		YM_CORE_VERIFY(p_SizeBytes > 0)
 
 	#ifdef USE_VMA_ALLOCATOR
-			auto res = vmaMapMemory(VulkanDevice::Get().GetAllocator(), m_Allocation, (void**)&m_Mapped);
+			auto res = vmaMapMemory(VulkanDevice::Get().GetAllocator(), m_Allocation, &m_Mapped);
 	#else
 			auto res = vkMapMemory(VulkanDevice::Get().GetDevice(), m_Memory, p_Offset, p_SizeBytes, 0, &m_Mapped);
 	#endif

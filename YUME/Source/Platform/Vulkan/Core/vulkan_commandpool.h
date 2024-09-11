@@ -8,7 +8,7 @@
 
 namespace YUME
 {
-	class YM_API VulkanCommandPool
+	class VulkanCommandPool
 	{
         public:
             VulkanCommandPool(uint32_t p_QueueIndex, VkCommandPoolCreateFlags p_Flags);

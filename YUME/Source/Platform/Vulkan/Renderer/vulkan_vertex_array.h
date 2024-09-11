@@ -10,7 +10,7 @@ namespace YUME
 	using BindingDescription = std::vector<VkVertexInputBindingDescription>;
 	using AttributeDescription = std::vector<VkVertexInputAttributeDescription>;
 
-	class YM_API VulkanVertexArray : public VertexArray
+	class VulkanVertexArray : public VertexArray
 	{
 		public:
 			VulkanVertexArray() = default;

@@ -11,9 +11,9 @@
 
 namespace YUME
 {
-	class YM_API VulkanContext;
+	class VulkanContext;
 
-	class YM_API VulkanPipeline : public Pipeline
+	class VulkanPipeline : public Pipeline
 	{
 		public:
 			VulkanPipeline() = default;

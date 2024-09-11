@@ -8,7 +8,7 @@
 
 namespace YUME
 {
-	class YM_API VulkanUniformBuffer : public UniformBuffer
+	class VulkanUniformBuffer : public UniformBuffer
 	{
 		public:
 			VulkanUniformBuffer(uint32_t p_SizeBytes);

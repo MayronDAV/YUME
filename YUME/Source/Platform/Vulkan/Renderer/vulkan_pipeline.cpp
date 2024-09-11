@@ -55,7 +55,7 @@ namespace YUME
 		m_CreateInfo = p_CreateInfo;
 		m_Shader = p_CreateInfo.Shader;
 
-		auto shader = static_cast<VulkanShader*>(m_Shader.get());
+		auto shader = m_Shader.As<VulkanShader>();
 
 
 		size_t totalBindingSize = 0;
@@ -63,7 +63,7 @@ namespace YUME
 
 		for (size_t i = 0; i < m_VertexArrays.size(); i++)
 		{
-			auto vkVAO = dynamic_cast<VulkanVertexArray*>(m_VertexArrays[i].get());
+			auto vkVAO = m_VertexArrays[i].As<VulkanVertexArray>();
 			totalBindingSize += vkVAO->GetBindingDescription().size();
 			totalInputAttribSize += vkVAO->GetAttributeDescription().size();
 		}
@@ -75,7 +75,7 @@ namespace YUME
 
 		for (size_t i = 0; i < m_VertexArrays.size(); i++)
 		{
-			auto vkVAO = dynamic_cast<VulkanVertexArray*>(m_VertexArrays[i].get());
+			auto vkVAO = m_VertexArrays[i].As<VulkanVertexArray>();
 			const auto& bindingDescs = vkVAO->GetBindingDescription();
 			bindingDescriptions.insert(bindingDescriptions.end(), bindingDescs.begin(), bindingDescs.end());
 			const auto& attribDescs = vkVAO->GetAttributeDescription();

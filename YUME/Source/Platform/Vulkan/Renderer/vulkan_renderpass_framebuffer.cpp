@@ -65,13 +65,13 @@ namespace YUME
 	{
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = std::dynamic_pointer_cast<VulkanRenderPass>(m_Spec.RenderPass)->Get();
+		framebufferInfo.renderPass = m_Spec.RenderPass.As<VulkanRenderPass>()->Get();
 		framebufferInfo.attachmentCount = (uint32_t)m_Spec.Attachments.size();
 
 		std::vector<VkImageView> attachments;
 		for (const auto& attachment : m_Spec.Attachments)
 		{
-			attachments.push_back(std::dynamic_pointer_cast<VulkanTexture2D>(attachment)->GetImageView());
+			attachments.push_back(attachment.As<VulkanTexture2D>()->GetImageView());
 		}
 		framebufferInfo.pAttachments = attachments.data();
 

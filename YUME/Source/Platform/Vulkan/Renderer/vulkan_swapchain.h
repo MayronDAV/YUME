@@ -9,7 +9,7 @@
 namespace YUME
 {
 
-	class YM_API VulkanSwapchain : public ThreadSafeSingleton<VulkanSwapchain>
+	class VulkanSwapchain : public ThreadSafeSingleton<VulkanSwapchain>
 	{
 		friend class ThreadSafeSingleton<VulkanSwapchain>;
 

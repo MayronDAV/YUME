@@ -8,7 +8,7 @@
 
 namespace YUME
 {
-	class YM_API VulkanCommandBuffer
+	class VulkanCommandBuffer
 	{
 		public:
 			VulkanCommandBuffer() = default;

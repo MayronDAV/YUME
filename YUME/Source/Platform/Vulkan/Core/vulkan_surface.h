@@ -10,7 +10,7 @@ namespace YUME
 {
 	// Maybe change this to platform os instead of glfw.
 
-	class YM_API VulkanSurface : public ThreadSafeSingleton<VulkanSurface>
+	class VulkanSurface : public ThreadSafeSingleton<VulkanSurface>
 	{
 		friend class ThreadSafeSingleton<VulkanSurface>;
 

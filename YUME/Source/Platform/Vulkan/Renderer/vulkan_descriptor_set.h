@@ -7,7 +7,7 @@
 namespace YUME
 {
 
-	class YM_API VulkanDescriptorSet : public DescriptorSet
+	class VulkanDescriptorSet : public DescriptorSet
 	{
 		public:
 			explicit VulkanDescriptorSet(const Ref<Shader>& p_Shader);

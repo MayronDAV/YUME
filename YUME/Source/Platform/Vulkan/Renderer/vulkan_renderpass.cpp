@@ -126,7 +126,7 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		YM_CORE_VERIFY(p_Frame != nullptr)
-		auto framebuffer = std::dynamic_pointer_cast<VulkanRenderPassFramebuffer>(p_Frame)->Get();
+		auto framebuffer = p_Frame.As<VulkanRenderPassFramebuffer>()->Get();
 		YM_CORE_VERIFY(framebuffer != VK_NULL_HANDLE)
 
 		VkClearValue clearValue;

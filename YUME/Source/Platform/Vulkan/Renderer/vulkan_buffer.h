@@ -10,7 +10,7 @@
 namespace YUME
 {
 
-	class YM_API VulkanVertexBuffer : public VertexBuffer
+	class VulkanVertexBuffer : public VertexBuffer
 	{
 		public:
 			VulkanVertexBuffer() = default;
@@ -33,7 +33,7 @@ namespace YUME
 	};
 
 
-	class YM_API VulkanIndexBuffer : public IndexBuffer
+	class VulkanIndexBuffer : public IndexBuffer
 	{
 		public:
 			VulkanIndexBuffer() = default;

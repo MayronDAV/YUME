@@ -8,7 +8,7 @@
 
 namespace YUME
 {
-	class YM_API VulkanRenderPassFramebuffer : public RenderPassFramebuffer
+	class VulkanRenderPassFramebuffer : public RenderPassFramebuffer
 	{
 		public:
 			VulkanRenderPassFramebuffer() = default;

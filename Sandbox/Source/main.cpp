@@ -74,8 +74,6 @@ class ExampleLayer : public YUME::Layer
 
 			YUME::Renderer2D::BeginScene(YUME::Camera(projection), transform);
 
-			YUME::Renderer2D::DrawQuad({ -(m_TileCount / 2) - 2, -(m_TileCount / 2) - 2, 0}, {1, 1}, m_TileColor, m_NokotanTexture);
-
 			for (int x = -(m_TileCount / 2); x < (m_TileCount / 2); x++)
 			{
 				for (int y = -(m_TileCount / 2); y < (m_TileCount / 2); y++)
@@ -90,6 +88,8 @@ class ExampleLayer : public YUME::Layer
 					}
 				}
 			}
+
+			YUME::Renderer2D::DrawQuad({ -(m_TileCount / 2) - 2, -(m_TileCount / 2) - 2, 0 }, { 1, 1 }, m_TileColor, m_NokotanTexture);
 
 			auto playerPos = m_Position;
 			playerPos.z = 0.0f;

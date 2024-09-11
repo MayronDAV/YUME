@@ -142,7 +142,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-			s_RenderData->QuadPipeline->SetPolygonMode(s_RenderData->PolygonMode);
+		s_RenderData->QuadPipeline->SetPolygonMode(s_RenderData->PolygonMode);
 
 		s_RenderData->CameraBuffer.ViewProjection = p_Camera.GetProjection() * glm::inverse(p_Transform);
 		s_RenderData->CameraUniformBuffer->SetData(&s_RenderData->CameraBuffer, sizeof(Renderer2Ddata::CameraData));

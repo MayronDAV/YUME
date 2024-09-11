@@ -6,7 +6,7 @@
 
 namespace YUME
 {
-	class YM_API VulkanImGuiLayer : public ImGuiLayer
+	class VulkanImGuiLayer : public ImGuiLayer
 	{
 		public:
 			VulkanImGuiLayer() = default;

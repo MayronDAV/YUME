@@ -8,7 +8,7 @@
 
 namespace YUME
 {
-	class YM_API VulkanDescriptorPool
+	class VulkanDescriptorPool
 	{
 		public:
 			VulkanDescriptorPool() = default;

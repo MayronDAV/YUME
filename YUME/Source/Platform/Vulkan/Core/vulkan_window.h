@@ -12,7 +12,7 @@ struct GLFWwindow;
 
 namespace YUME
 {
-	class YM_API VulkanWindow : public Window
+	class VulkanWindow : public Window
 	{
 		public:
 			explicit VulkanWindow(const WindowProps& props);

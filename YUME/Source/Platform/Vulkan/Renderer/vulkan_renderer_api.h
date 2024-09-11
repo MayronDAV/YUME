@@ -8,7 +8,7 @@
 
 namespace YUME
 {
-	class YM_API VulkanRendererAPI : public RendererAPI
+	class VulkanRendererAPI : public RendererAPI
 	{
 		public:
 			VulkanRendererAPI() = default;

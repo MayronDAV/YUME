@@ -1,6 +1,7 @@
 #pragma once
 
 #include "YUME/Core/base.h"
+#include "YUME/Core/reference.h"
 #include "vertex_array.h"
 #include "pipeline.h"
 #include "uniform_buffer.h"

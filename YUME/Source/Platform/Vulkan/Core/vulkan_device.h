@@ -1,6 +1,7 @@
 #pragma once
 
 #include "YUME/Core/base.h"
+#include "YUME/Core/reference.h"
 #include "vulkan_base.h"
 #include "YUME/Core/singleton.h"
 #include "vulkan_commandpool.h"
@@ -55,7 +56,7 @@ namespace YUME
 
 
 
-	class YM_API VulkanPhysicalDevice
+	class VulkanPhysicalDevice
 	{
 		public:
 			VulkanPhysicalDevice();
@@ -80,7 +81,7 @@ namespace YUME
 			friend class VulkanDevice;
 	};
 
-	class YM_API VulkanDevice : public ThreadSafeSingleton<VulkanDevice>
+	class VulkanDevice : public ThreadSafeSingleton<VulkanDevice>
 	{
 		friend class ThreadSafeSingleton<VulkanDevice>;
 

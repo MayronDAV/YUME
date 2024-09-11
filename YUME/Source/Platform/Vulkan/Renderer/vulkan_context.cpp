@@ -19,7 +19,7 @@ namespace YUME
 {
 
 #ifdef YM_DEBUG
-	#define YM_VK_DEBUG_LOG(Type)														 \
+	#define YM_VK_DEBUG_LOG(Type)															 \
 		YM_CORE_##Type("Debug Callback:")													 \
 		YM_CORE_##Type("{}", p_CallbackData->pMessage)										 \
 		YM_CORE_##Type("\t Severity: {}", Utils::GetMessageSeverityStr(p_Severity))			 \

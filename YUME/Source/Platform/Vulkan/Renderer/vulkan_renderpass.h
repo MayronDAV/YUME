@@ -10,7 +10,7 @@
 
 namespace YUME
 {
-	class YM_API VulkanRenderPass : public RenderPass
+	class VulkanRenderPass : public RenderPass
 	{
 		public:
 			VulkanRenderPass() = default;
