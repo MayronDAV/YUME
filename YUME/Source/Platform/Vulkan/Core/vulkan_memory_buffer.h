@@ -39,6 +39,8 @@ namespace YUME
 			void* m_Mapped = nullptr;
 			bool m_DeleteWithoutQueue = false;
 
+			bool m_Updated = false;
+
 	#ifdef USE_VMA_ALLOCATOR
 			VmaAllocation m_Allocation = VK_NULL_HANDLE;
 	#else

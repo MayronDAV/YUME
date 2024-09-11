@@ -93,7 +93,7 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 		YM_CORE_VERIFY(p_Data != nullptr && p_SizeBytes > 0)
 
-		if (p_SizeBytes != m_SizeBytes)
+		if (m_Updated)
 		{
 			auto buffer = m_Buffer;
 			auto device = VulkanDevice::Get().GetDevice();
@@ -119,6 +119,8 @@ namespace YUME
 		#endif
 
 			Init(m_UsageFlags, m_MemoryPropertyFlags, p_SizeBytes);
+
+			m_Updated = false;
 		}
 
 		if (m_MemoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
@@ -241,6 +243,8 @@ namespace YUME
 			vkFreeMemory(device, stagingBufferMemory, VK_NULL_HANDLE);
 #endif
 		}
+
+		m_Updated = true;
 	}
 
 	void VulkanMemoryBuffer::Map(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)

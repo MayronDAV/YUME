@@ -28,7 +28,7 @@ namespace YUME
 		// ----------------------------
 		// QUAD stuff
 
-		static const uint32_t MaxQuads = 100;
+		static const uint32_t MaxQuads = 5000;
 		static const uint32_t MaxVertices = MaxQuads * 4;
 		static const uint32_t MaxIndices = MaxQuads * 6;
 		static const uint8_t MaxTextureSlots = 32;
