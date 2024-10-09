@@ -10,8 +10,8 @@ from io import BytesIO
 from urllib.request import urlopen
 
 class VulkanConfiguration:
-    requiredVulkanVersion = "1.3.283.0"
-    installVulkanVersion = "1.3.283.0"
+    requiredVulkanVersion = "1.3.296.0"
+    installVulkanVersion = "1.3.296.0"
     vulkanDirectory = "./Thirdparty/VulkanSDK"
     system = platform.system().lower()
 
