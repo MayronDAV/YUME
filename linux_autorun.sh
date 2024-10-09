@@ -12,16 +12,18 @@ if [ $? -ne 0 ]; then
 	tar -xf Thirdparty/Python/Linux/python-3.12.4.tar.xz
 	rm -rf Thirdparty/Python/Linux/python-3.12.4.tar.xz
 
-	cd ./Thirdparty/Python/Python-3.12.4
+	cd Thirdparty/Python/Python-3.12.4
 
 	./configure
 	make
 	sudo make install
 
-	cd ..
+	cd ../..
+	rm -rf Python
 fi
 
 echo "Python is installed"
 echo "Setting up project..."
+chmod +x Scripts/Linux/linux_setup.sh
 ./Scripts/Linux/linux_setup.sh
 

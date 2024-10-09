@@ -40,7 +40,6 @@ namespace YUME
 
 			virtual const TextureSpecification& GetSpecification() const = 0;
 
-
 			virtual std::vector<unsigned char>& GetData() = 0;
 
 			virtual void SetData(const unsigned char* p_Data, uint32_t p_Size) = 0;

@@ -1,4 +1,7 @@
-#!bin/bash
+#!/bin/bash
 
-./../../Thirdparty/premake/bin/windows/premake5.exe gmake
-make
+pushd "$(dirname "$0")/../.."
+
+./Thirdparty/premake/bin/linux/premake5 gmake
+
+popd

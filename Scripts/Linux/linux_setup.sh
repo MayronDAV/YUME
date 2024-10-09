@@ -1,3 +1,3 @@
 #!bin/bash
 
-python ../setup.py
+python Scripts/setup.py

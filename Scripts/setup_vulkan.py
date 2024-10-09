@@ -63,18 +63,18 @@ class VulkanConfiguration:
             os.startfile(os.path.abspath(vulkanPath))
 
         if (cls.system == "linux"):
-            print("Unziping Vulkan SDK...")
+            print("Unzipping Vulkan SDK...")
             utils.UnzipFile(vulkanPath)
 
-            vulkanExeDir = f"{cls.vulkanDirectory}/{name}-{cls.installVulkanVersion}/{cls.installVulkanVersion}"
-            vulkansdkInstaller = f"{vulkanExeDir}/{name.split('-')[0]}"
+            vulkanExeDir = Path(f"{cls.vulkanDirectory}/{name}-{cls.installVulkanVersion}/{cls.installVulkanVersion}")
+            vulkansdkInstaller = vulkanExeDir / name.split('-')[0]  # Correctly create path object
             if vulkansdkInstaller.exists():
                 print("Running Vulkan SDK installer...")
                 subprocess.run([f"./{vulkansdkInstaller}"], check=True)
             else:
                 print("Vulkan SDK installer not found!")
 
-            setupScript = f"{vulkanExeDir}/setup_env"
+            setupScript = vulkanExeDir / "setup_env"  # Use pathlib to handle paths
             if setupScript.exists():
                 print("Setting up Vulkan SDK environment...")
                 subprocess.run([f"./{setupScript}"], check=True)
