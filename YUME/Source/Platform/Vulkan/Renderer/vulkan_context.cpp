@@ -87,12 +87,6 @@ namespace YUME
 		auto& device = VulkanDevice::Get().GetDevice();
 		vkDeviceWaitIdle(device);
 
-		YM_CORE_TRACE("Destroying vulkan swapchain framebuffer...")
-		for (auto framebuffer : m_Framebuffers)
-		{
-			framebuffer->CleanUp();
-		}
-
 		VulkanSwapchain::Release();
 
 		VulkanSurface::Release();
@@ -106,8 +100,6 @@ namespace YUME
 		}
 
 		m_CommandBuffers.Free();
-
-		m_RenderPass->CleanUp();
 
 		m_MainDeletionQueue.Flush();
 	
@@ -186,35 +178,6 @@ namespace YUME
 
 		YM_CORE_TRACE("Creating vulkan swapchain...")
 		VulkanSwapchain::Get().Init(false /* Vsync */, m_Window);
-
-		YM_CORE_TRACE("Creating vulkan renderpass...")
-		auto extent = VulkanSwapchain::Get().GetExtent2D();
-
-		TextureSpecification txSpec{};
-		txSpec.Width = extent.width;
-		txSpec.Height = extent.height;
-		txSpec.Usage = TextureUsage::TEXTURE_COLOR_ATTACHMENT;
-
-		RenderPassSpecification spec{};
-		spec.Attachments.push_back(CreateRef<VulkanTexture2D>(txSpec));
-		m_RenderPass = CreateRef<VulkanRenderPass>(spec);
-
-		auto& images = VulkanSwapchain::Get().GetImages();
-		auto& imageViews = VulkanSwapchain::Get().GetImageViews();
-		
-
-		for (size_t i = 0; i < images.size(); i++)
-		{
-			YM_CORE_TRACE("Creating vulkan swapchain framebuffer...")
-
-			RenderPassFramebufferSpec fbSpec{};
-			fbSpec.Attachments.push_back(CreateRef<VulkanTexture2D>(images[i], imageViews[i], VulkanSwapchain::Get().GetFormat().format, extent.width, extent.height));
-			fbSpec.RenderPass = m_RenderPass;
-			fbSpec.Width = extent.width;
-			fbSpec.Height = extent.height;
-
-			m_Framebuffers.push_back(CreateRef<VulkanRenderPassFramebuffer>(fbSpec));
-		}
 
 		CreateSyncObjs();
 	}
@@ -300,17 +263,7 @@ namespace YUME
 
 		VulkanSwapchain::Get().Invalidade(actualExtent.width, actualExtent.height);
 
-		auto& images = VulkanSwapchain::Get().GetImages();
-		auto& imageViews = VulkanSwapchain::Get().GetImageViews();
-		for (size_t i = 0; i < images.size(); i++)
-		{
-			std::vector<Ref<Texture2D>> attachments;
-			attachments.push_back(CreateRef<VulkanTexture2D>(images[i], imageViews[i], VulkanSwapchain::Get().GetFormat().format, actualExtent.width, actualExtent.height));
-
-			m_Framebuffers[i]->OnResize(actualExtent.width, actualExtent.height, attachments);
-		}
-
-		//Application::Get().GetImGuiLayer()->OnResize(actualExtent.width, actualExtent.height);
+		Application::Get().GetImGuiLayer()->OnResize(actualExtent.width, actualExtent.height);
 
 		m_ViewportResized = false;
 	}

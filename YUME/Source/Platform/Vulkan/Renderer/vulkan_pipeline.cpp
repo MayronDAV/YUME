@@ -5,6 +5,8 @@
 #include "vulkan_shader.h"
 
 #include "YUME/Core/application.h"
+#include "vulkan_texture.h"
+#include <glm/gtc/type_ptr.hpp>
 
 
 
@@ -55,8 +57,10 @@ namespace YUME
 		m_CreateInfo = p_CreateInfo;
 		m_Shader = p_CreateInfo.Shader;
 
-		auto shader = m_Shader.As<VulkanShader>();
+		CreateFramebuffers();
 
+		auto shader = m_Shader.As<VulkanShader>();
+		m_VertexArrays = shader->GetVertexArrays();
 
 		size_t totalBindingSize = 0;
 		size_t totalInputAttribSize = 0;
@@ -99,6 +103,7 @@ namespace YUME
 			VK_DYNAMIC_STATE_SCISSOR
 		};
 
+
 		VkPipelineDynamicStateCreateInfo dynamicState{};
 		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 		dynamicState.dynamicStateCount = (uint32_t)dynamicStateDescriptors.size();
@@ -128,69 +133,93 @@ namespace YUME
 		multisampling.sampleShadingEnable = VK_FALSE;
 		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-		colorBlendAttachment.colorWriteMask = 0x0f;
-		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
-		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-
-		if (p_CreateInfo.TransparencyEnabled)
+		std::vector<VkPipelineColorBlendAttachmentState> blendAttachState;
+		blendAttachState.resize(m_RenderPass.As<VulkanRenderPass>()->GetColorAttachmentCount());
+		for (size_t i = 0; i < blendAttachState.size(); i++)
 		{
-			colorBlendAttachment.blendEnable = VK_TRUE;
-			colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-			colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+			blendAttachState[i].colorWriteMask = 0x0f;
+			blendAttachState[i].alphaBlendOp = VK_BLEND_OP_ADD;
+			blendAttachState[i].colorBlendOp = VK_BLEND_OP_ADD;
+			blendAttachState[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+			blendAttachState[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 
-			if (p_CreateInfo.BlendMode == BlendMode::SrcAlphaOneMinusSrcAlpha)
+			if (p_CreateInfo.TransparencyEnabled)
 			{
-				colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-				colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-				colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-				colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			}
-			else if (p_CreateInfo.BlendMode == BlendMode::SrcAlphaOne)
-			{
-				colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-				colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
-				colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-				colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-			}
-			else if (p_CreateInfo.BlendMode == BlendMode::ZeroSrcColor)
-			{
-				colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-				colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
-			}
-			else if (p_CreateInfo.BlendMode == BlendMode::OneZero)
-			{
-				colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-				colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+				blendAttachState[i].blendEnable = VK_TRUE;
+				blendAttachState[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+				blendAttachState[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+
+				if (p_CreateInfo.BlendMode == BlendMode::SrcAlphaOneMinusSrcAlpha)
+				{
+					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+					blendAttachState[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+					blendAttachState[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+				}
+				else if (p_CreateInfo.BlendMode == BlendMode::SrcAlphaOne)
+				{
+					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+					blendAttachState[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+					blendAttachState[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+				}
+				else if (p_CreateInfo.BlendMode == BlendMode::ZeroSrcColor)
+				{
+					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
+				}
+				else if (p_CreateInfo.BlendMode == BlendMode::OneZero)
+				{
+					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+				}
+				else
+				{
+					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+				}
 			}
 			else
 			{
-				colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-				colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+				blendAttachState[i].blendEnable = VK_FALSE;
+				blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+				blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+				blendAttachState[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+				blendAttachState[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 			}
-		}
-		else
-		{
-			colorBlendAttachment.blendEnable = VK_FALSE;
-			colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-			colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-			colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-			colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		}
 
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
 		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.attachmentCount = (uint32_t)blendAttachState.size();
+		colorBlending.pAttachments = blendAttachState.data();
 		colorBlending.logicOpEnable = VK_FALSE;
 		colorBlending.logicOp = VK_LOGIC_OP_NO_OP;
 		colorBlending.blendConstants[0] = 1.0f;
 		colorBlending.blendConstants[1] = 1.0f;
 		colorBlending.blendConstants[2] = 1.0f;
 		colorBlending.blendConstants[3] = 1.0f;
+
 		
+		VkPipelineDepthStencilStateCreateInfo ds{};
+		ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		ds.pNext = NULL;
+		ds.depthTestEnable = p_CreateInfo.DepthTest ? VK_TRUE : VK_FALSE;
+		ds.depthWriteEnable = p_CreateInfo.DepthWrite ? VK_TRUE : VK_FALSE;
+		ds.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		ds.depthBoundsTestEnable = VK_FALSE;
+		ds.stencilTestEnable = VK_FALSE;
+		ds.back.failOp = VK_STENCIL_OP_KEEP;
+		ds.back.passOp = VK_STENCIL_OP_KEEP;
+		ds.back.compareOp = VK_COMPARE_OP_ALWAYS;
+		ds.back.compareMask = 0;
+		ds.back.reference = 0;
+		ds.back.depthFailOp = VK_STENCIL_OP_KEEP;
+		ds.back.writeMask = 0;
+		ds.minDepthBounds = 0;
+		ds.maxDepthBounds = 0;
+		ds.front = ds.back;
+
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.stageCount = (uint32_t)shader->GetShaderStages().size();
@@ -200,12 +229,12 @@ namespace YUME
 		pipelineInfo.pViewportState = &viewportState;
 		pipelineInfo.pRasterizationState = &rasterizer;
 		pipelineInfo.pMultisampleState = &multisampling;
-		pipelineInfo.pDepthStencilState = nullptr; // Optional
+		pipelineInfo.pDepthStencilState = &ds;
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
 		auto layout = shader->GetLayout();
 		pipelineInfo.layout = layout;
-		pipelineInfo.renderPass = m_Context->GetRenderPass()->Get();
+		pipelineInfo.renderPass = m_RenderPass.As<VulkanRenderPass>()->Get();
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
 		pipelineInfo.basePipelineIndex = -1; // Optional
@@ -232,12 +261,100 @@ namespace YUME
 		Init(p_CreateInfo);
 	}
 
-	void VulkanPipeline::Bind()
+	void VulkanPipeline::Begin()
 	{
 		YM_PROFILE_FUNCTION()
 
 		auto commandBuffer = m_Context->GetCommandBuffer();
 
+		Ref<RenderPassFramebuffer> framebuffer;
+		if (m_CreateInfo.SwapchainTarget)
+		{
+			framebuffer = m_Framebuffers[m_Context->GetCurrentImageIndex()];
+		}
+		else
+		{
+			framebuffer = m_Framebuffers[0];
+		}
+
+		m_RenderPass->Begin(framebuffer, GetWidth(), GetHeight(), glm::make_vec4(m_CreateInfo.ClearColor));
+
+		m_Context->HasDrawCommands(true);
+
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
+	}
+
+	void VulkanPipeline::End()
+	{
+		YM_PROFILE_FUNCTION()
+
+		m_RenderPass->End();
+	}
+
+	void VulkanPipeline::CreateFramebuffers()
+	{
+		YM_PROFILE_FUNCTION()
+
+		std::vector<Ref<Texture2D>> attachments;
+		auto width = GetWidth();
+		auto height = GetHeight();
+
+		if (m_CreateInfo.SwapchainTarget)
+		{
+			TextureSpecification txSpec{};
+			txSpec.Width = width;
+			txSpec.Height = height;
+			txSpec.Usage = TextureUsage::TEXTURE_COLOR_ATTACHMENT;
+
+			attachments.push_back(Texture2D::Create(txSpec));
+		}
+		else
+		{
+			for (const auto& texture : m_CreateInfo.ColorTargets)
+			{
+				if (texture)
+				{
+					attachments.push_back(texture);
+				}
+			}
+		}
+
+		if (m_CreateInfo.DepthTarget)
+		{
+			attachments.push_back(m_CreateInfo.DepthTarget);
+		}
+
+		RenderPassSpecification spec{};
+		spec.Attachments = attachments;
+		spec.ClearEnable = m_CreateInfo.ClearTargets;
+		spec.SwapchainTarget = m_CreateInfo.SwapchainTarget;
+		m_RenderPass = RenderPass::Get(spec);
+
+
+		RenderPassFramebufferSpec fbSpec{};
+		fbSpec.RenderPass = m_RenderPass;
+		fbSpec.Width = width;
+		fbSpec.Height = height;
+
+		if (m_CreateInfo.SwapchainTarget)
+		{
+			const auto& images = VulkanSwapchain::Get().GetImages();
+			const auto& imageViews = VulkanSwapchain::Get().GetImageViews();
+
+			for (size_t i = 0; i < images.size(); i++)
+			{
+				attachments[0] = CreateRef<VulkanTexture2D>(images[i], imageViews[i],
+					VulkanSwapchain::Get().GetFormat().format, width, height);
+
+				fbSpec.Attachments = attachments;
+
+				m_Framebuffers.push_back(RenderPassFramebuffer::Get(fbSpec));
+			}
+		}
+		else
+		{
+			fbSpec.Attachments = attachments;
+			m_Framebuffers.push_back(RenderPassFramebuffer::Get(fbSpec));
+		}
 	}
 }

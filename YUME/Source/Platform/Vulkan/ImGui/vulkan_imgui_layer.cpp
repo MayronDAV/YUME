@@ -33,13 +33,12 @@ static void check_vk_result(VkResult err)
 
 namespace YUME
 {
-	void DrawImgui(VkCommandBuffer p_Cmd, const Ref<VulkanRenderPass>& p_RenderPass)
+	void DrawImgui(VkCommandBuffer p_Cmd, const Ref<VulkanRenderPass>& p_RenderPass, const Ref<VulkanRenderPassFramebuffer>& p_Framebuffer)
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-
-		p_RenderPass->Begin(context->GetFramebuffer());
+		auto extent = VulkanSwapchain::Get().GetExtent2D();
+		p_RenderPass->Begin(p_Framebuffer, extent.width, extent.height);
 		{
 			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), p_Cmd);
 		}
@@ -50,7 +49,19 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		m_RenderPass.reset();
+		for (auto framebuffer : m_Framebuffers)
+		{
+			VulkanContext::PushFunction([framebuffer]()
+			{
+				framebuffer->CleanUp();
+			});
+		}
+
+		auto renderpass = m_RenderPass;
+		VulkanContext::PushFunction([renderpass]()
+		{
+			renderpass->CleanUp();
+		});
 
 		YM_CORE_TRACE("Destroying vulkan imgui descriptor pool...")
 		vkDestroyDescriptorPool(VulkanDevice::Get().GetDevice(), g_DescriptorPool, VK_NULL_HANDLE);
@@ -60,7 +71,6 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		auto& device = VulkanDevice::Get().GetDevice();
 		auto glfwWindow = (GLFWwindow*)Application::Get().GetWindow().GetNativeWindow();
 
@@ -104,20 +114,35 @@ namespace YUME
 		RenderPassSpecification spec{};
 		spec.Attachments.push_back(CreateRef<VulkanTexture2D>(txSpec));
 		spec.ClearEnable = false;
+		spec.SwapchainTarget = true;
 		m_RenderPass = CreateRef<VulkanRenderPass>(spec);
+
+		auto& images = VulkanSwapchain::Get().GetImages();
+		auto& imageViews = VulkanSwapchain::Get().GetImageViews();
+
+		for (size_t i = 0; i < images.size(); i++)
+		{
+			YM_CORE_TRACE("Creating vulkan swapchain framebuffer...")
+
+			RenderPassFramebufferSpec fbSpec{};
+			fbSpec.Attachments.push_back(CreateRef<VulkanTexture2D>(images[i], imageViews[i],
+				VulkanSwapchain::Get().GetFormat().format, wd->Width, wd->Height));
+			fbSpec.RenderPass = m_RenderPass;
+			fbSpec.Width = wd->Width;
+			fbSpec.Height = wd->Height;
+
+			m_Framebuffers.push_back(CreateRef<VulkanRenderPassFramebuffer>(fbSpec));
+		}
 
 		wd->RenderPass = m_RenderPass->Get();
 		wd->Frames = (ImGui_ImplVulkanH_Frame*)ImGui::MemAlloc(sizeof(ImGui_ImplVulkanH_Frame) * wd->ImageCount);
 		memset(wd->Frames, 0, sizeof(wd->Frames[0]) * wd->ImageCount);
 
-		auto& images = VulkanSwapchain::Get().GetImages();
-		auto& imageViews = VulkanSwapchain::Get().GetImageViews();
-		auto& framebuffers = context->GetFramebuffersList();
 		for (uint32_t i = 0; i < wd->ImageCount; i++)
 		{		
 			wd->Frames[i].Backbuffer = images[i];
 			wd->Frames[i].BackbufferView = imageViews[i];
-			wd->Frames[i].Framebuffer = framebuffers[i]->Get();
+			wd->Frames[i].Framebuffer = m_Framebuffers[i]->Get();
 		}
 
 		// 2: initialize imgui library
@@ -177,10 +202,7 @@ namespace YUME
 		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		auto commandBuffer = context->GetCommandBuffer();
 
-		auto extent = VulkanSwapchain::Get().GetExtent2D();
-		m_RenderPass->SetViewport(extent.width, extent.height);
-
-		DrawImgui(commandBuffer, m_RenderPass);
+		DrawImgui(commandBuffer, m_RenderPass, m_Framebuffers[context->GetCurrentImageIndex()]);
 
 		ImGuiIO& io = ImGui::GetIO();
 		Application& app = Application::Get();
@@ -197,8 +219,6 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-
 		auto* wd = &g_WindowData;
 		wd->Swapchain = VulkanSwapchain::Get().GetSwapChain();
 		wd->Width = VulkanSwapchain::Get().GetExtent2D().width;
@@ -206,12 +226,21 @@ namespace YUME
 
 		auto& images = VulkanSwapchain::Get().GetImages();
 		auto& imageViews = VulkanSwapchain::Get().GetImageViews();
-		auto& framebuffers = context->GetFramebuffersList();
+
+		for (size_t i = 0; i < images.size(); i++)
+		{
+			std::vector<Ref<Texture2D>> attachments;
+			attachments.push_back(CreateRef<VulkanTexture2D>(images[i], imageViews[i],
+				VulkanSwapchain::Get().GetFormat().format, wd->Width, wd->Height));
+
+			m_Framebuffers[i]->OnResize(wd->Width, wd->Height, attachments);
+		}
+
 		for (uint32_t i = 0; i < wd->ImageCount; i++)
 		{
 			wd->Frames[i].Backbuffer = images[i];
 			wd->Frames[i].BackbufferView = imageViews[i];
-			wd->Frames[i].Framebuffer = framebuffers[i]->Get();
+			wd->Frames[i].Framebuffer = m_Framebuffers[i]->Get();
 		}
 	}
 

@@ -11,6 +11,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include "vulkan_texture.h"
 
 
 
@@ -47,19 +48,45 @@ namespace YUME
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	}
 
-	void VulkanRendererAPI::Begin()
+	void VulkanRendererAPI::ClearRenderTarget(const Ref<Texture2D> p_Texture, const glm::vec4& p_Value)
 	{
-		YM_PROFILE_FUNCTION()
+		VkImageSubresourceRange subresourceRange = {};
+		subresourceRange.baseMipLevel = 0;
+		subresourceRange.layerCount = 1;
+		subresourceRange.levelCount = 1;
+		subresourceRange.baseArrayLayer = 0;
 
-		auto extent = VulkanSwapchain::Get().GetExtent2D();
-		m_Context->GetRenderPass()->SetClearColor(m_Color);
-		m_Context->GetRenderPass()->SetViewport(extent.width, extent.height);
+		const auto& spec = p_Texture->GetSpecification();
+		const auto& commandBuffer = m_Context->GetCommandBuffer();
 
-		m_Context->GetRenderPass()->Begin(m_Context->GetFramebuffer());
 
-		m_Context->HasDrawCommands(true);
+		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+		{
+			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-		SetViewport(0, 0, extent.width, extent.height);
+			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			VkClearColorValue clearColorValue = VkClearColorValue({ { p_Value.x, p_Value.y, p_Value.z, p_Value.w } });
+			vkCmdClearColorImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, 1, &subresourceRange);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout);
+		}
+		else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
+		{
+			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+			subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			VkClearDepthStencilValue clear_depth_stencil = { 1.0f, 1 };
+			vkCmdClearDepthStencilImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil, 1, &subresourceRange);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout);
+		}
+		else
+		{
+			YM_CORE_ERROR("Unsupported texture usage!")
+		}
+
 	}
 
 	void VulkanRendererAPI::Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount)
@@ -81,13 +108,6 @@ namespace YUME
 
 		p_VertexArray->Bind();
 		vkCmdDrawIndexed(commandBuffer, p_IndexCount, 1, 0, 0, 0);
-	}
-
-	void VulkanRendererAPI::End()
-	{
-		YM_PROFILE_FUNCTION()
-
-		m_Context->GetRenderPass()->End();
 	}
 
 }

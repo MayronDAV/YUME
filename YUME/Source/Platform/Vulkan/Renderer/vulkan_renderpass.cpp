@@ -15,79 +15,187 @@
 
 namespace YUME
 {
+	namespace Utils
+	{
+		static VkAttachmentDescription GetAttachmentDesc(const Ref<Texture2D>& p_Texture, bool p_Clear, bool p_SwapchainTarget, int p_Samples = 1)
+		{
+			YM_PROFILE_FUNCTION()
+
+			VkAttachmentDescription attachmentDesc{};
+			const auto& spec = p_Texture->GetSpecification();
+			attachmentDesc.format = Utils::TextureFormatToVk(spec.Format);
+			attachmentDesc.initialLayout = p_Texture.As<VulkanTexture2D>()->GetLayout();
+			attachmentDesc.finalLayout = attachmentDesc.initialLayout;
+
+			if (p_SwapchainTarget)
+			{
+				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			}
+
+			if (p_Clear)
+			{
+				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				
+			}
+			else
+			{
+				if (p_SwapchainTarget)
+				{
+					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+					attachmentDesc.finalLayout = attachmentDesc.initialLayout;
+				}
+
+				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			}
+
+			attachmentDesc.samples = p_Samples > 1 ? (VkSampleCountFlagBits)p_Samples : VK_SAMPLE_COUNT_1_BIT;
+			attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachmentDesc.flags = 0;
+
+			return attachmentDesc;
+		}
+
+	} // Utils
+
 	VulkanRenderPass::VulkanRenderPass(const RenderPassSpecification& p_Spec)
 		: m_ClearEnable(p_Spec.ClearEnable)
 	{
 		YM_PROFILE_FUNCTION()
 
-		std::vector<VkAttachmentDescription> attachmentDescs;
+		std::vector<VkAttachmentDescription> attachments;
 
-		for (const auto& attachment : p_Spec.Attachments)
+		std::vector<VkAttachmentReference> colorAttachmentReferences;
+		std::vector<VkAttachmentReference> depthAttachmentReferences;
+		std::vector<VkSubpassDependency> dependencies;
+
+		for (size_t i = 0; i < p_Spec.Attachments.size(); i++)
 		{
-			auto spec = attachment->GetSpecification();
+			const auto& attachment = p_Spec.Attachments[i];
+			const auto& spec = attachment->GetSpecification();
 
-			VkAttachmentDescription attachmentDesc{};
+			// attachment desc
+
+			attachments.push_back(Utils::GetAttachmentDesc(attachment, m_ClearEnable, p_Spec.SwapchainTarget));
+
+			// attachment ref
 
 			if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT)
 			{
-				attachmentDesc.format = Utils::TextureFormatToVk(spec.Format);
-				attachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
-				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-				attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				attachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-				if (m_ClearEnable)
-				{
-					attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				}
-				else
-				{
-					attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				}
-
-				attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			}
+				VkImageLayout layout = attachment.As<VulkanTexture2D>()->GetLayout();
+				VkAttachmentReference colorAttachmentRef = {};
+				colorAttachmentRef.attachment = uint32_t(i);
+				colorAttachmentRef.layout = layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : layout;
+				colorAttachmentReferences.push_back(colorAttachmentRef);
+				m_DepthOnly = false;
+				++m_ColorAttachmentCount;
+			}		
 			else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
 			{
-				YM_CORE_VERIFY(false, "NOT IMPLEMENTED!")
+				VkAttachmentReference depthAttachmentRef = {};
+				depthAttachmentRef.attachment = uint32_t(i);
+				depthAttachmentRef.layout = attachment.As<VulkanTexture2D>()->GetLayout();
+				depthAttachmentReferences.push_back(depthAttachmentRef);
+				m_ClearDepth = m_ClearEnable;
 			}
 			else
 			{
-				YM_CORE_CRITICAL("Unsupported texture usage!")
-				continue;
+				YM_CORE_ERROR("Unsupported texture attachment!")
 			}
 
-			attachmentDescs.push_back(attachmentDesc);
+			// Dependencies
+
+			if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
+			{
+				{
+					VkSubpassDependency& depedency = dependencies.emplace_back();
+					depedency.srcSubpass = VK_SUBPASS_EXTERNAL;
+					depedency.dstSubpass = 0;
+					depedency.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+					depedency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+					depedency.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+					depedency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+					depedency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+				}
+
+				{
+					VkSubpassDependency& depedency = dependencies.emplace_back();
+					depedency.srcSubpass = 0;
+					depedency.dstSubpass = VK_SUBPASS_EXTERNAL;
+					depedency.srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+					depedency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+					depedency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+					depedency.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+					depedency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+				}
+			}
+			else
+			{
+				{
+					VkSubpassDependency& depedency = dependencies.emplace_back();
+					depedency.srcSubpass = VK_SUBPASS_EXTERNAL;
+					depedency.dstSubpass = 0;
+					depedency.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+					depedency.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+					depedency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+					depedency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+					depedency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+				}
+				{
+					VkSubpassDependency& depedency = dependencies.emplace_back();
+					depedency.srcSubpass = 0;
+					depedency.dstSubpass = VK_SUBPASS_EXTERNAL;
+					depedency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+					depedency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+					depedency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+					depedency.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+					depedency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+				}
+			}
 		}
 
-		VkAttachmentReference colorAttachmentRef{};
-		colorAttachmentRef.attachment = 0;
-		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		bool resolveTexture = false;
+		VkAttachmentReference colorAttachmentResolvedRef = {};
 
-		VkSubpassDescription subpass{};
+		if (p_Spec.ResolveTexture != nullptr && p_Spec.Samples > 1)
+		{
+			resolveTexture = true;
+			VkImageLayout layout = p_Spec.ResolveTexture.As<VulkanTexture2D>()->GetLayout();
+			colorAttachmentResolvedRef.attachment = uint32_t(attachments.size());
+			colorAttachmentResolvedRef.layout = layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : layout;
+
+			attachments.push_back(Utils::GetAttachmentDesc(p_Spec.ResolveTexture, m_ClearEnable, p_Spec.SwapchainTarget));
+		}
+
+
+		VkSubpassDescription subpass = {};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorAttachmentRef;
+		subpass.colorAttachmentCount = static_cast<uint32_t>(colorAttachmentReferences.size());
+		subpass.pColorAttachments = colorAttachmentReferences.data();
+		subpass.pDepthStencilAttachment = depthAttachmentReferences.data();
+		subpass.pResolveAttachments = resolveTexture ? &colorAttachmentResolvedRef : VK_NULL_HANDLE;
 
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.srcAccessMask = 0;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		m_ColorAttachmentCount = int(colorAttachmentReferences.size());
 
-		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = (uint32_t)attachmentDescs.size();
-		renderPassInfo.pAttachments = attachmentDescs.data();
-		renderPassInfo.subpassCount = 1;
-		renderPassInfo.pSubpasses = &subpass;
-		renderPassInfo.dependencyCount = 1;
-		renderPassInfo.pDependencies = &dependency;
+		VkRenderPassCreateInfo renderPassCreateInfo = {};
+		renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		renderPassCreateInfo.pAttachments = attachments.data();
+		renderPassCreateInfo.subpassCount = 1;
+		renderPassCreateInfo.pSubpasses = &subpass;
+		renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+		renderPassCreateInfo.pDependencies = dependencies.data();
 
-		auto res = vkCreateRenderPass(VulkanDevice::Get().GetDevice(), &renderPassInfo, nullptr, &m_RenderPass);
+		auto res = vkCreateRenderPass(VulkanDevice::Get().GetDevice(), &renderPassCreateInfo, VK_NULL_HANDLE, &m_RenderPass);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
+
+		m_ClearValue = new VkClearValue[int(attachments.size())];
+		m_ClearCount = int(attachments.size());
 	}
 
 	VulkanRenderPass::~VulkanRenderPass()
@@ -104,7 +212,7 @@ namespace YUME
 			if (m_RenderPass != VK_NULL_HANDLE)
 			{
 				YM_CORE_TRACE("Destroying vulkan renderpass")
-					vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), m_RenderPass, VK_NULL_HANDLE);
+				vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), m_RenderPass, VK_NULL_HANDLE);
 			}
 		}
 		else
@@ -115,29 +223,35 @@ namespace YUME
 				if (renderpass != VK_NULL_HANDLE)
 				{
 					YM_CORE_TRACE("Destroying vulkan renderpass")
-						vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), renderpass, VK_NULL_HANDLE);
+					vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), renderpass, VK_NULL_HANDLE);
 				}
 			});
 		}
 	}
 
-	void VulkanRenderPass::Begin(const Ref<RenderPassFramebuffer>& p_Frame)
+	void VulkanRenderPass::Begin(const Ref<RenderPassFramebuffer>& p_Frame, uint32_t p_Width, uint32_t p_Height, const glm::vec4& p_Color)
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_VERIFY(p_Frame != nullptr)
+		YM_CORE_ASSERT(p_Frame != nullptr)
 		auto framebuffer = p_Frame.As<VulkanRenderPassFramebuffer>()->Get();
-		YM_CORE_VERIFY(framebuffer != VK_NULL_HANDLE)
+		YM_CORE_ASSERT(framebuffer != VK_NULL_HANDLE)
+		YM_CORE_ASSERT(m_ClearValue != nullptr)
 
-		VkClearValue clearValue;
-		clearValue.color.float32[0] = m_ClearColor.r;
-		clearValue.color.float32[1] = m_ClearColor.g;
-		clearValue.color.float32[2] = m_ClearColor.b;
-		clearValue.color.float32[3] = m_ClearColor.a;
+		if (!m_DepthOnly)
+		{
+			for (int i = 0; i < m_ClearCount; i++)
+			{
+				m_ClearValue[i].color.float32[0] = p_Color.r;
+				m_ClearValue[i].color.float32[1] = p_Color.g;
+				m_ClearValue[i].color.float32[2] = p_Color.b;
+				m_ClearValue[i].color.float32[3] = p_Color.a;
+			}
+		}
 
 		if (m_ClearDepth)
 		{
-			clearValue.depthStencil = VkClearDepthStencilValue{ 1.0f, 0 };
+			m_ClearValue[m_ClearCount - 1].depthStencil = VkClearDepthStencilValue{ 1.0f, 0 };
 		}
 
 		VkRenderPassBeginInfo rpBegin = {};
@@ -147,18 +261,10 @@ namespace YUME
 		rpBegin.framebuffer = framebuffer;
 		rpBegin.renderArea.offset.x = 0;
 		rpBegin.renderArea.offset.y = 0;
-		rpBegin.renderArea.extent.width = m_Width;
-		rpBegin.renderArea.extent.height = m_Height;
-		if (m_ClearEnable)
-		{
-			rpBegin.clearValueCount = 1;
-			rpBegin.pClearValues = &clearValue;
-		}
-		else
-		{
-			rpBegin.clearValueCount = 0;
-			rpBegin.pClearValues = nullptr;
-		}
+		rpBegin.renderArea.extent.width = p_Width;
+		rpBegin.renderArea.extent.height = p_Height;
+		rpBegin.clearValueCount = (m_ClearEnable) ? m_ClearCount : 0;
+		rpBegin.pClearValues = m_ClearValue;
 
 		auto& commandBuffer = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext())->GetCommandBuffer();
 		vkCmdBeginRenderPass(commandBuffer, &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
@@ -171,4 +277,5 @@ namespace YUME
 		auto& commandBuffer = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext())->GetCommandBuffer();
 		vkCmdEndRenderPass(commandBuffer);
 	}
-}
+
+} // YUME

@@ -1,6 +1,7 @@
 #pragma once
 #include "YUME/ImGui/imgui_layer.h"
 #include "Platform/Vulkan/Renderer/vulkan_renderpass.h"
+#include "Platform/Vulkan/Renderer/vulkan_renderpass_framebuffer.h"
 
 
 
@@ -21,6 +22,6 @@ namespace YUME
 
 		private:
 			Ref<VulkanRenderPass> m_RenderPass = nullptr;
-			
+			std::vector<Ref<VulkanRenderPassFramebuffer>> m_Framebuffers;
 	};
 }

@@ -17,6 +17,8 @@ namespace YUME
 	static constexpr uint16_t DESCRIPTOR_MAX_TEXTURES = 1024;
 
 
+	static constexpr uint8_t MAX_RENDER_TARGETS = 4;
+
 	enum class RenderAPI : uint8_t
 	{
 		Vulkan = 0, OpenGL, None

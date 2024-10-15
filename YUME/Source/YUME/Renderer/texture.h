@@ -47,6 +47,29 @@ namespace YUME
 			virtual void Bind(uint32_t p_Slot = 0) const = 0;
 			virtual void Unbind(uint32_t p_Slot = 0) const = 0;
 
+			static bool IsDepthStencilFormat(TextureFormat p_Format)
+			{
+				return p_Format == TextureFormat::D24_UNORM_S8_UINT || p_Format == TextureFormat::D16_UNORM_S8_UINT ||
+					p_Format == TextureFormat::D32_FLOAT_S8_UINT;
+			}
+
+			static bool IsDepthFormat(TextureFormat p_Format)
+			{
+				return p_Format == TextureFormat::D16_UNORM || p_Format == TextureFormat::D32_FLOAT ||
+					p_Format == TextureFormat::D24_UNORM_S8_UINT || p_Format == TextureFormat::D16_UNORM_S8_UINT ||
+					p_Format == TextureFormat::D32_FLOAT_S8_UINT;
+			}
+
+			static bool IsStencilFormat(TextureFormat p_Format)
+			{
+				return p_Format == TextureFormat::D24_UNORM_S8_UINT || p_Format == TextureFormat::D16_UNORM_S8_UINT ||
+					p_Format == TextureFormat::D32_FLOAT_S8_UINT;
+			}
+
+			bool IsSampled() const { return GetSpecification().Usage == TextureUsage::TEXTURE_SAMPLED; }
+			bool IsColorAttachment() const { return GetSpecification().Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT; }
+			bool IsDepthStencilAttachment() const { return GetSpecification().Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT; }
+
 			virtual bool operator== (const Texture& p_Other) const = 0;
 	};
 
@@ -56,5 +79,9 @@ namespace YUME
 		public:
 			static Ref<Texture2D> Create(const TextureSpecification& p_Spec = {});
 			static Ref<Texture2D> Create(const TextureSpecification& p_Spec, const unsigned char* p_Data, uint32_t p_Size);
+
+			static Ref<Texture2D> Get(const TextureSpecification& p_Spec = {});
+			static void ClearCache();
+			static void DeleteUnusedCache();
 	};
 }

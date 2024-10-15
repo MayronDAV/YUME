@@ -99,6 +99,13 @@ namespace YUME::Utils
 				p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT;
 	}
 
+	static bool HasStencilComponent(VkFormat p_Format)
+	{
+		return  p_Format == VK_FORMAT_D16_UNORM_S8_UINT ||
+				p_Format == VK_FORMAT_D24_UNORM_S8_UINT ||
+				p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT;
+	}
+
 
 	void TransitionImageLayout(VkImage p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout)
 	{
@@ -114,7 +121,7 @@ namespace YUME::Utils
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.image = p_Image;
 		
-		if (p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT || p_Format == VK_FORMAT_D24_UNORM_S8_UINT)
+		if (HasDepthComponent(p_Format) && HasStencilComponent(p_Format))
 		{
 			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 		}

@@ -36,7 +36,6 @@ namespace YUME
 			virtual void PushInt(const std::string& p_Name, int p_Value) = 0;
 
 			virtual void AddVertexArray(const Ref<VertexArray>& p_VertexArray) = 0;
-			virtual void SetPipeline(const Ref<Pipeline>& p_Pipeline) = 0;
 
 			static Ref<Shader> Create(const std::string& p_ShaderPath);
 	};

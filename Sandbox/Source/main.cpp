@@ -89,7 +89,7 @@ class ExampleLayer : public YUME::Layer
 				}
 			}
 
-			YUME::Renderer2D::DrawQuad({ -(m_TileCount / 2) - 2, -(m_TileCount / 2) - 2, 0 }, { 1, 1 }, m_TileColor, m_NokotanTexture);
+			YUME::Renderer2D::DrawQuad({ -(m_TileCount / 2) - 2, -(m_TileCount / 2) - 2, m_Nokotan_z }, { 1, 1 }, m_TileColor, m_NokotanTexture);
 
 			auto playerPos = m_Position;
 			playerPos.z = 0.0f;
@@ -111,6 +111,7 @@ class ExampleLayer : public YUME::Layer
 			ImGui::ColorEdit4("Tile Color", glm::value_ptr(m_TileColor));
 			ImGui::ColorEdit4("Background", glm::value_ptr(m_Color));
 			ImGui::InputInt("Tile Count", &m_TileCount);
+			ImGui::InputFloat("Nokotan Z", &m_Nokotan_z);
 			ImGui::End();
 
 			ImGui::Begin("Render Stats");
@@ -149,6 +150,7 @@ class ExampleLayer : public YUME::Layer
 		bool m_Wireframe = false;
 
 		glm::vec3 m_Position = { 0.0f, 0.0f, 10.0f };
+		float m_Nokotan_z = 0.0f;
 
 		glm::vec4 m_PlayerColor = { 0.7f, 0.3f, 0.5f, 1.0f };
 		glm::vec4 m_TileColor = { 0.5f, 0.3f, 0.7f, 1.0f };

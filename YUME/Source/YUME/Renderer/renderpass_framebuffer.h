@@ -26,5 +26,9 @@ namespace YUME
 			virtual uint32_t GetHeight() const = 0;
 
 			static Ref<RenderPassFramebuffer> Create(const RenderPassFramebufferSpec& p_Spec);
+
+			static Ref<RenderPassFramebuffer> Get(const RenderPassFramebufferSpec& p_Spec = {});
+			static void ClearCache();
+			static void DeleteUnusedCache();
 	};
 }

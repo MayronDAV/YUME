@@ -4,6 +4,9 @@
 #include "YUME/Renderer/vertex_array.h"
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 
+#include "YUME/Renderer/renderpass.h"
+#include "YUME/Renderer/renderpass_framebuffer.h"
+
 #include <vulkan/vulkan.h>
 
 
@@ -27,7 +30,8 @@ namespace YUME
 			void Invalidade();
 			void Invalidade(const PipelineCreateInfo& p_Desc);
 
-			void Bind() override;
+			void Begin() override;
+			void End() override;
 
 			void SetPolygonMode(PolygonMode p_Mode) override
 			{
@@ -45,9 +49,15 @@ namespace YUME
 			void AddVertexArray(const Ref<VertexArray>& p_VertexArray) { m_VertexArrays.push_back(p_VertexArray); Invalidade(); }
 
 		private:
+			void CreateFramebuffers();
+
+		private:
 			Ref<Shader> m_Shader;
 
 			VulkanContext* m_Context = nullptr;
+
+			Ref<RenderPass> m_RenderPass = nullptr;
+			std::vector<Ref<RenderPassFramebuffer>> m_Framebuffers;
 
 			VkPipeline m_Pipeline = VK_NULL_HANDLE;
 			VkPipelineLayout m_Layout = VK_NULL_HANDLE;

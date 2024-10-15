@@ -31,6 +31,7 @@ namespace YUME
 			VkImageView GetImageView() const { return m_TextureImageView; }
 			VkSampler GetImageSampler() const { return m_TextureSampler; }
 			VkImageLayout GetLayout() const { return m_TextureImageLayout; }
+			VkImage GetImage() const { return m_TextureImage; }
 
 			void TransitionImage(VkImageLayout p_NewLayout);
 

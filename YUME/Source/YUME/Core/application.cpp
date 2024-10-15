@@ -10,6 +10,10 @@
 
 #include "YUME/Core/engine.h"
 
+#include "YUME/Renderer/renderpass.h"
+#include "YUME/Renderer/renderpass_framebuffer.h"
+#include "YUME/Renderer/pipeline.h"
+
 #include <iostream>
 #include <imgui/imgui.h>
 
@@ -41,6 +45,11 @@ namespace YUME
 
 	Application::~Application()
 	{
+		Pipeline::ClearCache();
+		RenderPassFramebuffer::ClearCache();
+		RenderPass::ClearCache();
+		Texture2D::ClearCache();
+
 		YUME::RendererCommand::Shutdown();
 		Renderer::Shutdown();
 
@@ -97,6 +106,11 @@ namespace YUME
 				//YM_CORE_INFO("FPS -> {}", (int)m_FPS)
 
 				m_Window->EndFrame();
+
+				Pipeline::DeleteUnusedCache();
+				RenderPassFramebuffer::DeleteUnusedCache();
+				RenderPass::DeleteUnusedCache();
+				Texture2D::DeleteUnusedCache();
 
 				m_FPSCounter++;
 			}

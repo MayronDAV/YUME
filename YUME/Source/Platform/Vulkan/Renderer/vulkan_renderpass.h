@@ -19,24 +19,20 @@ namespace YUME
 
 			void CleanUp(bool p_DeletionQueue = false) noexcept;
 
-			void Begin(const Ref<RenderPassFramebuffer>& p_Frame) override;
+			void Begin(const Ref<RenderPassFramebuffer>& p_Frame, uint32_t p_Width, uint32_t p_Height, const glm::vec4& p_Color = { 1, 1, 1, 1 }) override;
 			void End() override;
 
-			void SetClearColor(const glm::vec4& p_Color) override { m_ClearColor = p_Color; }
-			void EnableClearDepth(bool p_Enable) override { m_ClearEnable = p_Enable; }
-			void SetViewport(uint32_t p_Width, uint32_t p_Height) override { m_Width = p_Width; m_Height = p_Height; }
-
-			void SetCurrentFrame(VkFramebuffer& p_Frame) { m_CurrentFrame = p_Frame; }
+			int GetColorAttachmentCount() const { return m_ColorAttachmentCount; }
 
 			VkRenderPass& Get() { return m_RenderPass; }
 
 		private:
-			uint32_t m_Width = 0;
-			uint32_t m_Height = 0;
-			glm::vec4 m_ClearColor = { 1, 1, 1, 1 };
 			bool m_ClearEnable = true;
 			bool m_ClearDepth = false;
-			VkFramebuffer m_CurrentFrame = VK_NULL_HANDLE;
+			VkClearValue* m_ClearValue = nullptr;
+			int m_ClearCount = 0;
+			int m_ColorAttachmentCount = 0;
+			bool m_DepthOnly = true;
 
 			VkRenderPass m_RenderPass = nullptr;
 	};

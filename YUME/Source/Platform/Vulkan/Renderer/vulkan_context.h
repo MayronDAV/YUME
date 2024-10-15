@@ -54,9 +54,6 @@ namespace YUME
 
 			VkFence& GetInFlightFence() { return m_InFlightFences[m_CurrentFrame]; }
 			VkCommandBuffer& GetCommandBuffer() { return m_CommandBuffers.Get(m_CurrentFrame); }
-			Ref<VulkanRenderPass>& GetRenderPass() { return m_RenderPass; }
-			Ref<VulkanRenderPassFramebuffer> GetFramebuffer() { return m_Framebuffers[m_CurrentImageIndex]; }
-			std::vector<Ref<VulkanRenderPassFramebuffer>>& GetFramebuffersList() { return m_Framebuffers; }
 
 			static void PushFunction(const std::function<void()>& p_Function)
 			{
@@ -89,9 +86,6 @@ namespace YUME
 			uint32_t m_CurrentImageIndex = 0;
 			uint32_t m_CurrentFrame = 0;
 			uint32_t m_ImagesCount = 0;
-
-			Ref<VulkanRenderPass> m_RenderPass;
-			std::vector<Ref<VulkanRenderPassFramebuffer>> m_Framebuffers;
 
 			std::vector<VkSemaphore> m_SignalSemaphores;
 			std::vector<VkSemaphore> m_WaitSemaphores;

@@ -30,24 +30,21 @@ namespace YUME
 
 		s_RendererAPI->SetViewport(p_X, p_Y, p_Width, p_Height);
 	}
-	void RendererCommand::Begin()
-	{
-		YM_PROFILE_FUNCTION()
 
-		s_RendererAPI->Begin();
-	}
-	void RendererCommand::End()
-	{
-		YM_PROFILE_FUNCTION()
-
-		s_RendererAPI->End();
-	}
 	void RendererCommand::ClearColor(const glm::vec4& p_Color)
 	{
 		YM_PROFILE_FUNCTION()
 
 		s_RendererAPI->ClearColor(p_Color);
 	}
+
+	void RendererCommand::ClearRenderTarget(const Ref<Texture2D> p_Texture, const glm::vec4& p_Value)
+	{
+		YM_PROFILE_FUNCTION()
+
+		s_RendererAPI->ClearRenderTarget(p_Texture, p_Value);
+	}
+
 	void RendererCommand::Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount)
 	{
 		YM_PROFILE_FUNCTION()

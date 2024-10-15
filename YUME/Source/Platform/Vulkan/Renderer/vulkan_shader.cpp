@@ -220,20 +220,12 @@ namespace YUME
 
 	void VulkanShader::Bind()
 	{
-		YM_PROFILE_FUNCTION()
-
-		if (auto pipeline = m_Pipeline.lock()) 
-		{
-			pipeline->Bind();
-		}
-		else 
-		{
-			YM_CORE_ERROR("Pipelie has deleted!")
-		}
+		// Do nothing
 	}
 
 	void VulkanShader::Unbind()
 	{
+		// Do nothing
 	}
 
 	const std::string_view& VulkanShader::GetName() const

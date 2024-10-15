@@ -33,20 +33,15 @@ namespace YUME
 
 			const std::string_view& GetName() const override;
 
+			const std::vector<Ref<VertexArray>>& GetVertexArrays() { return m_VertexArrays; }
 			VkPipelineLayout& GetLayout() { return m_PipelineLayout; }
 			const std::unordered_map<uint32_t, VkDescriptorSetLayout>& GetDescriptorSetLayouts() const { return m_DescriptorSetLayouts; }
 			std::vector<VkPipelineShaderStageCreateInfo>& GetShaderStages() { return m_ShaderStages; }
 
 			void AddVertexArray(const Ref<VertexArray>& p_VertexArray) override
 			{
-				if (Ref<Pipeline> pipeline = m_Pipeline.lock())
-					pipeline.As<VulkanPipeline>()->AddVertexArray(p_VertexArray);
-				else
-				{
-					YM_CORE_ERROR("Pipeline has deleted!")
-				}
+				m_VertexArrays.push_back(p_VertexArray);
 			}
-			void SetPipeline(const Ref<Pipeline>& p_Pipeline) override { YM_CORE_VERIFY(p_Pipeline->GetShader() == this)  m_Pipeline = p_Pipeline; }
 
 			void PushFloat(const std::string& p_Name, float p_Value) override;
 			void PushFloat3(const std::string& p_Name, const glm::vec3& p_Value) override;
@@ -76,7 +71,7 @@ namespace YUME
 
 			std::unordered_map<ShaderType, std::vector<uint32_t>> m_VulkanSPIRV;
 
-			WeakRef<Pipeline> m_Pipeline;
+			std::vector<Ref<VertexArray>> m_VertexArrays;
 			VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
 
 			VkShaderStageFlags m_Stages = 0;

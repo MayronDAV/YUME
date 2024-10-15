@@ -78,15 +78,9 @@ namespace YUME
 		// ----------------------------
 		// QUAD stuff
 
-		s_RenderData->QuadShader = Shader::Create("assets/shaders/Renderer2D_Quad.glsl");
-	
-		PipelineCreateInfo pci{};
-		pci.Shader = s_RenderData->QuadShader;
-		pci.BlendMode = BlendMode::SrcAlphaOneMinusSrcAlpha;
-		pci.TransparencyEnabled = true;
-		s_RenderData->QuadPipeline = Pipeline::Create(pci);
+		// SHADER
 
-		s_RenderData->QuadShader->SetPipeline(s_RenderData->QuadPipeline);
+		s_RenderData->QuadShader = Shader::Create("assets/shaders/Renderer2D_Quad.glsl");
 
 		s_RenderData->QuadVertexArray = VertexArray::Create();
 
@@ -120,6 +114,8 @@ namespace YUME
 	
 		s_RenderData->QuadShader->AddVertexArray(s_RenderData->QuadVertexArray);
 
+		// PIPELINE
+
 		s_RenderData->QuadVertexPositions[0] = { -0.5f, -0.5f, 0.0f, 1.0f };
 		s_RenderData->QuadVertexPositions[1] = {  0.5f, -0.5f, 0.0f, 1.0f };
 		s_RenderData->QuadVertexPositions[2] = {  0.5f,  0.5f, 0.0f, 1.0f };
@@ -142,12 +138,28 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		s_RenderData->QuadPipeline->SetPolygonMode(s_RenderData->PolygonMode);
+		TextureSpecification txSpec{};
+		txSpec.Width = 800;
+		txSpec.Height = 600;
+		txSpec.Format = TextureFormat::D16_UNORM_S8_UINT;
+		txSpec.Usage = TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT;
+
+		PipelineCreateInfo pci{};
+		pci.Shader = s_RenderData->QuadShader;
+		pci.BlendMode = BlendMode::SrcAlphaOneMinusSrcAlpha;
+		pci.TransparencyEnabled = true;
+		pci.SwapchainTarget = true;
+		pci.ClearTargets = true;
+		pci.PolygonMode = s_RenderData->PolygonMode;
+		pci.ClearColor[0] = 0;
+		pci.ClearColor[1] = 0;
+		pci.ClearColor[2] = 0;
+		pci.ClearColor[3] = 1;
+		pci.DepthTarget = Texture2D::Get(txSpec);
+		s_RenderData->QuadPipeline = Pipeline::Get(pci);
 
 		s_RenderData->CameraBuffer.ViewProjection = p_Camera.GetProjection() * glm::inverse(p_Transform);
 		s_RenderData->CameraUniformBuffer->SetData(&s_RenderData->CameraBuffer, sizeof(Renderer2Ddata::CameraData));
-
-		RendererCommand::Begin();
 
 		StartBatch();
 		ResetStats();
@@ -158,8 +170,6 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		Flush();
-
-		RendererCommand::End();
 	}
 	
 	void Renderer2D::StartBatch()
@@ -180,8 +190,10 @@ namespace YUME
 		{
 			YM_PROFILE_SCOPE("QuadFlush")
 
-			s_RenderData->QuadShader->Bind();
+			s_RenderData->QuadPipeline->Begin();
 			
+			RendererCommand::SetViewport(0, 0, s_RenderData->QuadPipeline->GetWidth(), s_RenderData->QuadPipeline->GetHeight());
+
 			s_RenderData->QuadDescriptorSet->Bind(0);
 			s_RenderData->QuadDescriptorSet->UploadUniform(0, s_RenderData->CameraUniformBuffer);
 
@@ -191,6 +203,7 @@ namespace YUME
 			s_RenderData->QuadVertexBuffer->SetData(s_RenderData->QuadVertexBufferBase.data(), s_RenderData->QuadVertexBufferBase.size() * sizeof(QuadVertex));
 			RendererCommand::DrawIndexed(s_RenderData->QuadVertexArray, s_RenderData->QuadIndexCount);
 
+			s_RenderData->QuadPipeline->End();
 			s_RenderData->Stats.DrawCalls++;
 		}
 	}

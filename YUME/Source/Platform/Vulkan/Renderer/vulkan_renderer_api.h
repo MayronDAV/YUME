@@ -18,10 +18,8 @@ namespace YUME
 
 			void SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height) override;
 
-			void Begin() override;
-			void End() override;
-
 			void ClearColor(const glm::vec4& p_Color) override { m_Color = p_Color; }
+			void ClearRenderTarget(const Ref<Texture2D> p_Texture, const glm::vec4& p_Value);
 
 			void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount) override;
 			void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount) override;

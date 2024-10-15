@@ -16,6 +16,19 @@ namespace YUME
 
 		//TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		//TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		switch (p_Spec.Usage)
+		{
+			case TextureUsage::TEXTURE_SAMPLED:
+				TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); break;
+			case TextureUsage::TEXTURE_COLOR_ATTACHMENT:
+				TransitionImage(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); break;
+			case TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT:
+				TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL); break;
+			default:
+				YM_CORE_ERROR("Usupported usage!")
+				m_TextureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED; break;
+		}
 	}
 
 	VulkanTexture2D::VulkanTexture2D(const TextureSpecification& p_Spec, const unsigned char* p_Data, uint32_t p_Size)
@@ -35,7 +48,18 @@ namespace YUME
 		stagingBuffer->SetDeleteWithoutQueue(true);
 		delete stagingBuffer;
 
-		TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		switch (p_Spec.Usage)
+		{
+			case TextureUsage::TEXTURE_SAMPLED:
+				TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); break;
+			case TextureUsage::TEXTURE_COLOR_ATTACHMENT:
+				TransitionImage(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); break;
+			case TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT:
+				TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL); break;
+			default:
+				YM_CORE_ERROR("Usupported usage!")
+				m_TextureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED; break;
+		}
 	}
 
 
@@ -47,6 +71,7 @@ namespace YUME
 		m_VkFormat = p_Format;
 		m_Specification.Width = p_Width;
 		m_Specification.Height = p_Height;
+
 		m_ShouldDestroy = false;
 	}
 
@@ -140,7 +165,7 @@ namespace YUME
 		m_Channels = Utils::TextureFormatChannels(p_Spec.Format);
 		m_VkFormat = Utils::TextureFormatToVk(p_Spec.Format);
 		m_BytesPerChannel = Utils::TextureFormatBytesPerChannel(p_Spec.Format);
-		auto usageFlagBits = Utils::TextureUsageToVk(p_Spec.Usage);
+		auto usageFlagBits = ((p_Spec.Usage != TextureUsage::TEXTURE_SAMPLED) ? VK_IMAGE_USAGE_SAMPLED_BIT : 0) | Utils::TextureUsageToVk(p_Spec.Usage);
 
 #ifdef USE_VMA_ALLOCATOR
 		CreateImage(p_Spec.Width, p_Spec.Height, m_VkFormat,
