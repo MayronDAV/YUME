@@ -41,7 +41,7 @@ namespace YUME
 			{
 				if (framebuffer != VK_NULL_HANDLE)
 				{
-					YM_CORE_TRACE("Destroying vulkan swapchain framebuffer... q")
+					YM_CORE_TRACE("Destroying vulkan swapchain framebuffer...")
 					vkDestroyFramebuffer(VulkanDevice::Get().GetDevice(), framebuffer, VK_NULL_HANDLE);
 				}
 			});

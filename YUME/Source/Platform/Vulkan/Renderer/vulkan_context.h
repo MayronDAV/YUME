@@ -65,6 +65,8 @@ namespace YUME
 				m_FrameEndDeletionQueue.PushFunction(p_Function);
 			}
 
+			static void PushFunctionToSwapchainOnResizeQueue(const std::function<void(int, int)>& p_Function);
+
 			static VkInstance GetInstance() { return s_Instance; }
 
 		private:

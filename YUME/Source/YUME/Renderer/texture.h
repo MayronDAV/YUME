@@ -77,6 +77,8 @@ namespace YUME
 	class YM_API Texture2D : public Texture
 	{
 		public:
+			virtual void Resize(uint32_t p_Width, uint32_t p_Height) = 0;
+
 			static Ref<Texture2D> Create(const TextureSpecification& p_Spec = {});
 			static Ref<Texture2D> Create(const TextureSpecification& p_Spec, const unsigned char* p_Data, uint32_t p_Size);
 

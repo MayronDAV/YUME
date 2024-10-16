@@ -261,6 +261,36 @@ namespace YUME
 		Init(p_CreateInfo);
 	}
 
+	void VulkanPipeline::OnResize(uint32_t p_Width, uint32_t p_Height)
+	{
+		if (m_CreateInfo.SwapchainTarget) return;
+
+		std::vector<Ref<Texture2D>> attachments;
+
+		for (const auto& texture : m_CreateInfo.ColorTargets)
+		{
+			if (texture)
+				attachments.push_back(texture);
+		}
+
+		if (m_CreateInfo.DepthTarget)
+		{
+			attachments.push_back(m_CreateInfo.DepthTarget);
+		}
+
+		for (const auto& framebuffer : m_Framebuffers)
+		{
+			if (!framebuffer) continue;
+
+			for (const auto& attachment : attachments)
+			{
+				attachment->Resize(p_Width, p_Height);
+			}
+
+			framebuffer->OnResize(p_Width, p_Height, attachments);
+		}
+	}
+
 	void VulkanPipeline::Begin()
 	{
 		YM_PROFILE_FUNCTION()
@@ -306,7 +336,7 @@ namespace YUME
 			txSpec.Height = height;
 			txSpec.Usage = TextureUsage::TEXTURE_COLOR_ATTACHMENT;
 
-			attachments.push_back(Texture2D::Create(txSpec));
+			attachments.push_back(Texture2D::Get(txSpec));
 		}
 		else
 		{
@@ -330,7 +360,6 @@ namespace YUME
 		spec.SwapchainTarget = m_CreateInfo.SwapchainTarget;
 		m_RenderPass = RenderPass::Get(spec);
 
-
 		RenderPassFramebufferSpec fbSpec{};
 		fbSpec.RenderPass = m_RenderPass;
 		fbSpec.Width = width;
@@ -350,6 +379,31 @@ namespace YUME
 
 				m_Framebuffers.push_back(RenderPassFramebuffer::Get(fbSpec));
 			}
+
+			auto framebuffers = m_Framebuffers;
+			auto createInfo = m_CreateInfo;
+			VulkanContext::PushFunctionToSwapchainOnResizeQueue([framebuffers, attachments, createInfo](int p_Width, int p_Height)
+			{
+				if (framebuffers.empty()) return;
+
+				const auto& images = VulkanSwapchain::Get().GetImages();
+				const auto& imageViews = VulkanSwapchain::Get().GetImageViews();
+
+				std::vector<Ref<Texture2D>> new_attachments = attachments;
+
+				if (createInfo.DepthTarget)
+				{
+					new_attachments[1]->Resize(p_Width, p_Height);
+				}
+
+				for (size_t i = 0; i < images.size(); i++)
+				{
+					new_attachments[0] = CreateRef<VulkanTexture2D>(images[i], imageViews[i],
+						VulkanSwapchain::Get().GetFormat().format, p_Width, p_Height);
+
+					framebuffers[i]->OnResize(p_Width, p_Height, new_attachments);
+				}
+			});
 		}
 		else
 		{

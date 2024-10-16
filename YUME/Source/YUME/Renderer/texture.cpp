@@ -18,7 +18,7 @@ namespace YUME
 		float TimeSinceLastAccessed;
 	};
 	static std::unordered_map<uint64_t, TextureAsset> s_TextureCache;
-	static const float s_CacheLifeTime = 0.1f;
+	static const float s_CacheLifeTime = 1.0f;
 
 	Ref<Texture2D> Texture2D::Create(const TextureSpecification& p_Spec)
 	{

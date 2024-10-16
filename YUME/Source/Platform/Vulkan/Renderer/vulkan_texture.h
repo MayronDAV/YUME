@@ -17,6 +17,8 @@ namespace YUME
 			VulkanTexture2D(VkImage p_Image, VkImageView p_ImageView, VkFormat p_Format = VK_FORMAT_R8G8B8A8_SRGB, uint32_t p_Width = 1, uint32_t p_Height = 1);
 			~VulkanTexture2D() override;
 
+			void Resize(uint32_t p_Width, uint32_t p_Height) override;
+
 			void Bind(uint32_t p_Slot = 0) const override;
 			void Unbind(uint32_t p_Slot = 0) const override;
 

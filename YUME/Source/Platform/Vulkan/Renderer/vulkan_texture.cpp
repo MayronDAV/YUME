@@ -110,6 +110,43 @@ namespace YUME
 		});
 	}
 
+	void VulkanTexture2D::Resize(uint32_t p_Width, uint32_t p_Height)
+	{
+		if (m_Specification.Width == p_Width && m_Specification.Height == p_Height) return;
+
+		auto image = m_TextureImage;
+		auto imageView = m_TextureImageView;
+		auto sampler = m_TextureSampler;
+#ifdef USE_VMA_ALLOCATOR
+		auto alloc = m_Allocation;
+		VulkanContext::PushFunction([image, imageView, sampler, alloc]()
+#else
+		auto memory = m_TextureImageMemory;
+		VulkanContext::PushFunction([image, imageView, sampler, memory]()
+#endif
+		{
+			YM_CORE_TRACE("Destroying vulkan texture image...")
+
+			auto device = VulkanDevice::Get().GetDevice();
+
+			vkDestroySampler(device, sampler, VK_NULL_HANDLE);
+
+			vkDestroyImageView(device, imageView, VK_NULL_HANDLE);
+
+#ifdef USE_VMA_ALLOCATOR		
+			vmaDestroyImage(VulkanDevice::Get().GetAllocator(), image, alloc);
+#else
+			vkDestroyImage(device, image, VK_NULL_HANDLE);
+			vkFreeMemory(device, memory, VK_NULL_HANDLE);
+#endif
+		});
+
+		m_Specification.Width = p_Width;
+		m_Specification.Height = p_Height;
+
+		Init(m_Specification);
+	}
+
 	void VulkanTexture2D::SetData(const unsigned char* p_Data, uint32_t p_Size)
 	{
 		auto stagingBuffer = new VulkanMemoryBuffer(

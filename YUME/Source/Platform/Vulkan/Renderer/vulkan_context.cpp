@@ -78,9 +78,13 @@ namespace YUME
 	DeletionQueue VulkanContext::m_MainDeletionQueue = DeletionQueue();
 	DeletionQueue VulkanContext::m_FrameEndDeletionQueue = DeletionQueue();
 
+	static std::vector<std::function<void(int, int)>> s_SwapchainOnResizeQueue;
+
 	VulkanContext::~VulkanContext()
 	{
 		YM_PROFILE_FUNCTION()
+
+		s_SwapchainOnResizeQueue.clear();
 
 		YM_CORE_TRACE("Destroying vulkan context...")
 
@@ -265,6 +269,14 @@ namespace YUME
 
 		Application::Get().GetImGuiLayer()->OnResize(actualExtent.width, actualExtent.height);
 
+		const auto& images = VulkanSwapchain::Get().GetImages();
+		const auto& imageViews = VulkanSwapchain::Get().GetImageViews();
+
+		for (auto it = s_SwapchainOnResizeQueue.rbegin(); it != s_SwapchainOnResizeQueue.rend(); it++) {
+			(*it)(actualExtent.width, actualExtent.height); //call functors
+		}
+		//s_SwapchainOnResizeQueue.clear();
+
 		m_ViewportResized = false;
 	}
 
@@ -339,6 +351,11 @@ namespace YUME
 		YM_CORE_VERIFY(res == VK_SUCCESS)
 
 		m_FrameEndDeletionQueue.Flush();
+	}
+
+	void VulkanContext::PushFunctionToSwapchainOnResizeQueue(const std::function<void(int, int)>& p_Function)
+	{
+		s_SwapchainOnResizeQueue.push_back(p_Function);
 	}
 
 	void VulkanContext::CreateInstance()

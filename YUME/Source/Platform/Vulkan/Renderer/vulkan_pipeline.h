@@ -30,6 +30,8 @@ namespace YUME
 			void Invalidade();
 			void Invalidade(const PipelineCreateInfo& p_Desc);
 
+			void OnResize(uint32_t p_Width, uint32_t p_Height) override;
+
 			void Begin() override;
 			void End() override;
 
