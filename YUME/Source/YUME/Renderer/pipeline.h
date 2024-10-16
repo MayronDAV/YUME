@@ -50,8 +50,6 @@ namespace YUME
 			virtual void Begin() = 0;
 			virtual void End() = 0;
 
-			virtual void OnResize(uint32_t p_Width, uint32_t p_Height) = 0;
-
 			uint32_t GetWidth();
 			uint32_t GetHeight();
 

@@ -139,9 +139,9 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		TextureSpecification txSpec{};
-		txSpec.Width = 800;
-		txSpec.Height = 600;
-		txSpec.Format = TextureFormat::D16_UNORM_S8_UINT;
+		txSpec.Width = Application::Get().GetWindow().GetWidth();
+		txSpec.Height = Application::Get().GetWindow().GetHeight();
+		txSpec.Format = TextureFormat::D32_FLOAT;
 		txSpec.Usage = TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT;
 
 		PipelineCreateInfo pci{};
@@ -151,10 +151,7 @@ namespace YUME
 		pci.SwapchainTarget = true;
 		pci.ClearTargets = true;
 		pci.PolygonMode = s_RenderData->PolygonMode;
-		pci.ClearColor[0] = 0;
-		pci.ClearColor[1] = 0;
-		pci.ClearColor[2] = 0;
-		pci.ClearColor[3] = 1;
+		std::memcpy(pci.ClearColor, glm::value_ptr(glm::vec4{0, 0, 0, 1}), 4 * sizeof(float));
 		pci.DepthTarget = Texture2D::Get(txSpec);
 		s_RenderData->QuadPipeline = Pipeline::Get(pci);
 

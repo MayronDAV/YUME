@@ -261,36 +261,6 @@ namespace YUME
 		Init(p_CreateInfo);
 	}
 
-	void VulkanPipeline::OnResize(uint32_t p_Width, uint32_t p_Height)
-	{
-		if (m_CreateInfo.SwapchainTarget) return;
-
-		std::vector<Ref<Texture2D>> attachments;
-
-		for (const auto& texture : m_CreateInfo.ColorTargets)
-		{
-			if (texture)
-				attachments.push_back(texture);
-		}
-
-		if (m_CreateInfo.DepthTarget)
-		{
-			attachments.push_back(m_CreateInfo.DepthTarget);
-		}
-
-		for (const auto& framebuffer : m_Framebuffers)
-		{
-			if (!framebuffer) continue;
-
-			for (const auto& attachment : attachments)
-			{
-				attachment->Resize(p_Width, p_Height);
-			}
-
-			framebuffer->OnResize(p_Width, p_Height, attachments);
-		}
-	}
-
 	void VulkanPipeline::Begin()
 	{
 		YM_PROFILE_FUNCTION()
