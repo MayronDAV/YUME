@@ -1,14 +1,15 @@
 VULKAN_SDK = os.getenv("VULKAN_SDK")
 
 IncludeDir = {}
-IncludeDir["glfw"] = "%{wks.location}/Thirdparty/glfw/include"
+IncludeDir["glfw"] = "%{wks.location}/YUME/Thirdparty/glfw/include"
 IncludeDir["glm"] = "%{wks.location}/Thirdparty/glm/include"
 IncludeDir["spdlog"] = "%{wks.location}/Thirdparty/spdlog/include"
-IncludeDir["glslang"] = "%{wks.location}/Thirdparty/glslang"
+IncludeDir["glslang"] = "%{wks.location}/YUME/Thirdparty/glslang"
 IncludeDir["imgui"] = "%{wks.location}/Thirdparty/imgui"
-IncludeDir["stb"] = "%{wks.location}/Thirdparty/stb"
+IncludeDir["stb"] = "%{wks.location}/YUME/Thirdparty/stb"
 IncludeDir["optick"] = "%{wks.location}/Thirdparty/optick/src"
-IncludeDir["vma"] = "%{wks.location}/Thirdparty/VulkanMemoryAllocator/include"
+IncludeDir["vma"] = "%{wks.location}/YUME/Thirdparty/VulkanMemoryAllocator/include"
+IncludeDir["entt"] = "%{wks.location}/Thirdparty/entt/include"
 IncludeDir["Vulkan"] = "%{VULKAN_SDK}/Include"
 
 LibraryDir = {}

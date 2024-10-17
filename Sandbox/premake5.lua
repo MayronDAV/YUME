@@ -24,6 +24,7 @@ project "Sandbox"
 		"%{IncludeDir.imgui}/imgui",
 		"%{IncludeDir.imgui}/backends",
 		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.entt}"
 	}
 
 	links 

@@ -41,6 +41,8 @@ project "YUME"
 		"%{IncludeDir.optick}",
 		"%{IncludeDir.vma}",
 		"%{IncludeDir.Vulkan}",
+		"%{IncludeDir.entt}",
+
 		"%{LibraryDir.VulkanSDK}"
 	}
 

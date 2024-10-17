@@ -5,20 +5,20 @@
 	path = Thirdparty/glm
 	url = https://github.com/MayronDAV/glm
 [submodule "Thirdparty/glfw"]
-	path = Thirdparty/glfw
+	path = YUME/Thirdparty/glfw
 	url = https://github.com/MayronDAV/glfw
 [submodule "Thirdparty/glslang"]
-	path = Thirdparty/glslang
+	path = YUME/Thirdparty/glslang
 	url = https://github.com/MayronDAV/glslang
 [submodule "Thirdparty/imgui"]
 	path = Thirdparty/imgui
 	url = https://github.com/MayronDAV/imgui
 [submodule "Thirdparty/stb"]
-	path = Thirdparty/stb
+	path = YUME/Thirdparty/stb
 	url = https://github.com/MayronDAV/stb.git
 [submodule "Thirdparty/optick"]
 	path = Thirdparty/optick
 	url = https://github.com/MayronDAV/optick.git
 [submodule "Thirdparty/VulkanMemoryAllocator"]
-	path = Thirdparty/VulkanMemoryAllocator
+	path = YUME/Thirdparty/VulkanMemoryAllocator
 	url = https://github.com/MayronDAV/VulkanMemoryAllocator.git
