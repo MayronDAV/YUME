@@ -47,13 +47,13 @@ namespace YUME
 		{
 			if (texture)
 			{
-				HashCombine(hash, texture.get());
+				HashCombine(hash, texture->Handle);
 			}
 		}
 
 		if (p_CreateInfo.DepthTarget)
 		{
-			HashCombine(hash, p_CreateInfo.DepthTarget.get());
+			HashCombine(hash, p_CreateInfo.DepthTarget->Handle);
 		}
 
 		HashCombine(hash, p_CreateInfo.ClearTargets);

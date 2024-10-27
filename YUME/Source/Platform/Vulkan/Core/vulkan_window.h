@@ -32,6 +32,7 @@ namespace YUME
 			bool IsVSync() const override;
 
 			void* GetNativeWindow() const override { return m_Window; }
+			const std::vector<Resolution>& GetResolutions() override { return m_Resolutions; }
 
 			GraphicsContext* GetContext() override;
 
@@ -57,6 +58,7 @@ namespace YUME
 
 			WindowData m_Data;
 
-			std::unique_ptr<VulkanContext> m_Context;
+			Scope<VulkanContext> m_Context;
+			std::vector<Resolution> m_Resolutions;
 	};
 }

@@ -211,10 +211,11 @@ namespace YUME
 		YM_CORE_VERIFY(!m_DescriptorSetLayouts.empty())
 		YM_CORE_VERIFY(!m_DescriptorSets.empty())
 
-		auto texture = static_cast<VulkanTexture2D*>(p_Texture.get());
+		auto texture = p_Texture.As<VulkanTexture2D>();
+		TransitionImageToCorrectLayout(p_Texture);
 
 		VkDescriptorImageInfo imageInfo{};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageLayout = texture->GetLayout();
 		imageInfo.imageView = texture->GetImageView();
 		imageInfo.sampler = texture->GetImageSampler();
 
@@ -244,10 +245,11 @@ namespace YUME
 
 		for (size_t i = 0; i < p_Count; ++i)
 		{
-			auto texture = static_cast<VulkanTexture2D*>(p_TextureData[i].get());
+			auto texture = p_TextureData[i].As<VulkanTexture2D>();
+			TransitionImageToCorrectLayout(p_TextureData[i]);
 
 			VkDescriptorImageInfo imageInfo{};
-			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo.imageLayout = texture->GetLayout();
 			imageInfo.imageView = texture->GetImageView();
 			imageInfo.sampler = texture->GetImageSampler();
 
@@ -266,6 +268,29 @@ namespace YUME
 		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), 1, &descriptorWrite, 0, nullptr);
 
 		m_DescriptorUpdated[m_CurrentBindSet] = true;
+	}
+
+	void VulkanDescriptorSet::TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture)
+	{
+		if (!p_Texture)
+			return;
+
+		const auto& spec = p_Texture->GetSpecification();
+		const auto& vkTexture = p_Texture.As<VulkanTexture2D>();
+		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+		{
+			if (vkTexture->GetLayout() != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			{
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
+		}
+		else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
+		{
+			if (vkTexture->GetLayout() != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
+			{
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+			}
+		}
 	}
 
 	void VulkanDescriptorSet::CheckIfDescriptorSetIsUpdated()

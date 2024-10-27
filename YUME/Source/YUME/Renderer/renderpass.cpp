@@ -46,13 +46,13 @@ namespace YUME
 		{
 			if (texture)
 			{
-				HashCombine(hash, texture.get());
+				HashCombine(hash, texture->Handle);
 			}
 		}
 
 		if (p_Spec.ResolveTexture)
 		{
-			HashCombine(hash, p_Spec.ResolveTexture.get());
+			HashCombine(hash, p_Spec.ResolveTexture->Handle);
 		}
 
 		auto found = s_RenderPassCache.find(hash);

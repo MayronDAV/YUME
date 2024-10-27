@@ -11,6 +11,13 @@
 
 namespace YUME
 {
+	struct YM_API Resolution
+	{
+		uint32_t Width;
+		uint32_t Height;
+		uint32_t RefreshRate;
+	};
+
 	struct YM_API WindowProps
 	{
 		std::string Title;
@@ -51,6 +58,7 @@ namespace YUME
 			virtual bool IsVSync() const = 0;
 
 			virtual void* GetNativeWindow() const = 0;
+			virtual const std::vector<Resolution>& GetResolutions() = 0;
 
 			virtual void SetCursorMode(CursorMode p_Mode) = 0;
 

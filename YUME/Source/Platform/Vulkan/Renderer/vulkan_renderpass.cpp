@@ -24,12 +24,11 @@ namespace YUME
 			VkAttachmentDescription attachmentDesc{};
 			const auto& spec = p_Texture->GetSpecification();
 			attachmentDesc.format = Utils::TextureFormatToVk(spec.Format);
-			attachmentDesc.initialLayout = p_Texture.As<VulkanTexture2D>()->GetLayout();
-			attachmentDesc.finalLayout = attachmentDesc.initialLayout;
+			attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachmentDesc.finalLayout = p_Texture.As<VulkanTexture2D>()->GetLayout();
 
 			if (p_SwapchainTarget)
 			{
-				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			}
 
@@ -188,8 +187,10 @@ namespace YUME
 		renderPassCreateInfo.pAttachments = attachments.data();
 		renderPassCreateInfo.subpassCount = 1;
 		renderPassCreateInfo.pSubpasses = &subpass;
-		renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
-		renderPassCreateInfo.pDependencies = dependencies.data();
+		//renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+		//renderPassCreateInfo.pDependencies = dependencies.data();
+		renderPassCreateInfo.dependencyCount = 0;
+		renderPassCreateInfo.pDependencies = nullptr;
 
 		auto res = vkCreateRenderPass(VulkanDevice::Get().GetDevice(), &renderPassCreateInfo, VK_NULL_HANDLE, &m_RenderPass);
 		YM_CORE_VERIFY(res == VK_SUCCESS)

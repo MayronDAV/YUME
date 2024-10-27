@@ -2,7 +2,6 @@
 
 #include "YUME/Core/base.h"
 #include "YUME/Core/reference.h"
-#include "YUME/Renderer/renderer_types.h"
 #include "YUME/Renderer/vertex_array.h"
 
 #include "YUME/Renderer/graphics_context.h"
@@ -22,7 +21,7 @@ namespace YUME
 			virtual void SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height) = 0;
 
 			virtual void ClearColor(const glm::vec4& p_Color) = 0;
-			virtual void ClearRenderTarget(const Ref<Texture2D> p_Texture, const glm::vec4& p_Value) = 0;
+			virtual void ClearRenderTarget(const Ref<Texture2D>& p_Texture, const glm::vec4& p_Value) = 0;
 
 			virtual void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount) = 0;
 			virtual void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount) = 0;

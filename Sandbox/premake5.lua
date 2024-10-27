@@ -17,7 +17,6 @@ project "Sandbox"
 	{
 		"Source",
 		"%{wks.location}/YUME/Source",
-		"%{IncludeDir.optick}",
 		
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.imgui}",

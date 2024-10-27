@@ -48,7 +48,7 @@ namespace YUME
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	}
 
-	void VulkanRendererAPI::ClearRenderTarget(const Ref<Texture2D> p_Texture, const glm::vec4& p_Value)
+	void VulkanRendererAPI::ClearRenderTarget(const Ref<Texture2D>& p_Texture, const glm::vec4& p_Value)
 	{
 		VkImageSubresourceRange subresourceRange = {};
 		subresourceRange.baseMipLevel = 0;
@@ -59,8 +59,7 @@ namespace YUME
 		const auto& spec = p_Texture->GetSpecification();
 		const auto& commandBuffer = m_Context->GetCommandBuffer();
 
-
-		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT)
 		{
 			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
 			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);

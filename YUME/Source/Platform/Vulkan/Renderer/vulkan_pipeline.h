@@ -49,6 +49,7 @@ namespace YUME
 			void AddVertexArray(const Ref<VertexArray>& p_VertexArray) { m_VertexArrays.push_back(p_VertexArray); Invalidade(); }
 
 		private:
+			void TransitionAttachments();
 			void CreateFramebuffers();
 
 		private:

@@ -23,10 +23,10 @@ namespace YUME
 		BlendMode BlendMode = BlendMode::None;
 
 		bool TransparencyEnabled = false;
-		bool ClearTargets = false;
+		bool ClearTargets = true;
 		bool DepthTest = true;
 		bool DepthWrite = true;
-		bool SwapchainTarget = false;
+		bool SwapchainTarget = true;
 
 		float LineWidth = 1.0f;
 

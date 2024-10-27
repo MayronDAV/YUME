@@ -14,20 +14,12 @@ namespace YUME
 	{
 		Init(p_Spec);
 
-		//TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		//TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
 		switch (p_Spec.Usage)
 		{
-			case TextureUsage::TEXTURE_SAMPLED:
-				TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); break;
 			case TextureUsage::TEXTURE_COLOR_ATTACHMENT:
 				TransitionImage(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); break;
 			case TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT:
 				TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL); break;
-			default:
-				YM_CORE_ERROR("Usupported usage!")
-				m_TextureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED; break;
 		}
 	}
 
@@ -48,18 +40,7 @@ namespace YUME
 		stagingBuffer->SetDeleteWithoutQueue(true);
 		delete stagingBuffer;
 
-		switch (p_Spec.Usage)
-		{
-			case TextureUsage::TEXTURE_SAMPLED:
-				TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); break;
-			case TextureUsage::TEXTURE_COLOR_ATTACHMENT:
-				TransitionImage(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL); break;
-			case TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT:
-				TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL); break;
-			default:
-				YM_CORE_ERROR("Usupported usage!")
-				m_TextureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED; break;
-		}
+		TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
 
 
@@ -112,6 +93,7 @@ namespace YUME
 
 	void VulkanTexture2D::Resize(uint32_t p_Width, uint32_t p_Height)
 	{
+		if (p_Width == 0 || p_Height == 0) return;
 		if (m_Specification.Width == p_Width && m_Specification.Height == p_Height) return;
 
 		auto image = m_TextureImage;
@@ -203,14 +185,17 @@ namespace YUME
 		m_VkFormat = Utils::TextureFormatToVk(p_Spec.Format);
 		m_BytesPerChannel = Utils::TextureFormatBytesPerChannel(p_Spec.Format);
 		auto usageFlagBits = ((p_Spec.Usage != TextureUsage::TEXTURE_SAMPLED) ? VK_IMAGE_USAGE_SAMPLED_BIT : 0) | Utils::TextureUsageToVk(p_Spec.Usage);
+		usageFlagBits |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		usageFlagBits |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
 
 #ifdef USE_VMA_ALLOCATOR
 		CreateImage(p_Spec.Width, p_Spec.Height, m_VkFormat,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usageFlagBits,
+			VK_IMAGE_TILING_OPTIMAL, usageFlagBits,
 			m_TextureImage, m_Allocation);
 #else
 		CreateImage(p_Spec.Width, p_Spec.Height, m_VkFormat,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usageFlagBits,
+			VK_IMAGE_TILING_OPTIMAL, usageFlagBits,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_TextureImage, m_TextureImageMemory);
 #endif
 
@@ -227,7 +212,7 @@ namespace YUME
 
 		auto borderColor = Utils::TextureBorderColorToVk(p_Spec.BorderColorFlag);
 		VkSamplerCustomBorderColorCreateInfoEXT borderColorCI{};
-		if (m_TextureImageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		if (p_Spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || p_Spec.Usage == TextureUsage::TEXTURE_SAMPLED)
 		{
 			samplerInfo.anisotropyEnable = VK_TRUE;
 			auto properties = VulkanDevice::Get().GetPhysicalDeviceStruct().Properties;

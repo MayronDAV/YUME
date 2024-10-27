@@ -2,6 +2,7 @@
 #include "YUME/Core/base.h"
 #include "YUME/Core/reference.h"
 #include "YUME/Core/definitions.h"
+#include "YUME/Asset/asset.h"
 
 // Lib
 #include <glm/glm.hpp>
@@ -27,7 +28,7 @@ namespace YUME
 		glm::vec4 BorderColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	};
 
-	class YM_API Texture
+	class YM_API Texture : public Asset
 	{
 		public:
 			virtual ~Texture() = default;
@@ -76,6 +77,8 @@ namespace YUME
 
 	class YM_API Texture2D : public Texture
 	{
+		ASSET_CLASS_TYPE(Texture2D)
+
 		public:
 			virtual void Resize(uint32_t p_Width, uint32_t p_Height) = 0;
 

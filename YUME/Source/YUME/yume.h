@@ -27,6 +27,15 @@
 #include "YUME/Utils/clock.h"
 // --------------------------
 
+// Scene
+// --------------------------
+#include "YUME/Scene/scene.h"
+#include "YUME/Scene/entity.h"
+#include "YUME/Scene/entity_manager.h"
+#include "YUME/Scene/Component/components.h"
+#include "YUME/Scene/Component/components_2D.h"
+// --------------------------
+
 // Renderer
 // --------------------------
 #include "YUME/Renderer/graphics_context.h"
@@ -38,8 +47,9 @@
 #include "YUME/Renderer/vertex_array.h"
 #include "YUME/Renderer/pipeline.h"
 #include "YUME/Renderer/texture.h"
+#include "YUME/Renderer/sub_texture.h"
 #include "YUME/Renderer/texture_importer.h"
 #include "YUME/Renderer/descriptor_set.h"
-#include "YUME/Renderer/renderer2D.h"
+#include "YUME/Renderer/renderer.h"
 #include "YUME/Renderer/camera.h"
 // --------------------------

@@ -3,7 +3,6 @@
 #include "YUME/Core/base.h"
 #include "YUME/Core/reference.h"
 #include "YUME/Renderer/renderer_api.h"
-#include "YUME/Renderer/renderer_types.h"
 #include "YUME/Renderer/vertex_array.h"
 #include "YUME/Renderer/texture.h"
 

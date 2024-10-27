@@ -6,7 +6,6 @@ namespace YUME
 {
 	// Var definitions
 	static constexpr uint8_t MAX_FRAMES_IN_FLIGHT = 2;
-	static constexpr uint8_t MAX_MIPS = 32;
 
 	// Descriptor set limits
 	static constexpr uint16_t DESCRIPTOR_MAX_STORAGE_TEXTURES = 1024;
@@ -78,16 +77,6 @@ namespace YUME
 		TEXTURE_COLOR_ATTACHMENT,
 		TEXTURE_DEPTH_STENCIL_ATTACHMENT,
 	};
-
-	enum TextureFlagBits : uint8_t
-	{
-		TEXTURE_CREATE_MIPS = BIT(0),
-		TEXTURE_MIP_VIEWS = BIT(1),
-		TEXTURE_DEPTH_STENCIL_READONLY = BIT(2),
-		TEXTURE_RENDER_TARGET = BIT(3),
-		TEXTURE_STORAGE = BIT(4)
-	};
-	using TextureFlags = uint16_t;
 
 	enum class TextureWrap : uint8_t
 	{

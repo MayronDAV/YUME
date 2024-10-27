@@ -4,6 +4,7 @@
 #include "YUME/Events/application_event.h"
 #include "YUME/Events/mouse_event.h"
 #include "YUME/Events/key_event.h"
+#include "YUME/Core/engine.h"
 
 // Lib
 #define GLFW_INCLUDE_VULKAN
@@ -109,6 +110,16 @@ namespace YUME
 		YM_CORE_ASSERT(m_Window)
 		m_Context->Init(m_Window);
 		++s_GLFWWindowCount;
+
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		YM_CORE_ASSERT(monitor)
+
+		int count = 0;
+		const GLFWvidmode* modes = glfwGetVideoModes(monitor, &count);
+
+		for (int i = 0; i < count; i++) {
+			m_Resolutions.emplace_back(modes[i].width, modes[i].height, modes[i].refreshRate);
+		}
 
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 		//SetVSync(true);

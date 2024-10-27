@@ -20,7 +20,7 @@ namespace YUME::Utils
 
 	VkCullModeFlags CullModeToVk(CullMode p_Mode);
 
-	void TransitionImageLayout(VkImage p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout);
+	void TransitionImageLayout(const VkImage& p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout);
 
 	VkRenderingAttachmentInfo AttachmentInfo(VkImageView p_View, VkClearValue* p_Clear, VkImageLayout p_Layout);
 
@@ -37,5 +37,7 @@ namespace YUME::Utils
 
 	void CopyBufferToImage(VkBuffer p_Buffer, VkImage p_Image, uint32_t p_Width, uint32_t p_Height);
 
+	void CopyImage(uint32_t p_Width, uint32_t p_Height, const VkImage& p_SrcImage, const VkImage& p_DestImage);
+		
 	VkShaderStageFlagBits ShaderTypeToVK(ShaderType p_Type);
 }

@@ -5,11 +5,14 @@
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 #include "Platform/Vulkan/ImGui/vulkan_imgui_layer.h"
 #include "YUME/Core/application.h"
-#include "optick.h"
 #include "YUME/Renderer/texture.h"
 #include "vulkan_texture.h"
 
 // Lib
+#if defined(YM_PLATFORM_WINDOWS) && defined(YM_PROFILE)
+	#include <optick/optick.h>
+#endif
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -151,6 +154,7 @@ namespace YUME
 		YM_CORE_TRACE("Creating vulkan logical device...")
 		VulkanDevice::Get().Init();
 
+	#if defined(YM_PLATFORM_WINDOWS) && defined(YM_PROFILE)
 		auto device = VulkanDevice::Get().GetDevice();
 		auto physicalDevice = VulkanDevice::Get().GetPhysicalDevice();
 		auto queue = VulkanDevice::Get().GetGraphicQueue();
@@ -177,6 +181,7 @@ namespace YUME
 		vulkanFunctions.vkFreeCommandBuffers = (PFN_vkFreeCommandBuffers_)vkFreeCommandBuffers;
 
 		YM_PROFILE_GPU_INIT_VULKAN(&device, &physicalDevice, &queue, &graphicIndex, 1, &vulkanFunctions)
+	#endif
 
 		m_CommandBuffers.Init(MAX_FRAMES_IN_FLIGHT);
 
@@ -205,7 +210,9 @@ namespace YUME
 			presentInfo.pResults = nullptr; // Optional
 
 			YM_PROFILE_GPU_FLIP(VulkanSwapchain::Get().GetSwapChain())
+#if defined(YM_PLATFORM_WINDOWS) && defined(YM_PROFILE)
 			OPTICK_CATEGORY("Present", Optick::Category::Wait)
+#endif
 			auto& presentQueue = VulkanDevice::Get().GetPresentQueue();
 			auto res = vkQueuePresentKHR(presentQueue, &presentInfo);
 
@@ -226,7 +233,9 @@ namespace YUME
 		m_CurrentFrame = (m_CurrentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 		m_HasDrawCommands = false; // Reset the flag for the next frame
 
+#if defined(YM_PLATFORM_WINDOWS) && defined(YM_PROFILE)
 		OPTICK_GPU_CONTEXT(m_CommandBuffers.Get(m_CurrentFrame))
+#endif
 	}
 
 	void VulkanContext::RecreateSwapchain()

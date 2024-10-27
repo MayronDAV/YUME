@@ -44,7 +44,7 @@ namespace YUME
 		{
 			if (texture)
 			{
-				HashCombine(hash, texture.get());
+				HashCombine(hash, texture->Handle);
 			}
 		}
 

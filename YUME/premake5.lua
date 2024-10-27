@@ -14,16 +14,10 @@ project "YUME"
 		"Source/**.h",
 		"Source/**.cpp",
 
-		"%{IncludeDir.optick}/*.h",
-		"%{IncludeDir.optick}/*.cpp",
+		"%{IncludeDir.optick}/**.h",
+		"%{IncludeDir.optick}/**.cpp",
 
-		"%{IncludeDir.vma}/*.h",
-	}
-
-	vpaths 
-	{
-		["Header Files/Thirdparty/Optick"] = "%{IncludeDir.optick}/*.h",
-		["Source Files/Thirdparty/Optick"] = "%{IncludeDir.optick}/*.cpp"
+		"%{IncludeDir.vma}/**.h"
 	}
 
 	includedirs
@@ -62,7 +56,7 @@ project "YUME"
 		"OPTICK_EXPORT"
 	}
 
-	filter "files:../Thirdparty/optick/src/**.cpp"
+	filter "files:Thirdparty/optick/src/**.cpp"
 		flags { "NoPCH" }
 
 	local source = "%{wks.location}/bin/" .. outputdir .. "/YUME/YUME.dll"

@@ -57,6 +57,7 @@ namespace YUME
 		m_CreateInfo = p_CreateInfo;
 		m_Shader = p_CreateInfo.Shader;
 
+		TransitionAttachments();
 		CreateFramebuffers();
 
 		auto shader = m_Shader.As<VulkanShader>();
@@ -265,6 +266,8 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
+		TransitionAttachments();
+
 		auto commandBuffer = m_Context->GetCommandBuffer();
 
 		Ref<RenderPassFramebuffer> framebuffer;
@@ -289,6 +292,26 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		m_RenderPass->End();
+	}
+
+	void VulkanPipeline::TransitionAttachments()
+	{
+		YM_PROFILE_FUNCTION()
+
+		auto commandBuffer = m_Context->GetCommandBuffer();
+
+		if (m_CreateInfo.DepthTarget)
+		{
+			m_CreateInfo.DepthTarget.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		}
+
+		for (auto texture : m_CreateInfo.ColorTargets)
+		{
+			if (texture)
+			{
+				texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			}
+		}
 	}
 
 	void VulkanPipeline::CreateFramebuffers()

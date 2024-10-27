@@ -21,6 +21,7 @@ namespace YUME
 			void UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>* p_TextureData, uint32_t p_Count) override;
 
 		private:
+			void TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture);
 			void CheckIfDescriptorSetIsUpdated();
 
 		private:
