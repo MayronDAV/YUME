@@ -89,13 +89,25 @@ class ExampleLayer : public YUME::Layer
 
 			auto& tc = m_PlayerEntt.GetComponent<YUME::TransformComponent>();
 			tc.Translation = glm::vec3(m_Position.x, m_Position.y, m_PlayerZ);
-
-			auto entts = m_Scene->GetEntitiesWithTag("Tile");
-			for (auto& entt : entts)
+		
+			// MORE EASIER
+			for (auto entts = m_Scene->GetEntitiesWithTag("Tile");
+				auto& entt : entts)
 			{
 				auto& sc = entt.GetComponent<YUME::SpriteComponent>();
 				sc.Color = m_TileColor;
 			}
+
+			// MORE OPTIMIZED
+			//m_Scene->GetRegistry().view<YUME::TagComponent>().each([&](auto p_Entity, const YUME::TagComponent& p_TC)
+			//{
+			//	if (p_TC.Tag == "Tile")
+			//	{
+			//		auto entt = YUME::Entity{ p_Entity, m_Scene };
+			//		auto& sc = entt.GetComponent<YUME::SpriteComponent>();
+			//		sc.Color = m_TileColor;
+			//	}
+			//});
 
 			YUME::RendererBeginInfo rbi{};
 			rbi.MainCamera = YUME::Camera(projection);
