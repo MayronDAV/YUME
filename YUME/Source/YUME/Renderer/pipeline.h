@@ -33,6 +33,8 @@ namespace YUME
 		float ClearColor[4] = {1, 1, 1, 1};
 		std::array<Ref<Texture2D>, MAX_RENDER_TARGETS> ColorTargets;
 		Ref<Texture2D> DepthTarget = nullptr;
+
+		const char* DebugName = "Pipeline";
 	};
 
 	class YM_API Pipeline

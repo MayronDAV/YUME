@@ -59,4 +59,18 @@ namespace YUME
 		return false;
 	}
 
+	std::vector<Entity> EntityManager::GetEntitiesWithTag(const std::string& p_Tag)
+	{
+		std::vector<Entity> filteredEntities;
+		m_Registry.view<TagComponent>().each([&](auto p_Entity, const TagComponent& p_TC)
+		{
+			if (p_TC.Tag == p_Tag)
+			{
+				filteredEntities.push_back(Entity{ p_Entity, m_Scene });
+			}
+		});
+
+		return filteredEntities;
+	}
+
 }

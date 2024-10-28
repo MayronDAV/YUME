@@ -24,19 +24,20 @@ namespace YUME
 			VkAttachmentDescription attachmentDesc{};
 			const auto& spec = p_Texture->GetSpecification();
 			attachmentDesc.format = Utils::TextureFormatToVk(spec.Format);
-			attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attachmentDesc.finalLayout = p_Texture.As<VulkanTexture2D>()->GetLayout();
+			attachmentDesc.initialLayout = p_Texture.As<VulkanTexture2D>()->GetLayout();
+			attachmentDesc.finalLayout = attachmentDesc.initialLayout;
 
 			if (p_SwapchainTarget)
 			{
+				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			}
 
 			if (p_Clear)
 			{
+				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				
 			}
 			else
@@ -44,7 +45,6 @@ namespace YUME
 				if (p_SwapchainTarget)
 				{
 					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-					attachmentDesc.finalLayout = attachmentDesc.initialLayout;
 				}
 
 				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -108,7 +108,6 @@ namespace YUME
 			}
 
 			// Dependencies
-
 			if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
 			{
 				{
@@ -187,10 +186,10 @@ namespace YUME
 		renderPassCreateInfo.pAttachments = attachments.data();
 		renderPassCreateInfo.subpassCount = 1;
 		renderPassCreateInfo.pSubpasses = &subpass;
-		//renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
-		//renderPassCreateInfo.pDependencies = dependencies.data();
-		renderPassCreateInfo.dependencyCount = 0;
-		renderPassCreateInfo.pDependencies = nullptr;
+		renderPassCreateInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+		renderPassCreateInfo.pDependencies = dependencies.data();
+		//renderPassCreateInfo.dependencyCount = 0;
+		//renderPassCreateInfo.pDependencies = nullptr;
 
 		auto res = vkCreateRenderPass(VulkanDevice::Get().GetDevice(), &renderPassCreateInfo, VK_NULL_HANDLE, &m_RenderPass);
 		YM_CORE_VERIFY(res == VK_SUCCESS)

@@ -28,6 +28,8 @@ namespace YUME
 				return m_Registry.group<Components...>();
 			}
 
+			std::vector<Entity> GetEntitiesWithTag(const std::string& p_Tag);
+
 			template <typename Component, typename Dependency>
 			void AddDependency()
 			{

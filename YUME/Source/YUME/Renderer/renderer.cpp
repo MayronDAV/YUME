@@ -123,6 +123,7 @@ namespace YUME
 		texSpec.Height = s_RenderData->Height;
 		texSpec.Format = TextureFormat::RGBA8_SRGB;
 		texSpec.Usage = TextureUsage::TEXTURE_COLOR_ATTACHMENT;
+		texSpec.DebugName = "MainTexture";
 		s_RenderData->MainTexture = Texture2D::Get(texSpec);
 
 		RendererCommand::ClearRenderTarget(s_RenderData->MainTexture, s_RenderData->ClearColor);
@@ -144,6 +145,7 @@ namespace YUME
 			pci.SwapchainTarget = false;
 			pci.DepthTest = false;
 			pci.DepthWrite = false;
+			pci.DebugName = "QuadPipeline";
 			std::memcpy(pci.ClearColor, glm::value_ptr(s_RenderData->ClearColor), 4 * sizeof(float));
 			s_Render2Ddata->QuadPipeline = Pipeline::Get(pci);
 
@@ -308,8 +310,8 @@ namespace YUME
 		s_Render2Ddata->QuadShader->AddVertexArray(s_Render2Ddata->QuadVertexArray);
 
 		s_Render2Ddata->QuadVertexPositions[0] = { -0.5f, -0.5f, 0.0f, 1.0f };
-		s_Render2Ddata->QuadVertexPositions[1] = { 0.5f, -0.5f, 0.0f, 1.0f };
-		s_Render2Ddata->QuadVertexPositions[2] = { 0.5f,  0.5f, 0.0f, 1.0f };
+		s_Render2Ddata->QuadVertexPositions[1] = {  0.5f, -0.5f, 0.0f, 1.0f };
+		s_Render2Ddata->QuadVertexPositions[2] = {  0.5f,  0.5f, 0.0f, 1.0f };
 		s_Render2Ddata->QuadVertexPositions[3] = { -0.5f,  0.5f, 0.0f, 1.0f };
 
 		s_Render2Ddata->QuadDescriptorSet = DescriptorSet::Create(s_Render2Ddata->QuadShader);
@@ -329,6 +331,28 @@ namespace YUME
 		if (s_Render2Ddata->QuadIndexCount)
 		{
 			YM_PROFILE_SCOPE("QuadFlush")
+
+			auto& vertices = s_Render2Ddata->QuadVertexBufferBase;
+			std::vector<std::array<QuadVertex, 4>> quads(vertices.size() / 4);
+
+			for (size_t i = 0; i < vertices.size(); i += 4)
+			{
+				quads[i / 4] = { vertices[i], vertices[i + 1], vertices[i + 2], vertices[i + 3] };
+			}
+
+			std::sort(quads.begin(), quads.end(), [](const auto& p_QuadA, const auto& p_QuadB)
+			{
+				return p_QuadA[0].Position.z < p_QuadB[0].Position.z;
+			});
+
+			for (size_t i = 0; i < quads.size(); ++i)
+			{
+				vertices[i * 4] = quads[i][0];
+				vertices[i * 4 + 1] = quads[i][1];
+				vertices[i * 4 + 2] = quads[i][2];
+				vertices[i * 4 + 3] = quads[i][3];
+			}
+
 
 			s_Render2Ddata->QuadPipeline->Begin();
 
@@ -375,6 +399,27 @@ namespace YUME
 			RendererCommand::ClearRenderTarget(s_RenderData->RenderTarget, s_RenderData->ClearColor);
 		}
 
+		// TEMPORARY
+		// ============================================================================================================================
+
+		TextureSpecification texSpec{};
+		texSpec.Width = s_RenderData->Width;
+		texSpec.Height = s_RenderData->Height;
+		texSpec.Format = TextureFormat::RGBA8_SRGB;
+		texSpec.Usage = TextureUsage::TEXTURE_SAMPLED;
+		texSpec.DebugName = "TemporaryTexture";
+		auto finalTexture = Texture2D::Get(texSpec);
+
+		finalTexture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		s_RenderData->MainTexture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		Utils::CopyImage(s_RenderData->Width, s_RenderData->Height, s_RenderData->MainTexture.As<VulkanTexture2D>()->GetImage(), finalTexture.As<VulkanTexture2D>()->GetImage());
+
+		finalTexture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		s_RenderData->MainTexture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+		// ============================================================================================================================
+
 		PipelineCreateInfo pci{};
 		pci.Shader = s_RenderData->FinalPassShader;
 		pci.TransparencyEnabled = false;
@@ -390,6 +435,7 @@ namespace YUME
 			pci.SwapchainTarget = false;
 			pci.ClearTargets = false;
 		}
+		pci.DebugName = "FinalPassPipeline";
 		s_RenderData->FinalPassPipeline = Pipeline::Get(pci);
 
 		s_RenderData->FinalPassPipeline->Begin();
@@ -397,7 +443,7 @@ namespace YUME
 		RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
 
 		s_RenderData->FinalPassDescriptorSet->Bind(0);
-		s_RenderData->FinalPassDescriptorSet->UploadTexture2D(0, s_RenderData->MainTexture);
+		s_RenderData->FinalPassDescriptorSet->UploadTexture2D(0, finalTexture);
 
 		RendererCommand::Draw(nullptr, 6);
 

@@ -54,6 +54,8 @@ namespace YUME
 
 		HashCombine(hash, p_Spec.Height, p_Spec.Width);
 
+		HashCombine(hash, p_Spec.DebugName);
+
 		auto found = s_TextureCache.find(hash);
 		if (found != s_TextureCache.end() && found->second.Texture)
 		{

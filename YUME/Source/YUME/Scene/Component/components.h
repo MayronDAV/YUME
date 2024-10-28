@@ -36,8 +36,8 @@ namespace YUME
 
 		TransformComponent() = default;
 		TransformComponent(const TransformComponent&) = default;
-		TransformComponent(const glm::vec3& p_translation)
-			:Translation(p_translation) {}
+		TransformComponent(const glm::vec3& p_Translation, const glm::vec3& p_Scale = { 1.0f, 1.0f, 1.0f }, const glm::vec3& p_Rotation = { 0.0f, 0.0f, 0.0f })
+			: Translation(p_Translation), Scale(p_Scale), Rotation(p_Rotation) {}
 
 		glm::mat4 GetTransform() const
 		{

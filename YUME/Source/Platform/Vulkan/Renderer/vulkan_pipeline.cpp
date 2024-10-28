@@ -266,7 +266,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		TransitionAttachments();
+		//TransitionAttachments();
 
 		auto commandBuffer = m_Context->GetCommandBuffer();
 
@@ -297,8 +297,6 @@ namespace YUME
 	void VulkanPipeline::TransitionAttachments()
 	{
 		YM_PROFILE_FUNCTION()
-
-		auto commandBuffer = m_Context->GetCommandBuffer();
 
 		if (m_CreateInfo.DepthTarget)
 		{

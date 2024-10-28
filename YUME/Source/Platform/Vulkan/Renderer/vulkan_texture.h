@@ -35,7 +35,7 @@ namespace YUME
 			VkImageLayout GetLayout() const { return m_TextureImageLayout; }
 			VkImage GetImage() const { return m_TextureImage; }
 
-			void TransitionImage(VkImageLayout p_NewLayout);
+			void TransitionImage(VkImageLayout p_NewLayout, bool p_UseSingleTime = true);
 
 			bool operator== (const Texture& p_Other) const override;
 

@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <format>
 #include <string>
+#include <type_traits>
 
 
 namespace YUME
@@ -609,7 +610,7 @@ namespace YUME
 			template<class U>
 			Scope<U> As() const
 			{
-				//YM_CORE_ASSERT(std::is_base_of<U, T>::value)
+				static_assert(std::is_convertible_v<U*, T*>);
 				return Scope<U>(std::dynamic_pointer_cast<U>(*this));
 			}
 	};
@@ -633,7 +634,7 @@ namespace YUME
 			template<class U>
 			Ref<U> As() const
 			{
-				//YM_CORE_ASSERT(std::is_base_of<U, T>::value)
+				static_assert(std::is_convertible_v<U*, T*>);
 				return Ref<U>(std::dynamic_pointer_cast<U>(*this));
 			}
 	};

@@ -2,6 +2,8 @@
 #include "vulkan_utils.h"
 
 #include "Platform/Vulkan/Core/vulkan_device.h"
+#include "Platform/Vulkan/Renderer/vulkan_context.h"
+#include "YUME/Core/application.h"
 
 #include <utility>
 
@@ -161,11 +163,20 @@ namespace YUME::Utils
 	};
 
 
-	void TransitionImageLayout(const VkImage& p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout)
+	void TransitionImageLayout(const VkImage& p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout, bool p_UseSingleTime)
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto commandBuffer = BeginSingleTimeCommand();
+		VkCommandBuffer commandBuffer;
+		if (p_UseSingleTime)
+		{
+			commandBuffer = BeginSingleTimeCommand();
+		}
+		else
+		{
+			auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
+			commandBuffer = context->GetCommandBuffer();
+		}
 
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -208,7 +219,8 @@ namespace YUME::Utils
 		else 
 		{
 			YM_CORE_ASSERT(false, "Unsupported layout transition!")
-			EndSingleTimeCommand(commandBuffer);
+			if (p_UseSingleTime)
+				EndSingleTimeCommand(commandBuffer);
 			return;
 		}
 
@@ -221,7 +233,8 @@ namespace YUME::Utils
 			1, &barrier
 		);
 
-		EndSingleTimeCommand(commandBuffer);
+		if (p_UseSingleTime)
+			EndSingleTimeCommand(commandBuffer);
 	}
 
 

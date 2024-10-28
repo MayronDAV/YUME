@@ -15,17 +15,17 @@ namespace YUME
 
 	Ref<SubTexture2D> SubTexture2D::Create(const SubTextureSpec& p_Spec)
 	{
-		float customTileSizeX = (p_Spec.CustomTileSize.x == 0.0f) ? 1.0f : p_Spec.CustomTileSize.x;
-		float customTileSizeY = (p_Spec.CustomTileSize.y == 0.0f) ? 1.0f : p_Spec.CustomTileSize.y;
+		float customTileSizeX = (p_Spec.Scale.x == 0.0f) ? 1.0f : p_Spec.Scale.x;
+		float customTileSizeY = (p_Spec.Scale.y == 0.0f) ? 1.0f : p_Spec.Scale.y;
 
 		glm::vec2 min = {
-			(p_Spec.ByTileSize ? p_Spec.TileCoord.x * p_Spec.TileSize.x : p_Spec.TileCoord.x) / p_Spec.Texture->GetWidth(),
-			(p_Spec.ByTileSize ? p_Spec.TileCoord.y * p_Spec.TileSize.y : p_Spec.TileCoord.y) / p_Spec.Texture->GetHeight()
+			(p_Spec.BySize ? p_Spec.Offset.x * p_Spec.Size.x : p_Spec.Offset.x) / p_Spec.Texture->GetWidth(),
+			(p_Spec.BySize ? p_Spec.Offset.y * p_Spec.Size.y : p_Spec.Offset.y) / p_Spec.Texture->GetHeight()
 		};
 
 		glm::vec2 max = {
-			(p_Spec.ByTileSize ? (p_Spec.TileCoord.x + customTileSizeX) * p_Spec.TileSize.x : p_Spec.TileCoord.x + (customTileSizeX * p_Spec.TileSize.x)) / p_Spec.Texture->GetWidth(),
-			(p_Spec.ByTileSize ? (p_Spec.TileCoord.y + customTileSizeY) * p_Spec.TileSize.y : p_Spec.TileCoord.y + (customTileSizeY * p_Spec.TileSize.x)) / p_Spec.Texture->GetHeight()
+			(p_Spec.BySize ? (p_Spec.Offset.x + customTileSizeX) * p_Spec.Size.x : p_Spec.Offset.x + (customTileSizeX * p_Spec.Size.x)) / p_Spec.Texture->GetWidth(),
+			(p_Spec.BySize ? (p_Spec.Offset.y + customTileSizeY) * p_Spec.Size.y : p_Spec.Offset.y + (customTileSizeY * p_Spec.Size.x)) / p_Spec.Texture->GetHeight()
 		};
 
 		return CreateRef<SubTexture2D>(p_Spec.Texture, min, max);

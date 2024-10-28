@@ -30,6 +30,11 @@ namespace YUME
 		return m_EntityManager->CreateEntity(p_ID, p_Tag);
 	}
 
+	std::vector<Entity> Scene::GetEntitiesWithTag(const std::string& p_Tag)
+	{
+		return m_EntityManager->GetEntitiesWithTag(p_Tag);
+	}
+
 	Entity Scene::GetEntityByUUID(const UUID& p_ID)
 	{
 		return m_EntityManager->GetEntityByUUID(p_ID);

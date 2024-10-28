@@ -12,15 +12,13 @@ namespace YUME
 	{
 		Ref<Texture2D> Texture = nullptr;
 
-		glm::vec2 TileSize = { 1, 1 };
+		glm::vec2 Size = { 1, 1 };
 
 		// [true] if you want to pass the tile coord as a multiplier of the tile size
 		// [false] if you want to pass the actual coord directly
-		bool ByTileSize = true;
-		glm::vec2 TileCoord = { 0, 0 };
-
-		// use this if the tile does not respect the pattern
-		glm::vec2 CustomTileSize = { 1, 1 };
+		bool BySize = true;
+		glm::vec2 Offset = { 0, 0 };
+		glm::vec2 Scale = { 1, 1 };
 	};
 
 	class YM_API SubTexture2D

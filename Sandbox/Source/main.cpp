@@ -17,13 +17,31 @@ class ExampleLayer : public YUME::Layer
 		{
 			m_Scene = new YUME::Scene();
 
+			auto tile1Texture = YUME::TextureImporter::LoadTexture2D("Resources/window.png");
+			auto tile2Texture = YUME::TextureImporter::LoadTexture2D("Resources/grass.png");
+			auto playerTexture = YUME::TextureImporter::LoadTexture2D("Resources/star.png");
+
+			m_PlayerEntt = m_Scene->CreateEntity("Player");
+			m_PlayerEntt.AddComponent<YUME::SpriteComponent>(m_PlayerColor, playerTexture);
+
 			for (int x = 0; x < 10; x++)
 			{
 				for (int y = 0; y < 10; y++)
 				{
-					auto entt = m_Scene->CreateEntity("Grass");
-					entt.AddComponent<YUME::SpriteComponent>(glm::vec4{1, 1, 1, 1}, "Resources/green_grass.jpg");
-					entt.AddOrReplaceComponent<YUME::TransformComponent>(glm::vec3{x, y, 0.0f});
+					glm::vec4 color{ 1.0f, 1.0f, 1.0f, 1.0f };
+					glm::vec3 pos{ x, y, 0.0f };
+
+					auto entt = m_Scene->CreateEntity("Tile");
+					if (x % 2 == 0)
+					{
+						entt.AddComponent<YUME::SpriteComponent>(color, tile1Texture);
+						entt.AddOrReplaceComponent<YUME::TransformComponent>(pos);
+					}
+					else
+					{
+						entt.AddComponent<YUME::SpriteComponent>(color, tile2Texture);
+						entt.AddOrReplaceComponent<YUME::TransformComponent>(pos);
+					}
 				}
 			}
 		}
@@ -66,6 +84,19 @@ class ExampleLayer : public YUME::Layer
 			auto projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
 			auto transform = glm::translate(glm::mat4(1.0f), m_Position);
 
+			auto& sc = m_PlayerEntt.GetComponent<YUME::SpriteComponent>();
+			sc.Color = m_PlayerColor;
+
+			auto& tc = m_PlayerEntt.GetComponent<YUME::TransformComponent>();
+			tc.Translation = glm::vec3(m_Position.x, m_Position.y, m_PlayerZ);
+
+			auto entts = m_Scene->GetEntitiesWithTag("Tile");
+			for (auto& entt : entts)
+			{
+				auto& sc = entt.GetComponent<YUME::SpriteComponent>();
+				sc.Color = m_TileColor;
+			}
+
 			YUME::RendererBeginInfo rbi{};
 			rbi.MainCamera = YUME::Camera(projection);
 			rbi.CameraTransform = transform;
@@ -90,6 +121,9 @@ class ExampleLayer : public YUME::Layer
 
 			ImGui::Begin("Editor");
 			ImGui::DragFloat3("Player.Position", glm::value_ptr(m_Position), 1.0f);
+			ImGui::DragFloat("Player.Position.z", &m_PlayerZ, 0.1f);
+			ImGui::ColorEdit4("Player Color", glm::value_ptr(m_PlayerColor));
+			ImGui::ColorEdit4("Tile Color", glm::value_ptr(m_TileColor));
 			ImGui::ColorEdit4("Background", glm::value_ptr(m_Color));
 			ImGui::End();
 		}
@@ -105,8 +139,13 @@ class ExampleLayer : public YUME::Layer
 
 	private:
 		glm::vec4 m_Color{0, 0, 0, 1};
+		glm::vec4 m_TileColor{ 1.0f, 1.0f, 1.0f, 1.0f };
 		glm::vec3 m_Position = { 0.0f, 0.0f, 10.0f };
+		float m_PlayerZ = 0.0f;
 		std::string m_CurrentKeyPressed = " ";
+
+		glm::vec4 m_PlayerColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+		YUME::Entity m_PlayerEntt;
 
 		YUME::Scene* m_Scene = nullptr;
 };

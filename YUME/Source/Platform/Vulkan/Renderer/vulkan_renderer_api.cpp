@@ -62,24 +62,24 @@ namespace YUME
 		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT)
 		{
 			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, false);
 
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 			VkClearColorValue clearColorValue = VkClearColorValue({ { p_Value.x, p_Value.y, p_Value.z, p_Value.w } });
 			vkCmdClearColorImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, 1, &subresourceRange);
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout, false);
 		}
 		else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
 		{
 			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, false);
 
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 			VkClearDepthStencilValue clear_depth_stencil = { 1.0f, 1 };
 			vkCmdClearDepthStencilImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil, 1, &subresourceRange);
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout, false);
 		}
 		else
 		{

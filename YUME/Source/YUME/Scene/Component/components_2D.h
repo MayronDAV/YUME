@@ -84,16 +84,39 @@ namespace YUME
 				return;
 
 			SubTextureSpec spec{};
-			spec.Texture = TextureImporter::LoadTexture2D(Path);
+			spec.Texture = TextureImporter::LoadTexture2D(Path); // TEMPORARY, when we have the Asset Manager the texture will become an Asset Handle
 			if (p_Size.x == 0.0f || p_Size.y == 0.0f)
 			{
 				Size.x = (float)spec.Texture->GetWidth();
 				Size.y = (float)spec.Texture->GetHeight();
 			}
-			spec.TileSize = Size;
-			spec.ByTileSize = BySize;
-			spec.TileCoord = Offset;
-			spec.CustomTileSize = Scale;
+			spec.Size = Size;
+			spec.BySize = BySize;
+			spec.Offset = Offset;
+			spec.Scale = Scale;
+
+			Texture = SubTexture2D::Create(spec);
+		}
+		// TEMPORARY, when we have the Asset Manager the texture will become an Asset Handle
+		// Then this constructor will be deleted
+		SpriteComponent(const glm::vec4& p_Color, const Ref<Texture2D>& p_Texture, const glm::vec2& p_Scale = { 1.0f, 1.0f },
+			const glm::vec2& p_Offset = { 0.0f, 0.0f }, bool p_BySize = true, const glm::vec2& p_Size = { 0.0f, 0.0f })
+			: Color(p_Color), Offset(p_Offset), Scale(p_Scale), Size(p_Size)
+		{
+			if (p_Texture == nullptr)
+				return;
+
+			SubTextureSpec spec{};
+			spec.Texture = p_Texture;
+			if (p_Size.x == 0.0f || p_Size.y == 0.0f)
+			{
+				Size.x = (float)spec.Texture->GetWidth();
+				Size.y = (float)spec.Texture->GetHeight();
+			}
+			spec.Size = Size;
+			spec.BySize = BySize;
+			spec.Offset = Offset;
+			spec.Scale = Scale;
 
 			Texture = SubTexture2D::Create(spec);
 		}

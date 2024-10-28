@@ -325,12 +325,13 @@ namespace YUME
 
 		m_CurrentImageIndex = imageIndex;
 
-		auto images = VulkanSwapchain::Get().GetImages();
-		Utils::TransitionImageLayout(images[m_CurrentFrame], VulkanSwapchain::Get().GetFormat().format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
 		m_CommandBuffers.Reset(m_CurrentFrame);
 
 		m_CommandBuffers.Begin(m_CurrentFrame);
+
+		auto images = VulkanSwapchain::Get().GetImages();
+		Utils::TransitionImageLayout(images[m_CurrentFrame], VulkanSwapchain::Get().GetFormat().format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
 	}
 
 	void VulkanContext::EndFrame()

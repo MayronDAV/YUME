@@ -153,13 +153,13 @@ namespace YUME
 		// Do nothing
 	}
 
-	void VulkanTexture2D::TransitionImage(VkImageLayout p_NewLayout)
+	void VulkanTexture2D::TransitionImage(VkImageLayout p_NewLayout, bool p_UseSingleTime)
 	{
 		YM_PROFILE_FUNCTION()
 
 		if (p_NewLayout != m_TextureImageLayout)
 		{
-			Utils::TransitionImageLayout(m_TextureImage, m_VkFormat, m_TextureImageLayout, p_NewLayout);
+			Utils::TransitionImageLayout(m_TextureImage, m_VkFormat, m_TextureImageLayout, p_NewLayout, p_UseSingleTime);
 			m_TextureImageLayout = p_NewLayout;
 		}
 	}

@@ -24,6 +24,8 @@ namespace YUME
 			Entity CreateEntity(const std::string& p_Tag = "Entity");
 			Entity CreateEntity(const UUID& p_ID, const std::string& p_Tag = "Entity");
 
+			std::vector<Entity> GetEntitiesWithTag(const std::string& p_Tag);
+			
 			Entity GetEntityByUUID(const UUID& p_ID);
 
 			entt::registry& GetRegistry();
@@ -32,6 +34,7 @@ namespace YUME
 			void OnUpdate(const Timestep& p_Ts);
 
 			void OnRender();
+
 		private:
 			Scope<EntityManager> m_EntityManager;
 	};
