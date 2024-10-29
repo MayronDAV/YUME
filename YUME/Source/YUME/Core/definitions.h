@@ -1,5 +1,8 @@
 #pragma once
 #include "YUME/Core/base.h"
+#include "YUME/Core/reference.h"
+
+#include <string>
 
 
 namespace YUME
@@ -140,4 +143,35 @@ namespace YUME
 		D32_FLOAT_S8_UINT,
 	};
 
+	enum class DescriptorType : uint8_t
+	{
+		UNIFORM_BUFFER,
+		IMAGE_SAMPLER
+	};
+
+	struct DescriptorMemberInfo
+	{
+		uint32_t Size;
+		uint32_t Offset;
+		std::string Name;
+		std::string FullName;
+	};
+
+	class Texture2D;
+	class UniformBuffer;
+
+	struct DescriptorInfo
+	{
+		std::vector<Ref<Texture2D>> Textures;
+		Ref<UniformBuffer> Buffer = nullptr;
+
+		int Binding;
+		uint64_t Size;
+		int Offset;
+		std::string Name;
+		DescriptorType Type;
+		ShaderType Stage;
+
+		std::vector<DescriptorMemberInfo> Members;
+	};
 }

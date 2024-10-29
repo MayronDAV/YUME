@@ -40,4 +40,6 @@ namespace YUME::Utils
 	void CopyImage(uint32_t p_Width, uint32_t p_Height, const VkImage& p_SrcImage, const VkImage& p_DestImage);
 		
 	VkShaderStageFlagBits ShaderTypeToVK(ShaderType p_Type);
+
+	VkDescriptorType DescriptorTypeToVk(DescriptorType p_Type);
 }

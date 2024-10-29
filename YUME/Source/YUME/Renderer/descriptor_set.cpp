@@ -8,12 +8,12 @@
 
 namespace YUME
 {
-	Ref<DescriptorSet> DescriptorSet::Create(const Ref<Shader>& p_Shader)
+	Ref<DescriptorSet> DescriptorSet::Create(const DescriptorSpec& p_Spec)
 	{
 		YM_PROFILE_FUNCTION()
 
 		if (Engine::GetAPI() == RenderAPI::Vulkan)
-			return CreateRef<VulkanDescriptorSet>(p_Shader);
+			return CreateRef<VulkanDescriptorSet>(p_Spec);
 
 		YM_CORE_ASSERT(false, "Unknown RendererAPI!")
 		return nullptr;

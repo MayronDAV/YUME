@@ -33,8 +33,6 @@ namespace YUME
 		static const uint32_t MaxIndices = MaxQuads * 6;
 		static const uint8_t MaxTextureSlots = 32;
 
-		bool First = true;
-
 		// ----------------------------
 		// QUAD stuff
 
@@ -42,7 +40,7 @@ namespace YUME
 		Ref<VertexBuffer> QuadVertexBuffer = nullptr;
 		Ref<Shader> QuadShader = nullptr;
 		Ref<Pipeline> QuadPipeline = nullptr;
-		Ref<DescriptorSet> QuadDescriptorSet = nullptr;
+		std::array<Ref<DescriptorSet>, 2> QuadDescriptorSets;
 
 		uint32_t QuadIndexCount = 0;
 		std::vector<QuadVertex> QuadVertexBufferBase;
@@ -55,13 +53,6 @@ namespace YUME
 		std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
 		uint32_t TextureSlotIndex = 1;
 
-		struct CameraData
-		{
-			glm::mat4 ViewProjection;
-		};
-		CameraData CameraBuffer{ glm::mat4(1.0f) };
-		Ref<UniformBuffer> CameraUniformBuffer = nullptr;
-
 		// ----------------------------
 	};
 
@@ -71,6 +62,7 @@ namespace YUME
 		glm::vec4 ClearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
 		Ref<Texture2D> MainTexture = nullptr;
 		Ref<Texture2D> WhiteTexture = nullptr;
+
 		bool SwapchainTarget = true; 
 		Ref<Texture2D> RenderTarget = nullptr;
 		uint32_t Width;
@@ -81,6 +73,13 @@ namespace YUME
 		Ref<DescriptorSet> FinalPassDescriptorSet = nullptr;
 
 		RenderSettings Settings = {};
+
+		struct CameraData
+		{
+			glm::mat4 ViewProjection;
+		};
+		CameraData CameraBuffer{ glm::mat4(1.0f) };
+		Ref<UniformBuffer> CameraUniformBuffer = nullptr;
 	};
 
 	static RenderData* s_RenderData;
@@ -97,10 +96,17 @@ namespace YUME
 
 		s_RenderData->FinalPassShader = Shader::Create("assets/shaders/FinalPassShader.glsl");
 
-		s_RenderData->FinalPassDescriptorSet = DescriptorSet::Create(s_RenderData->FinalPassShader);
+		s_RenderData->FinalPassDescriptorSet = DescriptorSet::Create({/* Set */ 0, s_RenderData->FinalPassShader});
 
 		uint8_t whiteData[] = { 255, 255, 255, 255 };
 		s_RenderData->WhiteTexture = Texture2D::Create({}, whiteData, sizeof(whiteData));
+		
+		s_RenderData->CameraUniformBuffer = UniformBuffer::Create(sizeof(RenderData::CameraData));
+
+		if (s_RenderData->Settings.Renderer2D)
+		{
+			Render2DInit();
+		}
 	}
 
 	void Renderer::Begin(const RendererBeginInfo& p_BeginInfo)
@@ -128,14 +134,11 @@ namespace YUME
 
 		RendererCommand::ClearRenderTarget(s_RenderData->MainTexture, s_RenderData->ClearColor);
 
+		s_RenderData->CameraBuffer.ViewProjection = p_BeginInfo.MainCamera.GetProjection() * glm::inverse(p_BeginInfo.CameraTransform);
+		s_RenderData->CameraUniformBuffer->SetData(&s_RenderData->CameraBuffer, sizeof(RenderData::CameraData));
+
 		if (s_RenderData->Settings.Renderer2D)
 		{
-			if (s_Render2Ddata->First)
-			{
-				Render2DInit();
-				s_Render2Ddata->First = false;
-			}
-
 			PipelineCreateInfo pci{};
 			pci.Shader = s_Render2Ddata->QuadShader;
 			pci.BlendMode = BlendMode::SrcAlphaOneMinusSrcAlpha;
@@ -148,9 +151,6 @@ namespace YUME
 			pci.DebugName = "QuadPipeline";
 			std::memcpy(pci.ClearColor, glm::value_ptr(s_RenderData->ClearColor), 4 * sizeof(float));
 			s_Render2Ddata->QuadPipeline = Pipeline::Get(pci);
-
-			s_Render2Ddata->CameraBuffer.ViewProjection = p_BeginInfo.MainCamera.GetProjection() * glm::inverse(p_BeginInfo.CameraTransform);
-			s_Render2Ddata->CameraUniformBuffer->SetData(&s_Render2Ddata->CameraBuffer, sizeof(Render2Ddata::CameraData));
 
 			Render2DStartBatch();
 		}
@@ -214,7 +214,7 @@ namespace YUME
 								Render2DFlushAndReset();
 
 							textureIndex = s_Render2Ddata->TextureSlotIndex;
-							s_Render2Ddata->TextureSlots[s_Render2Ddata->TextureSlotIndex] = sprite.Texture->GetTexture();
+							s_Render2Ddata->TextureSlots[(int)s_Render2Ddata->TextureSlotIndex] = sprite.Texture->GetTexture();
 							s_Render2Ddata->TextureSlotIndex++;
 						}
 					}
@@ -314,14 +314,18 @@ namespace YUME
 		s_Render2Ddata->QuadVertexPositions[2] = {  0.5f,  0.5f, 0.0f, 1.0f };
 		s_Render2Ddata->QuadVertexPositions[3] = { -0.5f,  0.5f, 0.0f, 1.0f };
 
-		s_Render2Ddata->QuadDescriptorSet = DescriptorSet::Create(s_Render2Ddata->QuadShader);
+		for (size_t i = 0; i < s_Render2Ddata->QuadDescriptorSets.size(); i++)
+		{
+			DescriptorSpec spec;
+			spec.Set = (uint32_t)i;
+			spec.Shader = s_Render2Ddata->QuadShader;
+			s_Render2Ddata->QuadDescriptorSets[i] = DescriptorSet::Create(spec);
+		}
 
 		// ----------------------------
 		// OTHER stuff
 
 		s_Render2Ddata->TextureSlots.fill(s_RenderData->WhiteTexture);
-
-		s_Render2Ddata->CameraUniformBuffer = UniformBuffer::Create(sizeof(Render2Ddata::CameraData));
 	}
 
 	void Renderer::Render2DFlush()
@@ -347,7 +351,7 @@ namespace YUME
 
 			for (size_t i = 0; i < quads.size(); ++i)
 			{
-				vertices[i * 4] = quads[i][0];
+				vertices[i * 4 + 0] = quads[i][0];
 				vertices[i * 4 + 1] = quads[i][1];
 				vertices[i * 4 + 2] = quads[i][2];
 				vertices[i * 4 + 3] = quads[i][3];
@@ -358,12 +362,13 @@ namespace YUME
 
 			RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
 
-			s_Render2Ddata->QuadDescriptorSet->Bind(0);
-			s_Render2Ddata->QuadDescriptorSet->UploadUniform(0, s_Render2Ddata->CameraUniformBuffer);
+			s_Render2Ddata->QuadDescriptorSets[0]->SetUniformData("u_Camera", s_RenderData->CameraUniformBuffer);
+			s_Render2Ddata->QuadDescriptorSets[0]->Upload();
 
-			s_Render2Ddata->QuadDescriptorSet->Bind(1);
-			s_Render2Ddata->QuadDescriptorSet->UploadTexture2D(0, s_Render2Ddata->TextureSlots.data(), (uint32_t)s_Render2Ddata->TextureSlots.size());
+			s_Render2Ddata->QuadDescriptorSets[1]->SetTexture2D("u_Textures", s_Render2Ddata->TextureSlots.data(), (uint32_t)s_Render2Ddata->TextureSlots.size());
+			s_Render2Ddata->QuadDescriptorSets[1]->Upload();
 
+			RendererCommand::BindDescriptorSets(s_Render2Ddata->QuadDescriptorSets.data(), (uint32_t)s_Render2Ddata->QuadDescriptorSets.size());
 			s_Render2Ddata->QuadVertexBuffer->SetData(s_Render2Ddata->QuadVertexBufferBase.data(), s_Render2Ddata->QuadVertexBufferBase.size() * sizeof(QuadVertex));
 			RendererCommand::DrawIndexed(s_Render2Ddata->QuadVertexArray, s_Render2Ddata->QuadIndexCount);
 
@@ -442,9 +447,10 @@ namespace YUME
 
 		RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
 
-		s_RenderData->FinalPassDescriptorSet->Bind(0);
-		s_RenderData->FinalPassDescriptorSet->UploadTexture2D(0, finalTexture);
+		s_RenderData->FinalPassDescriptorSet->SetTexture2D("u_Texture", finalTexture);
+		s_RenderData->FinalPassDescriptorSet->Upload();
 
+		RendererCommand::BindDescriptorSets(&s_RenderData->FinalPassDescriptorSet);
 		RendererCommand::Draw(nullptr, 6);
 
 		s_RenderData->FinalPassPipeline->End();

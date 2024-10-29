@@ -56,7 +56,7 @@ namespace YUME
 	static DescData* s_Data = nullptr;
 
 
-	VulkanDescriptorSet::VulkanDescriptorSet(const Ref<Shader>& p_Shader)
+	VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSpec& p_Spec)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -66,31 +66,61 @@ namespace YUME
 			s_Data->CurrentPool = s_Data->GetPool();
 		}
 
-		auto vkShader = static_cast<VulkanShader*>(p_Shader.get());
+		m_Set = p_Spec.Set;
+
+		auto vkShader = p_Spec.Shader.As<VulkanShader>();
 		m_PipelineLayout = vkShader->GetLayout();
-		m_DescriptorSetLayouts = vkShader->GetDescriptorSetLayouts();
+		m_DescriptorsInfo = vkShader->GetDescriptorsInfo(m_Set);
+		m_SetLayout = vkShader->GetDescriptorSetLayout(m_Set);
 
 		VkDevice device = VulkanDevice::Get().GetDevice();
 
-		m_DescriptorSets.resize(m_DescriptorSetLayouts.size());
-		m_DescriptorUpdated.resize(m_DescriptorSetLayouts.size(), false);
-		m_UsingCurrentPool.resize(m_DescriptorSets.size(), true);
+		VkDescriptorSetAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = s_Data->CurrentPool;
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts = &m_SetLayout;
 
-		for (size_t i = 0; i < m_DescriptorSetLayouts.size(); i++)
+		auto res = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSet);
+		if ( res != VK_SUCCESS)
 		{
-			VkDescriptorSetAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = s_Data->CurrentPool;
-			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = &m_DescriptorSetLayouts[(uint32_t)i];
+			YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
+		}
 
-			auto res = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSets[i]);
-			if ( res != VK_SUCCESS)
+		bool needReallocate = false;
+		switch (res)
+		{
+			case VK_SUCCESS:
+				return;
+			case VK_ERROR_FRAGMENTED_POOL:
+			case VK_ERROR_OUT_OF_POOL_MEMORY:
+				needReallocate = true;
+				break;
+			default:
+				YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
+				YM_CORE_ERROR("Type: Unrecoverable")
+				break;
+		}
+
+		if (needReallocate)
+		{
+			vkDeviceWaitIdle(device);
+
+			s_Data->UsedDescriptorPools.push_back(s_Data->CurrentPool);
+			s_Data->CurrentPool = s_Data->GetPool();
+			allocInfo.descriptorPool = s_Data->CurrentPool;
+
+			if (vkAllocateDescriptorSets(VulkanDevice::Get().GetDevice(), &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
 			{
 				YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
 			}
-		}
 
+			auto& data = s_Data;
+			VulkanContext::PushFunctionToFrameEnd([data]()
+			{
+				data->ResetUsedDescriptorPools();
+			});
+		}
 	}
 
 	VulkanDescriptorSet::~VulkanDescriptorSet()
@@ -132,142 +162,217 @@ namespace YUME
 		}
 	}
 
-	void VulkanDescriptorSet::Bind(uint32_t p_Set)
+	void VulkanDescriptorSet::SetUniformData(const std::string& p_Name, const Ref<UniformBuffer>& p_UniformBuffer)
 	{
 		YM_PROFILE_FUNCTION()
 
-		m_CurrentBindSet = p_Set;
-		CheckIfDescriptorSetIsUpdated();
-
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
-
-		vkCmdBindDescriptorSets(
-			commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			m_PipelineLayout,
-			p_Set,
-			1,
-			&m_DescriptorSets[p_Set],
-			0,
-			nullptr
-		);
-	}
-
-	void VulkanDescriptorSet::Unbind()
-	{
-		YM_PROFILE_FUNCTION()
-
-		m_CurrentBindSet = -1;
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
-
-		vkCmdBindDescriptorSets(
-			commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			m_PipelineLayout,
-			0,
-			0,
-			nullptr,
-			0,
-			nullptr
-		);
-	}
-
-	void VulkanDescriptorSet::UploadUniform(uint32_t p_Binding, const Ref<UniformBuffer>& p_UniformBuffer)
-	{
-		YM_PROFILE_FUNCTION()
-
-		YM_CORE_VERIFY(m_CurrentBindSet >= 0, "Did you call Bind(uint32_t p_Set)?")
-		YM_CORE_VERIFY(!m_DescriptorSetLayouts.empty())
-		YM_CORE_VERIFY(!m_DescriptorSets.empty())
-
-		auto buffer = static_cast<VulkanUniformBuffer*>(p_UniformBuffer.get());
-
-		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = buffer->GetBuffer();
-		bufferInfo.offset = 0;
-		bufferInfo.range = VK_WHOLE_SIZE;
-
-		VkWriteDescriptorSet descriptorWrite = {};
-		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet = m_DescriptorSets[m_CurrentBindSet];
-		descriptorWrite.dstBinding = p_Binding;
-		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrite.descriptorCount = 1;
-		descriptorWrite.pBufferInfo = &bufferInfo;
-
-		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), 1, &descriptorWrite, 0, nullptr);
-
-		m_DescriptorUpdated[m_CurrentBindSet] = true;
-	}
-
-	void VulkanDescriptorSet::UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>& p_Texture)
-	{
-		YM_PROFILE_FUNCTION()
-
-		YM_CORE_VERIFY(m_CurrentBindSet >= 0, "Did you call Bind(uint32_t p_Set)?")
-		YM_CORE_VERIFY(!m_DescriptorSetLayouts.empty())
-		YM_CORE_VERIFY(!m_DescriptorSets.empty())
-
-		auto texture = p_Texture.As<VulkanTexture2D>();
-		TransitionImageToCorrectLayout(p_Texture);
-
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.imageLayout = texture->GetLayout();
-		imageInfo.imageView = texture->GetImageView();
-		imageInfo.sampler = texture->GetImageSampler();
-
-		VkWriteDescriptorSet descriptorWrite = {};
-		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet = m_DescriptorSets[m_CurrentBindSet];
-		descriptorWrite.dstBinding = p_Binding;
-		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrite.descriptorCount = 1;
-		descriptorWrite.pImageInfo = &imageInfo;
-
-		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), 1, &descriptorWrite, 0, nullptr);
-
-		m_DescriptorUpdated[m_CurrentBindSet] = true;
-	}
-
-	void VulkanDescriptorSet::UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>* p_TextureData, uint32_t p_Count)
-	{
-		YM_PROFILE_FUNCTION()
-
-		YM_CORE_VERIFY(m_CurrentBindSet >= 0, "Did you call Bind(uint32_t p_Set)?")
-		YM_CORE_VERIFY(!m_DescriptorSetLayouts.empty())
-		YM_CORE_VERIFY(!m_DescriptorSets.empty())
-
-		std::vector<VkDescriptorImageInfo> imageInfos;
-
-		for (size_t i = 0; i < p_Count; ++i)
+		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
 		{
-			auto texture = p_TextureData[i].As<VulkanTexture2D>();
-			TransitionImageToCorrectLayout(p_TextureData[i]);
+			auto& descriptor = m_DescriptorsInfo[i];
+			if (descriptor.Name == p_Name && descriptor.Type == DescriptorType::UNIFORM_BUFFER)
+			{
+				if (descriptor.Buffer)
+				{
+					descriptor.Buffer.reset();
+				}
 
-			VkDescriptorImageInfo imageInfo{};
-			imageInfo.imageLayout = texture->GetLayout();
-			imageInfo.imageView = texture->GetImageView();
-			imageInfo.sampler = texture->GetImageSampler();
-
-			imageInfos.push_back(imageInfo);
+				descriptor.Buffer = p_UniformBuffer;
+				descriptor.Offset = 0;
+				descriptor.Size = VK_WHOLE_SIZE;
+				m_Queue.push_back((int)i);
+				m_MustToBeUploaded = true;
+				return;
+			}
 		}
 
-		VkWriteDescriptorSet descriptorWrite = {};
-		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet = m_DescriptorSets[m_CurrentBindSet];
-		descriptorWrite.dstBinding = p_Binding;
-		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrite.descriptorCount = p_Count;
-		descriptorWrite.pImageInfo = imageInfos.data();
+		YM_CORE_ERROR("Unkown name {}", p_Name)
+	}
 
-		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), 1, &descriptorWrite, 0, nullptr);
+	void VulkanDescriptorSet::SetUniform(const std::string& p_BufferName, const std::string& p_MemberName, void* p_Data)
+	{
+		YM_PROFILE_FUNCTION()
 
-		m_DescriptorUpdated[m_CurrentBindSet] = true;
+		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
+		{
+			auto& descriptor = m_DescriptorsInfo[i];
+			if (descriptor.Name == p_BufferName && descriptor.Type == DescriptorType::UNIFORM_BUFFER)
+			{
+				for (const auto& member : descriptor.Members)
+				{
+					if (member.Name == p_MemberName)
+					{
+						if (descriptor.Buffer)
+						{
+							descriptor.Buffer.reset();
+						}
+
+						descriptor.Buffer = UniformBuffer::Create(p_Data, member.Size);
+						descriptor.Offset = member.Offset;
+						descriptor.Size = member.Size;
+						m_Queue.push_back((int)i);
+						m_MustToBeUploaded = true;
+						return;
+					}
+				}
+			}
+		}
+
+		YM_CORE_ERROR("Unkown buffer name {} or member name {}", p_BufferName, p_MemberName)
+	}
+
+	void VulkanDescriptorSet::SetUniform(const std::string& p_BufferName, const std::string& p_MemberName, void* p_Data, uint32_t p_Size)
+	{
+		YM_PROFILE_FUNCTION()
+
+		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
+		{
+			auto& descriptor = m_DescriptorsInfo[i];
+			if (descriptor.Name == p_BufferName && descriptor.Type == DescriptorType::UNIFORM_BUFFER)
+			{
+				for (const auto& member : descriptor.Members)
+				{
+					if (member.Name == p_MemberName)
+					{
+						if (descriptor.Buffer)
+						{
+							descriptor.Buffer.reset();
+						}
+
+						descriptor.Buffer = UniformBuffer::Create(p_Data, p_Size);
+						descriptor.Offset = member.Offset;
+						descriptor.Size = p_Size;
+						m_Queue.push_back((int)i);
+						m_MustToBeUploaded = true;
+						return;
+					}
+				}
+			}
+		}
+
+		YM_CORE_ERROR("Unkown buffer name {} or member name {}", p_BufferName, p_MemberName)
+	}
+
+	void VulkanDescriptorSet::SetTexture2D(const std::string& p_Name, const Ref<Texture2D>& p_Texture)
+	{
+		YM_PROFILE_FUNCTION()
+
+		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
+		{
+			auto& descriptor = m_DescriptorsInfo[i];
+			if (descriptor.Name == p_Name && descriptor.Type == DescriptorType::IMAGE_SAMPLER)
+			{
+				descriptor.Textures.clear();
+				descriptor.Textures.push_back(p_Texture);
+				m_Queue.push_back((int)i);
+				m_MustToBeUploaded = true;
+				return;
+			}
+		}
+
+		YM_CORE_ERROR("Unkown name {}", p_Name)
+	}
+
+	void VulkanDescriptorSet::SetTexture2D(const std::string& p_Name, const Ref<Texture2D>* p_TextureData, uint32_t p_Count)
+	{
+		YM_PROFILE_FUNCTION()
+
+		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
+		{
+			auto& descriptor = m_DescriptorsInfo[i];
+			if (descriptor.Name == p_Name && descriptor.Type == DescriptorType::IMAGE_SAMPLER)
+			{
+				descriptor.Textures.clear();
+				descriptor.Textures.resize(p_Count);
+				for (uint32_t j = 0; j < p_Count; j++)
+				{
+					descriptor.Textures[j] = p_TextureData[j];
+				}
+				m_Queue.push_back((int)i);
+				m_MustToBeUploaded = true;
+				return;
+			}
+		}
+
+		YM_CORE_ERROR("Unkown name {}", p_Name)
+	}
+
+	void VulkanDescriptorSet::Upload()
+	{
+		YM_PROFILE_FUNCTION()
+
+		YM_CORE_VERIFY(m_SetLayout)
+		YM_CORE_VERIFY(m_DescriptorSet)
+
+		std::vector<VkWriteDescriptorSet> descWrites;
+		std::vector<VkDescriptorBufferInfo> buffersInfo;
+		std::unordered_map<int, std::vector<VkDescriptorImageInfo>> imagesInfoMap;
+
+		for (int index : m_Queue)
+		{
+			auto& data = m_DescriptorsInfo[index];
+
+			VkWriteDescriptorSet& descriptorWrite = descWrites.emplace_back();
+
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = m_DescriptorSet;
+			descriptorWrite.dstBinding = data.Binding;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = Utils::DescriptorTypeToVk(data.Type);
+			descriptorWrite.descriptorCount = 1;
+
+			auto& bufferInfo = buffersInfo.emplace_back();
+			auto& imagesInfo = imagesInfoMap[index];
+
+			if (data.Type == DescriptorType::IMAGE_SAMPLER)
+			{
+				for (const auto& texture : data.Textures)
+				{
+					TransitionImageToCorrectLayout(texture);
+					auto vkTexture = texture.As<VulkanTexture2D>();
+
+					auto& info = imagesInfo.emplace_back();
+					info.imageLayout = vkTexture->GetLayout();
+					info.imageView = vkTexture->GetImageView();
+					info.sampler = vkTexture->GetImageSampler();
+				}
+
+				descriptorWrite.descriptorCount = data.Size;
+				descriptorWrite.pImageInfo = imagesInfo.data();
+			}
+			else if (data.Type == DescriptorType::UNIFORM_BUFFER)
+			{
+				bufferInfo.buffer = data.Buffer.As<VulkanUniformBuffer>()->GetBuffer();
+				bufferInfo.offset = data.Offset;
+				bufferInfo.range = data.Size;
+
+				descriptorWrite.pBufferInfo = &bufferInfo;
+			}
+		}
+
+		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), (uint32_t)descWrites.size(), descWrites.data(), 0, nullptr);
+
+		m_Queue.clear();
+		m_MustToBeUploaded = false;
+	}
+
+	void VulkanDescriptorSet::Bind()
+	{
+		YM_PROFILE_FUNCTION()
+		YM_CORE_ASSERT(!m_MustToBeUploaded, "Did you call Upload()?")
+
+		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
+		auto commandBuffer = context->GetCommandBuffer();
+
+		vkCmdBindDescriptorSets(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			m_PipelineLayout,
+			m_Set,
+			1,
+			&m_DescriptorSet,
+			0,
+			nullptr
+		);
 	}
 
 	void VulkanDescriptorSet::TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture)
@@ -292,73 +397,5 @@ namespace YUME
 			}
 		}
 	}
-
-	void VulkanDescriptorSet::CheckIfDescriptorSetIsUpdated()
-	{
-		YM_PROFILE_FUNCTION()
-
-		if (m_CurrentBindSet >= 0 && m_DescriptorUpdated[m_CurrentBindSet])
-		{
-			m_DescriptorUpdated[m_CurrentBindSet] = false;
-			auto device = VulkanDevice::Get().GetDevice();
-
-			if (s_Data->CurrentPool == VK_NULL_HANDLE)
-			{
-				s_Data->CurrentPool = s_Data->GetPool();
-			}
-
-			VkDescriptorSetAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.pNext = nullptr;
-			allocInfo.pSetLayouts = &m_DescriptorSetLayouts[m_CurrentBindSet];
-			allocInfo.descriptorPool = s_Data->CurrentPool;
-			allocInfo.descriptorSetCount = 1;
-
-			auto res = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSets[m_CurrentBindSet]);
-
-			bool needReallocate = false;
-			switch (res)
-			{
-				case VK_SUCCESS:
-					return;
-				case VK_ERROR_FRAGMENTED_POOL:
-				case VK_ERROR_OUT_OF_POOL_MEMORY:
-					needReallocate = true;
-					break;
-				default:
-					YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
-					YM_CORE_ERROR("Type: Unrecoverable")
-					break;
-			}
-
-			if (needReallocate)
-			{
-				vkDeviceWaitIdle(device);
-
-				s_Data->UsedDescriptorPools.push_back(s_Data->CurrentPool);
-				s_Data->CurrentPool = s_Data->GetPool();
-				allocInfo.descriptorPool = s_Data->CurrentPool;
-
-				for (int i = 0; i < m_DescriptorSets.size(); i++)
-				{
-					m_UsingCurrentPool[i] = false;
-				}
-
-				if (vkAllocateDescriptorSets(VulkanDevice::Get().GetDevice(), &allocInfo, &m_DescriptorSets[m_CurrentBindSet]) != VK_SUCCESS)
-				{
-					YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
-				}
-
-				m_UsingCurrentPool[m_CurrentBindSet] = true;
-
-				auto& data = s_Data;
-				VulkanContext::PushFunctionToFrameEnd([data]() {
-					data->ResetUsedDescriptorPools();
-				});
-			}
-
-		}
-	}
-
 
 }

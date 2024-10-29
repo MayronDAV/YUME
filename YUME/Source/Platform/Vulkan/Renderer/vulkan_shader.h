@@ -35,7 +35,8 @@ namespace YUME
 
 			const std::vector<Ref<VertexArray>>& GetVertexArrays() { return m_VertexArrays; }
 			VkPipelineLayout& GetLayout() { return m_PipelineLayout; }
-			const std::unordered_map<uint32_t, VkDescriptorSetLayout>& GetDescriptorSetLayouts() const { return m_DescriptorSetLayouts; }
+			const std::vector<DescriptorInfo>& GetDescriptorsInfo(int p_Set) { return m_DescriptorsInfo[p_Set];  }
+			VkDescriptorSetLayout& GetDescriptorSetLayout(int p_Set) { return m_DescriptorSetLayouts[p_Set]; }
 			std::vector<VkPipelineShaderStageCreateInfo>& GetShaderStages() { return m_ShaderStages; }
 
 			void AddVertexArray(const Ref<VertexArray>& p_VertexArray) override
@@ -78,6 +79,8 @@ namespace YUME
 
 			std::unordered_map<uint32_t, VkPushConstantRange> m_PushConstantRanges;
 			std::unordered_map<std::string, std::pair<VkShaderStageFlags, uint32_t>> m_MemberOffsets;
+
+			std::unordered_map<uint32_t, std::vector<DescriptorInfo>> m_DescriptorsInfo;
 
 			std::unordered_map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>> m_DescriptorSetLayoutBindings;
 			std::unordered_map<uint32_t, VkDescriptorSetLayout> m_DescriptorSetLayouts;

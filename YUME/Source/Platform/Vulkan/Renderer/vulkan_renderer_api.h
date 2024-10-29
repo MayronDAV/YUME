@@ -23,7 +23,6 @@ namespace YUME
 
 			void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount) override;
 			void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount) override;
-
 		private:
 			VulkanContext* m_Context = nullptr;
 

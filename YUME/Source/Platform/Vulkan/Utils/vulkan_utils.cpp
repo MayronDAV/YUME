@@ -542,5 +542,17 @@ namespace YUME::Utils
 		}
 	}
 
+	VkDescriptorType DescriptorTypeToVk(DescriptorType p_Type)
+	{
+		switch (p_Type)
+		{
+			case YUME::DescriptorType::UNIFORM_BUFFER: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			case YUME::DescriptorType::IMAGE_SAMPLER: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			default:
+				YM_CORE_ERROR("Unknown descriptor type")
+				return (VkDescriptorType)0;
+		}
+	}
+
 }
 

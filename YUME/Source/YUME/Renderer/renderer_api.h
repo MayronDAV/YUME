@@ -6,6 +6,7 @@
 
 #include "YUME/Renderer/graphics_context.h"
 #include "YUME/Renderer/texture.h"
+#include "YUME/Renderer/descriptor_set.h"
 #include <glm/glm.hpp>
 
 
@@ -25,6 +26,14 @@ namespace YUME
 
 			virtual void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount) = 0;
 			virtual void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount) = 0;
+
+			void BindDescriptorSets(const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count)
+			{
+				for (uint32_t i = 0; i < p_Count; i++)
+				{
+					p_DescriptorSets[i]->Bind();
+				}
+			}
 
 			// Change this later
 			static RendererAPI* Create();

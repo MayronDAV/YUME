@@ -6,33 +6,36 @@
 
 namespace YUME
 {
-
 	class VulkanDescriptorSet : public DescriptorSet
 	{
 		public:
-			explicit VulkanDescriptorSet(const Ref<Shader>& p_Shader);
+			explicit VulkanDescriptorSet(const DescriptorSpec& p_Spec);
 			~VulkanDescriptorSet() override;
 
-			void Bind(uint32_t p_Set = 0) override;
-			void Unbind() override;
+			void SetUniformData(const std::string& p_Name, const Ref<UniformBuffer>& p_UniformBuffer) override;
+			void SetUniform(const std::string& p_BufferName, const std::string& p_MemberName, void* p_Data) override;
+			void SetUniform(const std::string& p_BufferName, const std::string& p_MemberName, void* p_Data, uint32_t p_Size) override;
 
-			void UploadUniform(uint32_t p_Binding, const Ref<UniformBuffer>& p_UniformBuffer) override;
-			void UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>& p_Texture) override;
-			void UploadTexture2D(uint32_t p_Binding, const Ref<Texture2D>* p_TextureData, uint32_t p_Count) override;
+			void SetTexture2D(const std::string& p_Name, const Ref<Texture2D>& p_Texture) override;
+			void SetTexture2D(const std::string& p_Name, const Ref<Texture2D>* p_TextureData, uint32_t p_Count) override;
+
+			void Upload() override;
+
+		protected:
+			void Bind() override;
 
 		private:
 			void TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture);
-			void CheckIfDescriptorSetIsUpdated();
 
 		private:
-			std::unordered_map<uint32_t, VkDescriptorSetLayout> m_DescriptorSetLayouts;
-			std::vector<VkDescriptorSet> m_DescriptorSets;	
 			VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;
 
-			std::vector<bool> m_DescriptorUpdated;
-			std::vector<bool> m_UsingCurrentPool;
+			int m_Set = -1;
+			VkDescriptorSet m_DescriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSetLayout m_SetLayout = VK_NULL_HANDLE;
+			std::vector<DescriptorInfo> m_DescriptorsInfo;
+			std::vector<int> m_Queue;
 
-			int m_CurrentBindSet = -1;
-
+			bool m_MustToBeUploaded = false;
 	};
 }

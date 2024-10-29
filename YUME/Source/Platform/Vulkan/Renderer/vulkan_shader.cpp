@@ -461,6 +461,8 @@ namespace YUME
 		spirv_cross::Compiler compiler(p_ShaderData);
 		spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
+		YM_CORE_TRACE("===================== SHADER LOG =====================")
+
 		YM_CORE_TRACE("Vulkan::Reflect - {0} {1}", Utils::ShaderStageToString(p_Stage), m_FilePath)
 		YM_CORE_TRACE("    {0} uniform buffers", resources.uniform_buffers.size())
 		YM_CORE_TRACE("    {0} resources", resources.sampled_images.size())
@@ -482,6 +484,30 @@ namespace YUME
 			YM_CORE_TRACE("    Binding = {0}", binding)
 			YM_CORE_TRACE("    Members = {0}", memberCount)
 			YM_CORE_TRACE("    Descriptor Count = {0}", descriptorCount)
+
+			auto& descriptor = m_DescriptorsInfo[set].emplace_back();
+			descriptor.Binding = binding;
+			descriptor.Size = (uint32_t)bufferSize;
+			descriptor.Name = resource.name;
+			descriptor.Offset = 0;
+			descriptor.Stage = p_Stage;
+			descriptor.Type = DescriptorType::UNIFORM_BUFFER;
+
+			for (int i = 0; i < memberCount; i++)
+			{
+				auto type = compiler.get_type(bufferType.member_types[i]);
+				const auto& memberName = compiler.get_member_name(bufferType.self, i);
+				auto size = compiler.get_declared_struct_member_size(bufferType, i);
+				auto offset = compiler.type_struct_member_offset(bufferType, i);
+
+				std::string uniformName = resource.name + "." + memberName;
+
+				auto& member = descriptor.Members.emplace_back();
+				member.Name = memberName;
+				member.FullName = uniformName;
+				member.Offset = offset;
+				member.Size = (uint32_t)size;
+			}
 
 			VkDescriptorSetLayoutBinding bindingInfo{};
 			bindingInfo.binding = binding;
@@ -508,6 +534,14 @@ namespace YUME
 			YM_CORE_TRACE("    Binding = {0}", binding)
 			YM_CORE_TRACE("    Members = {0}", memberCount)
 			YM_CORE_TRACE("    Descriptor Count = {0}", descriptorCount)
+
+			auto& descriptor = m_DescriptorsInfo[set].emplace_back();
+			descriptor.Binding = binding;
+			descriptor.Size = descriptorCount;
+			descriptor.Name = resource.name;
+			descriptor.Offset = 0;
+			descriptor.Stage = p_Stage;
+			descriptor.Type = DescriptorType::IMAGE_SAMPLER;
 
 			VkDescriptorSetLayoutBinding bindingInfo{};
 			bindingInfo.binding = binding;
@@ -562,6 +596,8 @@ namespace YUME
 				}
 			}
 		}
+
+		YM_CORE_TRACE("======================================================")
 	}
 
 	void VulkanShader::CreateShaderModules()

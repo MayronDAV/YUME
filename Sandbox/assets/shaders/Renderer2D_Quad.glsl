@@ -9,10 +9,10 @@ layout(location = 2) in vec2 a_TexCoord;
 layout(location = 3) in int a_TexIndex;
 
 
-layout(set = 0, binding = 0) uniform camera
+layout(set = 0, binding = 0) uniform u_Camera
 {
 	mat4 ViewProjection;
-} u_Camera;
+} u_camera;
 
 struct VertexOutput
 {
@@ -29,7 +29,7 @@ void main()
 	Output.TexCoord = a_TexCoord;
 	TexIndex = a_TexIndex;
 
-	gl_Position = u_Camera.ViewProjection * vec4(a_Position, 1.0f);
+	gl_Position = u_camera.ViewProjection * vec4(a_Position, 1.0f);
 }
 
 
