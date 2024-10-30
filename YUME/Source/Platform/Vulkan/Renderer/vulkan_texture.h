@@ -35,22 +35,26 @@ namespace YUME
 			VkImageLayout GetLayout() const { return m_TextureImageLayout; }
 			VkImage GetImage() const { return m_TextureImage; }
 
+			VkImageSubresourceRange GetSubresourceRange() const;
+
 			void TransitionImage(VkImageLayout p_NewLayout, bool p_UseSingleTime = true);
 
 			bool operator== (const Texture& p_Other) const override;
 
 		private:
 			void Init(const TextureSpecification& p_Spec);
+			void GenerateMipmaps(VkImage p_Image, VkFormat p_Format, int32_t p_Width, int32_t p_Height, uint32_t p_MipLevels);
+
 
 #ifdef USE_VMA_ALLOCATOR
 		void CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
-			VkImageUsageFlags p_Usage, VkImage& p_Image, VmaAllocation& p_Allocation) const;
+			VkImageUsageFlags p_Usage, VkImage& p_Image, uint32_t p_MipLevels, VmaAllocation& p_Allocation) const;
 #else
 		void CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
-			VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, VkDeviceMemory& p_ImageMemory);
+			VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, uint32_t p_MipLevels, VkDeviceMemory& p_ImageMemory);
 		void AllocateImageMemory(VkImage& p_Image, VkDeviceMemory& p_ImageMemory, VkMemoryPropertyFlags p_Properties);
 #endif
-			VkImageView CreateImageView(VkImage p_Image, VkFormat p_Format);
+			VkImageView CreateImageView(VkImage p_Image, VkFormat p_Format, uint32_t p_MipLevels);
 
 		private:
 			TextureSpecification m_Specification;
@@ -67,6 +71,9 @@ namespace YUME
 
 			VkFormat m_VkFormat = VK_FORMAT_R8G8B8A8_SRGB;
 			VkImageLayout m_TextureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			VkImageSubresourceRange m_SubresourceRange{};
+
+			uint32_t m_MipLevels = 1;
 
 		#ifdef USE_VMA_ALLOCATOR
 			VmaAllocation m_Allocation = VK_NULL_HANDLE;

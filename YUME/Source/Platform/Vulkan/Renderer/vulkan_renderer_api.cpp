@@ -22,6 +22,14 @@ namespace YUME
 	void VulkanRendererAPI::Init(GraphicsContext* p_Context)
 	{
 		m_Context = dynamic_cast<VulkanContext*>(p_Context);
+
+		auto features = VulkanDevice::Get().GetFeatures();
+		m_Capabilities.FillModeNonSolid = features.fillModeNonSolid == VK_TRUE;
+		m_Capabilities.SamplerAnisotropy = features.samplerAnisotropy == VK_TRUE;
+		m_Capabilities.WideLines = features.wideLines == VK_TRUE;
+		m_Capabilities.SupportGeometry = features.geometryShader == VK_TRUE;
+		m_Capabilities.SupportTesselation = features.tessellationShader == VK_TRUE;
+		m_Capabilities.SupportCompute = VulkanDevice::Get().SupportCompute();
 	}
 
 	void VulkanRendererAPI::SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height)
@@ -50,12 +58,7 @@ namespace YUME
 
 	void VulkanRendererAPI::ClearRenderTarget(const Ref<Texture2D>& p_Texture, const glm::vec4& p_Value)
 	{
-		VkImageSubresourceRange subresourceRange = {};
-		subresourceRange.baseMipLevel = 0;
-		subresourceRange.layerCount = 1;
-		subresourceRange.levelCount = 1;
-		subresourceRange.baseArrayLayer = 0;
-
+		VkImageSubresourceRange subresourceRange = p_Texture.As<VulkanTexture2D>()->GetSubresourceRange();
 		const auto& spec = p_Texture->GetSpecification();
 		const auto& commandBuffer = m_Context->GetCommandBuffer();
 
@@ -85,7 +88,6 @@ namespace YUME
 		{
 			YM_CORE_ERROR("Unsupported texture usage!")
 		}
-
 	}
 
 	void VulkanRendererAPI::Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount)

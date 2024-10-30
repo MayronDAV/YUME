@@ -12,6 +12,16 @@
 
 namespace YUME
 {
+	struct YM_API Capabilities
+	{
+		bool SupportTesselation;
+		bool SupportGeometry;
+		bool SupportCompute;
+		bool SamplerAnisotropy;
+		bool WideLines;
+		bool FillModeNonSolid;
+	};
+
 	class YM_API RendererAPI
 	{
 		public:
@@ -26,6 +36,8 @@ namespace YUME
 
 			virtual void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount) = 0;
 			virtual void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount) = 0;
+
+			virtual const Capabilities& GetCapabilities() const = 0;
 
 			void BindDescriptorSets(const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count)
 			{

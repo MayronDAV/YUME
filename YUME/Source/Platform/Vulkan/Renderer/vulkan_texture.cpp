@@ -4,12 +4,22 @@
 #include "Platform/Vulkan/Core/vulkan_memory_buffer.h"
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 #include "vulkan_context.h"
-
+#include "YUME/Renderer/renderer_command.h"
+#include "YUME/Core/application.h"
 
 
 
 namespace YUME
 {
+	static bool HasDepthComponent(VkFormat p_Format)
+	{
+		return  p_Format == VK_FORMAT_D16_UNORM ||
+			p_Format == VK_FORMAT_D32_SFLOAT ||
+			p_Format == VK_FORMAT_D16_UNORM_S8_UINT ||
+			p_Format == VK_FORMAT_D24_UNORM_S8_UINT ||
+			p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT;
+	}
+
 	VulkanTexture2D::VulkanTexture2D(const TextureSpecification& p_Spec)
 	{
 		Init(p_Spec);
@@ -39,6 +49,11 @@ namespace YUME
 
 		stagingBuffer->SetDeleteWithoutQueue(true);
 		delete stagingBuffer;
+
+		if (p_Spec.GenerateMips && p_Spec.Width > 1 && p_Spec.Height > 1)
+		{
+			GenerateMipmaps(m_TextureImage, m_VkFormat, p_Spec.Width, p_Spec.Height, m_MipLevels);
+		}
 
 		TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
@@ -153,13 +168,38 @@ namespace YUME
 		// Do nothing
 	}
 
+
+	VkImageSubresourceRange VulkanTexture2D::GetSubresourceRange() const
+	{
+		VkImageSubresourceRange range{};
+
+		if (m_VkFormat == VK_FORMAT_D32_SFLOAT_S8_UINT || m_VkFormat == VK_FORMAT_D24_UNORM_S8_UINT)
+		{
+			range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		else if (HasDepthComponent(m_VkFormat))
+		{
+			range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		}
+		else
+		{
+			range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+		range.baseMipLevel = 0;
+		range.levelCount = m_MipLevels;
+		range.baseArrayLayer = 0;
+		range.layerCount = 1;
+
+		return range;
+	}
+
 	void VulkanTexture2D::TransitionImage(VkImageLayout p_NewLayout, bool p_UseSingleTime)
 	{
 		YM_PROFILE_FUNCTION()
 
 		if (p_NewLayout != m_TextureImageLayout)
 		{
-			Utils::TransitionImageLayout(m_TextureImage, m_VkFormat, m_TextureImageLayout, p_NewLayout, p_UseSingleTime);
+			Utils::TransitionImageLayout(m_TextureImage, m_VkFormat, m_TextureImageLayout, p_NewLayout, p_UseSingleTime, m_MipLevels);
 			m_TextureImageLayout = p_NewLayout;
 		}
 	}
@@ -184,22 +224,27 @@ namespace YUME
 		m_Channels = Utils::TextureFormatChannels(p_Spec.Format);
 		m_VkFormat = Utils::TextureFormatToVk(p_Spec.Format);
 		m_BytesPerChannel = Utils::TextureFormatBytesPerChannel(p_Spec.Format);
-		auto usageFlagBits = ((p_Spec.Usage != TextureUsage::TEXTURE_SAMPLED) ? VK_IMAGE_USAGE_SAMPLED_BIT : 0) | Utils::TextureUsageToVk(p_Spec.Usage);
+		VkImageUsageFlags usageFlagBits = Utils::TextureUsageToVk(p_Spec.Usage);
+		usageFlagBits |= VK_IMAGE_USAGE_SAMPLED_BIT;
 		usageFlagBits |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		usageFlagBits |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
+		if (p_Spec.GenerateMips && p_Spec.Width > 1 && p_Spec.Height > 1 && p_Spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+		{ 
+			m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(p_Spec.Width, p_Spec.Height)))) + 1;
+		}
 
 #ifdef USE_VMA_ALLOCATOR
 		CreateImage(p_Spec.Width, p_Spec.Height, m_VkFormat,
 			VK_IMAGE_TILING_OPTIMAL, usageFlagBits,
-			m_TextureImage, m_Allocation);
+			m_TextureImage, m_MipLevels, m_Allocation);
 #else
 		CreateImage(p_Spec.Width, p_Spec.Height, m_VkFormat,
 			VK_IMAGE_TILING_OPTIMAL, usageFlagBits,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_TextureImage, m_TextureImageMemory);
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_TextureImage, m_MipLevels, m_TextureImageMemory);
 #endif
 
-		m_TextureImageView = CreateImageView(m_TextureImage, m_VkFormat);
+		m_TextureImageView = CreateImageView(m_TextureImage, m_VkFormat, m_MipLevels);
 
 		VkSamplerCreateInfo samplerInfo{};
 		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -210,13 +255,31 @@ namespace YUME
 		samplerInfo.addressModeV = Utils::TextureWrapToVk(p_Spec.WrapV);
 		samplerInfo.addressModeW = Utils::TextureWrapToVk(p_Spec.WrapW);
 
-		auto borderColor = Utils::TextureBorderColorToVk(p_Spec.BorderColorFlag);
-		VkSamplerCustomBorderColorCreateInfoEXT borderColorCI{};
-		if (p_Spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || p_Spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+		if (p_Spec.AnisotropyEnable && RendererCommand::GetCapabilities().SamplerAnisotropy)
 		{
 			samplerInfo.anisotropyEnable = VK_TRUE;
 			auto properties = VulkanDevice::Get().GetPhysicalDeviceStruct().Properties;
 			samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+		}
+		else
+		{
+			samplerInfo.anisotropyEnable = VK_FALSE;
+			samplerInfo.maxAnisotropy = 1.0f;
+		}
+
+		if (p_Spec.GenerateMips && p_Spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+		{
+			samplerInfo.maxLod = float(m_MipLevels);
+		}
+		else
+		{
+			samplerInfo.maxLod = 0.0f;
+		}
+
+		auto borderColor = Utils::TextureBorderColorToVk(p_Spec.BorderColorFlag);
+		VkSamplerCustomBorderColorCreateInfoEXT borderColorCI{};
+		if (p_Spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || p_Spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+		{
 			samplerInfo.compareEnable = VK_FALSE;
 			samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 			samplerInfo.borderColor = borderColor;
@@ -244,18 +307,15 @@ namespace YUME
 		}
 		else
 		{
-			samplerInfo.anisotropyEnable = VK_FALSE;
-			samplerInfo.maxAnisotropy = 0.0f;
 			samplerInfo.compareEnable = VK_TRUE;
 			samplerInfo.compareOp = VK_COMPARE_OP_LESS;
 			samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 		}
 
-		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 		samplerInfo.mipLodBias = 0.0f;
 		samplerInfo.minLod = 0.0f;
-		samplerInfo.maxLod = 0.0f;
 
 		if (vkCreateSampler(VulkanDevice::Get().GetDevice(), &samplerInfo, VK_NULL_HANDLE, &m_TextureSampler) != VK_SUCCESS)
 		{
@@ -264,12 +324,105 @@ namespace YUME
 		}
 	}
 
+	void VulkanTexture2D::GenerateMipmaps(VkImage p_Image, VkFormat p_Format, int32_t p_Width, int32_t p_Height, uint32_t p_MipLevels)
+	{
+		// Check if image format supports linear blitting
+		VkFormatProperties formatProperties;
+		vkGetPhysicalDeviceFormatProperties(VulkanDevice::Get().GetPhysicalDevice(), p_Format, &formatProperties);
+
+		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+		{
+			YM_CORE_ERROR("texture image format does not support linear blitting!")
+			return;
+		}
+
+		VkCommandBuffer commandBuffer = Utils::BeginSingleTimeCommand();
+
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.image = p_Image;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
+		barrier.subresourceRange.levelCount = 1;
+
+		int32_t mipWidth = p_Width;
+		int32_t mipHeight = p_Height;
+
+		for (uint32_t i = 1; i < p_MipLevels; i++)
+		{
+			barrier.subresourceRange.baseMipLevel = i - 1;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+			vkCmdPipelineBarrier(commandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+			VkImageBlit blit{};
+			blit.srcOffsets[0] = { 0, 0, 0 };
+			blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+			blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			blit.srcSubresource.mipLevel = i - 1;
+			blit.srcSubresource.baseArrayLayer = 0;
+			blit.srcSubresource.layerCount = 1;
+			blit.dstOffsets[0] = { 0, 0, 0 };
+			blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+			blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			blit.dstSubresource.mipLevel = i;
+			blit.dstSubresource.baseArrayLayer = 0;
+			blit.dstSubresource.layerCount = 1;
+
+			vkCmdBlitImage(commandBuffer,
+				p_Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				p_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1, &blit,
+				VK_FILTER_LINEAR);
+
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+			vkCmdPipelineBarrier(commandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+			if (mipWidth > 1) mipWidth /= 2;
+			if (mipHeight > 1) mipHeight /= 2;
+		}
+
+
+		barrier.subresourceRange.baseMipLevel = p_MipLevels - 1;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		vkCmdPipelineBarrier(commandBuffer,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier);
+
+		Utils::EndSingleTimeCommand(commandBuffer);
+	}
+
+
 #ifdef USE_VMA_ALLOCATOR
 	void VulkanTexture2D::CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
-		VkImageUsageFlags p_Usage, VkImage& p_Image, VmaAllocation& p_Allocation) const
+		VkImageUsageFlags p_Usage, VkImage& p_Image, uint32_t p_MipLevels, VmaAllocation& p_Allocation) const
 #else
 	void VulkanTexture2D::CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
-		VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, VkDeviceMemory& p_ImageMemory)
+		VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, uint32_t p_MipLevels, VkDeviceMemory& p_ImageMemory)
 #endif
 	{
 		YM_PROFILE_FUNCTION()
@@ -280,7 +433,7 @@ namespace YUME
 		imageInfo.extent.width = p_Width;
 		imageInfo.extent.height = p_Height;
 		imageInfo.extent.depth = 1;
-		imageInfo.mipLevels = 1;
+		imageInfo.mipLevels = p_MipLevels;
 		imageInfo.arrayLayers = 1;
 		imageInfo.format = p_Format;
 		imageInfo.tiling = p_Tiling;
@@ -364,16 +517,8 @@ namespace YUME
 	}
 #endif
 
-	static bool HasDepthComponent(VkFormat p_Format)
-	{
-		return  p_Format == VK_FORMAT_D16_UNORM ||
-			p_Format == VK_FORMAT_D32_SFLOAT ||
-			p_Format == VK_FORMAT_D16_UNORM_S8_UINT ||
-			p_Format == VK_FORMAT_D24_UNORM_S8_UINT ||
-			p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT;
-	}
 
-	VkImageView VulkanTexture2D::CreateImageView(VkImage p_Image, VkFormat p_Format)
+	VkImageView VulkanTexture2D::CreateImageView(VkImage p_Image, VkFormat p_Format, uint32_t p_MipLevels)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -399,7 +544,7 @@ namespace YUME
 		}
 
 		viewInfo.subresourceRange.baseMipLevel = 0;
-		viewInfo.subresourceRange.levelCount = 1;
+		viewInfo.subresourceRange.levelCount = p_MipLevels;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
 

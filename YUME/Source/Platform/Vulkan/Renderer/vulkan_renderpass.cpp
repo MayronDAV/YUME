@@ -38,7 +38,6 @@ namespace YUME
 				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				
 			}
 			else
 			{
@@ -46,8 +45,14 @@ namespace YUME
 				{
 					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 				}
-
+				
 				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				if (spec.RenderTarget)
+				{
+					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+					attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				}
 				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			}
 

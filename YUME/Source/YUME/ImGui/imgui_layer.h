@@ -1,9 +1,11 @@
 #pragma once
 #include "YUME/Core/base.h"
 #include "YUME/Core/layer.h"
+#include "YUME/Renderer/texture.h"
 
 
 struct ImGuiContext;
+typedef void* ImTextureID;
 
 namespace YUME
 {
@@ -29,6 +31,8 @@ namespace YUME
 			void End();
 
 			ImGuiContext* GetCurrentContext();
+
+			virtual ImTextureID AddTexture(const Ref<Texture2D>& p_Texture) const = 0;
 
 			uint32_t GetActiveWidgetID() const;
 

@@ -27,6 +27,8 @@ namespace YUME
 			static void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount);
 			static void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount);
 
+			static const Capabilities& GetCapabilities();
+
 			static void BindDescriptorSets(const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count = 1);
 
 			static RendererAPI* Get() { return s_RendererAPI; }

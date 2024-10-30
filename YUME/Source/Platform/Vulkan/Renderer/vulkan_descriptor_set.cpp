@@ -14,57 +14,9 @@
 
 namespace YUME
 {
-	struct DescData
-	{
-		VkDescriptorPool CurrentPool = VK_NULL_HANDLE;
-		std::vector<VkDescriptorPool> UsedDescriptorPools;
-		std::vector<VkDescriptorPool> FreeDescriptorPools;
-
-		DescData() = default;
-
-		VkDescriptorPool GetPool()
-		{
-			YM_PROFILE_FUNCTION()
-
-			if (!FreeDescriptorPools.empty())
-			{
-				VkDescriptorPool pool = FreeDescriptorPools.back();
-				FreeDescriptorPools.pop_back();
-				return pool;
-			}
-			else
-			{
-				VulkanDescriptorPool pool;
-				pool.Init(1000, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
-				return pool.Get();
-			}
-		}
-
-		void ResetUsedDescriptorPools()
-		{
-			YM_PROFILE_FUNCTION()
-
-			for (auto& pool : UsedDescriptorPools)
-			{
-				vkResetDescriptorPool(VulkanDevice::Get().GetDevice(), pool, 0);
-				FreeDescriptorPools.push_back(pool);
-			}
-			UsedDescriptorPools.clear();
-		}
-	};
-
-	static DescData* s_Data = nullptr;
-
-
 	VulkanDescriptorSet::VulkanDescriptorSet(const DescriptorSpec& p_Spec)
 	{
 		YM_PROFILE_FUNCTION()
-
-		if (s_Data == nullptr) s_Data = new DescData();
-		if (s_Data->CurrentPool == VK_NULL_HANDLE)
-		{
-			s_Data->CurrentPool = s_Data->GetPool();
-		}
 
 		m_Set = p_Spec.Set;
 
@@ -77,7 +29,7 @@ namespace YUME
 
 		VkDescriptorSetAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = s_Data->CurrentPool;
+		allocInfo.descriptorPool = VulkanDevice::Get().GetDescriptorPool();
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &m_SetLayout;
 
@@ -86,80 +38,11 @@ namespace YUME
 		{
 			YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
 		}
-
-		bool needReallocate = false;
-		switch (res)
-		{
-			case VK_SUCCESS:
-				return;
-			case VK_ERROR_FRAGMENTED_POOL:
-			case VK_ERROR_OUT_OF_POOL_MEMORY:
-				needReallocate = true;
-				break;
-			default:
-				YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
-				YM_CORE_ERROR("Type: Unrecoverable")
-				break;
-		}
-
-		if (needReallocate)
-		{
-			vkDeviceWaitIdle(device);
-
-			s_Data->UsedDescriptorPools.push_back(s_Data->CurrentPool);
-			s_Data->CurrentPool = s_Data->GetPool();
-			allocInfo.descriptorPool = s_Data->CurrentPool;
-
-			if (vkAllocateDescriptorSets(VulkanDevice::Get().GetDevice(), &allocInfo, &m_DescriptorSet) != VK_SUCCESS)
-			{
-				YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
-			}
-
-			auto& data = s_Data;
-			VulkanContext::PushFunctionToFrameEnd([data]()
-			{
-				data->ResetUsedDescriptorPools();
-			});
-		}
 	}
 
 	VulkanDescriptorSet::~VulkanDescriptorSet()
 	{
 		YM_PROFILE_FUNCTION()
-
-		if (s_Data != nullptr)
-		{
-			auto usedDescriptorPools = s_Data->UsedDescriptorPools;
-			auto freeDescriptorPools = s_Data->FreeDescriptorPools;
-			auto currentPool = s_Data->CurrentPool;
-			VulkanContext::PushFunction([usedDescriptorPools, freeDescriptorPools, currentPool]()
-			{
-				VkDevice device = VulkanDevice::Get().GetDevice();
-
-				if (!usedDescriptorPools.empty())
-				{
-					for (auto pool : usedDescriptorPools)
-					{
-						vkDestroyDescriptorPool(device, pool, VK_NULL_HANDLE);
-					}
-				}
-
-				if (!freeDescriptorPools.empty())
-				{
-					for (auto pool : freeDescriptorPools)
-					{
-						vkDestroyDescriptorPool(device, pool, VK_NULL_HANDLE);
-					}
-				}
-
-				if (currentPool != VK_NULL_HANDLE)
-				{
-					vkDestroyDescriptorPool(device, currentPool, VK_NULL_HANDLE);
-				}
-			});
-
-			s_Data = nullptr;
-		}
 	}
 
 	void VulkanDescriptorSet::SetUniformData(const std::string& p_Name, const Ref<UniformBuffer>& p_UniformBuffer)
@@ -336,7 +219,7 @@ namespace YUME
 					info.sampler = vkTexture->GetImageSampler();
 				}
 
-				descriptorWrite.descriptorCount = data.Size;
+				descriptorWrite.descriptorCount = (uint32_t)data.Size;
 				descriptorWrite.pImageInfo = imagesInfo.data();
 			}
 			else if (data.Type == DescriptorType::UNIFORM_BUFFER)
@@ -377,6 +260,8 @@ namespace YUME
 
 	void VulkanDescriptorSet::TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture)
 	{
+		YM_PROFILE_FUNCTION()
+
 		if (!p_Texture)
 			return;
 
@@ -386,14 +271,14 @@ namespace YUME
 		{
 			if (vkTexture->GetLayout() != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			{
-				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, false);
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 		}
 		else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
 		{
 			if (vkTexture->GetLayout() != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
 			{
-				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, false);
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 			}
 		}
 	}

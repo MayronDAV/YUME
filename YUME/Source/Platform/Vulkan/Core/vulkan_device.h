@@ -52,6 +52,7 @@ namespace YUME
 
 		PhysicalDeviceInfo Info;
 		QueueFamilyIndices Indices;
+		bool SupportCompute = false;
 	};
 
 
@@ -93,6 +94,8 @@ namespace YUME
 
 			VkPhysicalDevice& GetPhysicalDevice() { return m_PhysicalDevice->Handle(); }
 			PhysicalDevice& GetPhysicalDeviceStruct() { return m_PhysicalDevice->Selected(); }
+			const VkPhysicalDeviceFeatures& GetFeatures() const { return m_PhysicalDevice->Selected().Features; }
+			bool SupportCompute() const { return m_PhysicalDevice->Selected().SupportCompute; }
 
 			uint32_t FindMemoryType(uint32_t p_TypeFilter, VkMemoryPropertyFlags p_Properties) const { return m_PhysicalDevice->FindMemoryType(p_TypeFilter, p_Properties); }
 

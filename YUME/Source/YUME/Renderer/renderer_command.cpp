@@ -58,6 +58,13 @@ namespace YUME
 		s_RendererAPI->DrawIndexed(p_VertexArray, p_IndexCount);
 	}
 
+	const Capabilities& RendererCommand::GetCapabilities()
+	{
+		YM_PROFILE_FUNCTION()
+
+		return s_RendererAPI->GetCapabilities();
+	}
+
 	void RendererCommand::BindDescriptorSets(const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count)
 	{
 		YM_PROFILE_FUNCTION()

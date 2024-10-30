@@ -21,10 +21,13 @@ namespace YUME
 			void ClearColor(const glm::vec4& p_Color) override { m_Color = p_Color; }
 			void ClearRenderTarget(const Ref<Texture2D>& p_Texture, const glm::vec4& p_Value);
 
+			const Capabilities& GetCapabilities() const override { return m_Capabilities; }
+
 			void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount) override;
 			void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount) override;
 		private:
 			VulkanContext* m_Context = nullptr;
+			Capabilities m_Capabilities;
 
 			glm::vec4 m_Color = {0.0f, 0.0f, 0.0f, 1.0f};
 	};

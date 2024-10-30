@@ -139,6 +139,7 @@ namespace YUME
 					queueInfo.pQueuePriorities = &defaultQueuePriority;
 					m_PhysicalDevices[i].QueueCreateInfos.push_back(queueInfo);
 
+					physDevice.SupportCompute = true;
 				}
 				
 				if (familyProps.queueFlags & VK_QUEUE_TRANSFER_BIT)
@@ -388,7 +389,7 @@ namespace YUME
 				YM_CORE_INFO("Device extension {} founded!", ext)
 				requiredExts.push_back(ext);
 			}
-			else 
+			else
 			{
 				YM_CORE_ERROR("Device extension {} not founded!", ext)
 			}
@@ -397,18 +398,12 @@ namespace YUME
 
 		auto physDevice = m_PhysicalDevice->Selected();
 
-		YM_CORE_ASSERT(physDevice.Features.geometryShader == VK_TRUE, "Gemotry shader isn't supported!")
-		YM_CORE_ASSERT(physDevice.Features.tessellationShader == VK_TRUE, "Tesselation shader isn't supported!")
-		YM_CORE_ASSERT(physDevice.Features.samplerAnisotropy == VK_TRUE, "Anisotropy isn't supported!")
-		YM_CORE_ASSERT(physDevice.Features.wideLines == VK_TRUE, "Wide lines isn't supported!")
-		YM_CORE_ASSERT(physDevice.Features.fillModeNonSolid == VK_TRUE, "Fill mode non solid isn't supported!")
-
 		VkPhysicalDeviceFeatures physFeatures{ 0 };
-		physFeatures.geometryShader = VK_TRUE;
-		physFeatures.tessellationShader = VK_TRUE;
-		physFeatures.samplerAnisotropy = VK_TRUE;
-		physFeatures.wideLines = VK_TRUE;
-		physFeatures.fillModeNonSolid = VK_TRUE;
+		physFeatures.geometryShader = physDevice.Features.geometryShader;
+		physFeatures.tessellationShader = physDevice.Features.tessellationShader;
+		physFeatures.samplerAnisotropy = physDevice.Features.samplerAnisotropy;
+		physFeatures.wideLines = physDevice.Features.wideLines;
+		physFeatures.fillModeNonSolid = physDevice.Features.fillModeNonSolid;
 
 		auto queueCreateInfos = ConsolidateQueueCreateInfos(physDevice.QueueCreateInfos);
 

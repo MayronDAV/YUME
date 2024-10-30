@@ -13,6 +13,8 @@ namespace YUME
 			VulkanImGuiLayer() = default;
 			~VulkanImGuiLayer() override;
 
+			ImTextureID AddTexture(const Ref<Texture2D>& p_Texture) const override;
+
 		protected:
 			void Init() override;
 			void NewFrame() override;

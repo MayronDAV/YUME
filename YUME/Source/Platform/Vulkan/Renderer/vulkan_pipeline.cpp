@@ -3,7 +3,7 @@
 #include "Platform/Vulkan/Core/vulkan_device.h"
 #include "vulkan_context.h"
 #include "vulkan_shader.h"
-
+#include "YUME/Renderer/renderer_command.h"
 #include "YUME/Core/application.h"
 #include "vulkan_texture.h"
 #include <glm/gtc/type_ptr.hpp>
@@ -41,6 +41,11 @@ namespace YUME
 	void VulkanPipeline::CleanUp()
 	{
 		YM_PROFILE_FUNCTION()
+
+		for (auto& buffer : m_VertexArrays)
+		{
+			buffer.reset();
+		}
 
 		YM_CORE_TRACE("Destroying vulkan pipeline...")
 		if (m_Pipeline != VK_NULL_HANDLE)
@@ -122,12 +127,22 @@ namespace YUME
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizer.depthClampEnable = VK_FALSE;
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode = Utils::PolygonModeToVk(p_CreateInfo.PolygonMode);
+		if (p_CreateInfo.PolygonMode == PolygonMode::LINE || p_CreateInfo.PolygonMode == PolygonMode::POINT)
+		{
+			rasterizer.polygonMode = Utils::PolygonModeToVk((RendererCommand::GetCapabilities().FillModeNonSolid) ? p_CreateInfo.PolygonMode : PolygonMode::FILL);
+		}
+		else
+		{
+			rasterizer.polygonMode = Utils::PolygonModeToVk(p_CreateInfo.PolygonMode);
+		}
 		rasterizer.lineWidth = p_CreateInfo.LineWidth;
 		rasterizer.cullMode = Utils::CullModeToVk(p_CreateInfo.CullMode);
 		rasterizer.frontFace = Utils::FrontFaceToVk(p_CreateInfo.FrontFace);
 		rasterizer.depthBiasEnable = VK_FALSE;
-		rasterizer.lineWidth = p_CreateInfo.LineWidth; // TODO: Verify if support wide lines
+		if (RendererCommand::GetCapabilities().WideLines)
+			rasterizer.lineWidth = p_CreateInfo.LineWidth;
+		else
+			rasterizer.lineWidth = 1.0f;
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -266,7 +281,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		//TransitionAttachments();
+		TransitionAttachments();
 
 		auto commandBuffer = m_Context->GetCommandBuffer();
 
@@ -326,6 +341,7 @@ namespace YUME
 			txSpec.Width = width;
 			txSpec.Height = height;
 			txSpec.Usage = TextureUsage::TEXTURE_COLOR_ATTACHMENT;
+			txSpec.GenerateMips = false;
 
 			attachments.push_back(Texture2D::Get(txSpec));
 		}

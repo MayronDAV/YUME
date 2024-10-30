@@ -89,7 +89,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_TRACE("Renderer Initialized!")
+		YM_CORE_TRACE("Renderer Initialized!")
 
 		s_RenderData = new RenderData();
 		s_Render2Ddata = new Render2Ddata();
@@ -129,6 +129,8 @@ namespace YUME
 		texSpec.Height = s_RenderData->Height;
 		texSpec.Format = TextureFormat::RGBA8_SRGB;
 		texSpec.Usage = TextureUsage::TEXTURE_COLOR_ATTACHMENT;
+		texSpec.GenerateMips = false;
+		texSpec.RenderTarget = true;
 		texSpec.DebugName = "MainTexture";
 		s_RenderData->MainTexture = Texture2D::Get(texSpec);
 
@@ -144,6 +146,7 @@ namespace YUME
 			pci.BlendMode = BlendMode::SrcAlphaOneMinusSrcAlpha;
 			pci.TransparencyEnabled = true;
 			pci.ColorTargets[0] = s_RenderData->MainTexture;
+			pci.PolygonMode = PolygonMode::FILL;
 			pci.ClearTargets = false;
 			pci.SwapchainTarget = false;
 			pci.DepthTest = false;
@@ -214,7 +217,7 @@ namespace YUME
 								Render2DFlushAndReset();
 
 							textureIndex = s_Render2Ddata->TextureSlotIndex;
-							s_Render2Ddata->TextureSlots[(int)s_Render2Ddata->TextureSlotIndex] = sprite.Texture->GetTexture();
+							s_Render2Ddata->TextureSlots[s_Render2Ddata->TextureSlotIndex] = sprite.Texture->GetTexture();
 							s_Render2Ddata->TextureSlotIndex++;
 						}
 					}
@@ -357,7 +360,6 @@ namespace YUME
 				vertices[i * 4 + 3] = quads[i][3];
 			}
 
-
 			s_Render2Ddata->QuadPipeline->Begin();
 
 			RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
@@ -404,26 +406,8 @@ namespace YUME
 			RendererCommand::ClearRenderTarget(s_RenderData->RenderTarget, s_RenderData->ClearColor);
 		}
 
-		// TEMPORARY
-		// ============================================================================================================================
 
-		TextureSpecification texSpec{};
-		texSpec.Width = s_RenderData->Width;
-		texSpec.Height = s_RenderData->Height;
-		texSpec.Format = TextureFormat::RGBA8_SRGB;
-		texSpec.Usage = TextureUsage::TEXTURE_SAMPLED;
-		texSpec.DebugName = "TemporaryTexture";
-		auto finalTexture = Texture2D::Get(texSpec);
-
-		finalTexture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		s_RenderData->MainTexture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-		Utils::CopyImage(s_RenderData->Width, s_RenderData->Height, s_RenderData->MainTexture.As<VulkanTexture2D>()->GetImage(), finalTexture.As<VulkanTexture2D>()->GetImage());
-
-		finalTexture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		s_RenderData->MainTexture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-		// ============================================================================================================================
+		auto finalTexture = s_RenderData->MainTexture;
 
 		PipelineCreateInfo pci{};
 		pci.Shader = s_RenderData->FinalPassShader;

@@ -27,6 +27,9 @@ namespace YUME
 		// each component in BorderColor will be clamped between 0.0f and 1.0f if CUSTOM_FLOAT or between 0 and 255 if CUSTOM_SRGB
 		glm::vec4 BorderColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
+		bool AnisotropyEnable = true;
+		bool GenerateMips = true;
+		bool RenderTarget = false;
 
 		const char* DebugName = "Texture";
 	};

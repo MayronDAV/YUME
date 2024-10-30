@@ -5,6 +5,7 @@
 #include <imgui/imgui.h>
 
 #include <glm/gtc/type_ptr.hpp>
+#include <imgui_internal.h>
 
 
 
@@ -78,9 +79,9 @@ class ExampleLayer : public YUME::Layer
 			m_Position += ((length == 0) ? direction : normalized) * speed;
 
 
-			uint32_t width = YUME::Application::Get().GetWindow().GetWidth();
-			uint32_t height = YUME::Application::Get().GetWindow().GetHeight();
-			float aspectRatio = (float)width / (float)height;
+			//uint32_t width = YUME::Application::Get().GetWindow().GetWidth();
+			//uint32_t height = YUME::Application::Get().GetWindow().GetHeight();
+			float aspectRatio = (float)m_Width / (float)m_Height;
 			auto projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
 			auto transform = glm::translate(glm::mat4(1.0f), m_Position);
 
@@ -109,13 +110,24 @@ class ExampleLayer : public YUME::Layer
 			//	}
 			//});
 
+			YUME::TextureSpecification texSpec{};
+			texSpec.Width = m_Width;
+			texSpec.Height = m_Height;
+			texSpec.Format = YUME::TextureFormat::RGBA8_SRGB;
+			texSpec.Usage = YUME::TextureUsage::TEXTURE_COLOR_ATTACHMENT;
+			texSpec.GenerateMips = false;
+			texSpec.RenderTarget = true;
+			texSpec.DebugName = "Render Target";
+			m_RenderTarget = YUME::Texture2D::Get(texSpec);
+
 			YUME::RendererBeginInfo rbi{};
 			rbi.MainCamera = YUME::Camera(projection);
 			rbi.CameraTransform = transform;
 			rbi.ClearColor = m_Color;
-			rbi.SwapchainTarget = true;
-			rbi.Width = width;
-			rbi.Height = height;
+			rbi.SwapchainTarget = false;
+			rbi.RenderTarget = m_RenderTarget;
+			rbi.Width = m_Width;
+			rbi.Height = m_Height;
 
 			YUME::Renderer::Begin(rbi);
 
@@ -124,8 +136,62 @@ class ExampleLayer : public YUME::Layer
 			YUME::Renderer::End();
 		}
 
+		void BeginDockSpace()
+		{
+			static bool opt_fullscreen = true;
+			static bool opt_padding = false;
+			static ImGuiDockNodeFlags DockspaceFlags = ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton; /* ImGuiDockNodeFlags_None  */
+
+			ImGuiID DockspaceID = ImGui::GetID("MyDockspace");
+
+			ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+			if (opt_fullscreen)
+			{
+				const ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+				ImGui::SetNextWindowPos(viewport->WorkPos);
+				ImGui::SetNextWindowSize(viewport->WorkSize);
+				ImGui::SetNextWindowViewport(viewport->ID);
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+				WindowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse
+					| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+				WindowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+			}
+			else
+			{
+				DockspaceFlags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
+			}
+
+			if (DockspaceFlags & ImGuiDockNodeFlags_PassthruCentralNode)
+				WindowFlags |= ImGuiWindowFlags_NoBackground;
+
+			if (!opt_padding)
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+			ImGui::Begin("Editor Dockspace", nullptr, WindowFlags);
+			if (!opt_padding)
+				ImGui::PopStyleVar();
+			
+			if (opt_fullscreen)
+				ImGui::PopStyleVar(2);
+
+			// Submit the DockSpace
+			ImGuiIO& io = ImGui::GetIO();
+			if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+			{
+				ImGui::DockSpace(DockspaceID, ImVec2(0.0f, 0.0f), DockspaceFlags);
+			}
+		}
+
+		void EndDockSpace()
+		{
+			ImGui::End();
+		}
+
 		void OnImGuiRender() override
 		{
+			BeginDockSpace();
+
 			ImGui::Begin("Visualizer");
 			ImGui::Text("FPS: %.0f", (float)YUME::Application::Get().GetFPS());
 			ImGui::Text("Key Pressed: %s", m_CurrentKeyPressed.c_str());
@@ -138,6 +204,19 @@ class ExampleLayer : public YUME::Layer
 			ImGui::ColorEdit4("Tile Color", glm::value_ptr(m_TileColor));
 			ImGui::ColorEdit4("Background", glm::value_ptr(m_Color));
 			ImGui::End();
+
+			ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+			ImGui::Begin("Scene View");
+			ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+			m_Width = (uint32_t)viewportSize.x;
+			m_Height = (uint32_t)viewportSize.y;
+
+			auto imgui = YUME::Application::Get().GetImGuiLayer();
+			ImGui::Image(imgui->AddTexture(m_RenderTarget), { (float)m_Width, (float)m_Height });
+			ImGui::End();
+			ImGui::PopStyleColor();
+
+			EndDockSpace();
 		}
 
 		void OnEvent(YUME::Event& p_Event) override
@@ -160,6 +239,8 @@ class ExampleLayer : public YUME::Layer
 		YUME::Entity m_PlayerEntt;
 
 		YUME::Scene* m_Scene = nullptr;
+		YUME::Ref<YUME::Texture2D> m_RenderTarget;
+		uint32_t m_Width = 800, m_Height = 600;
 };
 
 
