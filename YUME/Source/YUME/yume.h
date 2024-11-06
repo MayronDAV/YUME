@@ -34,6 +34,7 @@
 #include "YUME/Scene/entity_manager.h"
 #include "YUME/Scene/Component/components.h"
 #include "YUME/Scene/Component/components_2D.h"
+#include "YUME/Scene/Component/components_3D.h"
 // --------------------------
 
 // Renderer
@@ -44,7 +45,6 @@
 #include "YUME/Renderer/shader.h"
 #include "YUME/Renderer/buffer.h"
 #include "YUME/Renderer/uniform_buffer.h"
-#include "YUME/Renderer/vertex_array.h"
 #include "YUME/Renderer/pipeline.h"
 #include "YUME/Renderer/texture.h"
 #include "YUME/Renderer/sub_texture.h"
@@ -52,4 +52,6 @@
 #include "YUME/Renderer/descriptor_set.h"
 #include "YUME/Renderer/renderer.h"
 #include "YUME/Renderer/camera.h"
+#include "YUME/Renderer/model.h"
+#include "YUME/Renderer/mesh.h"
 // --------------------------

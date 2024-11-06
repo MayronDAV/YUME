@@ -39,9 +39,6 @@ namespace YUME
 			void WaitFence();
 			void ResetFence();
 
-
-			void HasDrawCommands(bool p_Has) { m_HasDrawCommands = p_Has; }
-
 			// Draw
 			void BeginFrame();
 			void EndFrame();
@@ -58,11 +55,6 @@ namespace YUME
 			static void PushFunction(const std::function<void()>& p_Function)
 			{
 				m_MainDeletionQueue.PushFunction(p_Function);
-			}
-
-			static void PushFunctionToFrameEnd(const std::function<void()>& p_Function)
-			{
-				m_FrameEndDeletionQueue.PushFunction(p_Function);
 			}
 
 			static void PushFunctionToSwapchainOnResizeQueue(const std::function<void(int, int)>& p_Function);
@@ -96,9 +88,7 @@ namespace YUME
 			VulkanCommandBuffer m_CommandBuffers;
 
 			bool m_ViewportResized = false;
-			bool m_HasDrawCommands = false;
 
 			static DeletionQueue m_MainDeletionQueue;
-			static DeletionQueue m_FrameEndDeletionQueue;
 	};
 }

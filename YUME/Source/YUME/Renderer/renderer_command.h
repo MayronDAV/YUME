@@ -3,8 +3,9 @@
 #include "YUME/Core/base.h"
 #include "YUME/Core/reference.h"
 #include "YUME/Renderer/renderer_api.h"
-#include "YUME/Renderer/vertex_array.h"
+#include "YUME/Renderer/buffer.h"
 #include "YUME/Renderer/texture.h"
+#include "YUME/Renderer/mesh.h"
 
 #include <glm/glm.hpp>
 
@@ -22,10 +23,12 @@ namespace YUME
 			static void SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height);
 
 			static void ClearColor(const glm::vec4& p_Color);
-			static void ClearRenderTarget(const Ref<Texture2D> p_Texture, const glm::vec4& p_Value);
+			static void ClearRenderTarget(const Ref<Texture2D> p_Texture, uint32_t p_Value);
+			static void ClearRenderTarget(const Ref<Texture2D> p_Texture, const glm::vec4& p_Value = { 0.0f, 0.0f, 0.0f, 1.0f });
 
-			static void Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount);
-			static void DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount);
+			static void Draw(const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount = 1);
+			static void DrawIndexed(const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount = 1);
+			static void DrawMesh(const Ref<Mesh>& p_Mesh);
 
 			static const Capabilities& GetCapabilities();
 

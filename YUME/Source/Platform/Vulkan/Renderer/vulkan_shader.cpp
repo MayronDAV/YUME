@@ -16,7 +16,7 @@
 
 
 
-const TBuiltInResource DefaultTBuiltInResource = {
+TBuiltInResource DefaultTBuiltInResource = {
 	32,  // maxLights
 	6,   // maxClipDistances
 	8,   // maxCullDistances
@@ -78,7 +78,6 @@ const TBuiltInResource DefaultTBuiltInResource = {
 	8,   // maxShaderConstantSize
 	16,  // maxShaderPushConstantSize
 };
-
 
 
 namespace YUME
@@ -159,6 +158,11 @@ namespace YUME
 		CreateShaderModules();
 		CreatePipelineLayout();
 
+		for (auto& push : m_PushConstants)
+		{
+			push.Data = (uint8_t*)malloc(push.Size);
+		}
+
 		timer.Stop();
 		YM_CORE_WARN("Shader creation took {0} ms", timer.Elapsed())
 
@@ -169,7 +173,6 @@ namespace YUME
 		lastDot = (lastDot == std::string::npos) ? p_ShaderPath.size() : lastDot;
 
 		m_Name = p_ShaderPath.substr(lastSlash, lastDot - lastSlash);
-
 	}
 
 	VulkanShader::~VulkanShader()
@@ -185,15 +188,15 @@ namespace YUME
 
 			for (const auto& [stage, shaderModule] : shaderModules)
 			{
-				YM_CORE_TRACE("Destroying vulkan shader modules...")
+				YM_CORE_TRACE(VULKAN_PREFIX "Destroying shader modules...")
 				if (shaderModule != VK_NULL_HANDLE)
 					vkDestroyShaderModule(device, shaderModule, VK_NULL_HANDLE);
 			}
 
-			YM_CORE_TRACE("Destroying vulkan pipeline layout...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Destroying pipeline layout...")
 			vkDestroyPipelineLayout(device, layout, VK_NULL_HANDLE);
 
-			YM_CORE_TRACE("Destroying vulkan descriptor set layout...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Destroying descriptor set layout...")
 			for (const auto& [set, setLayout] : descriptorSetLayouts)
 			{
 				vkDestroyDescriptorSetLayout(device, setLayout, VK_NULL_HANDLE);
@@ -209,12 +212,12 @@ namespace YUME
 
 		for (const auto& [stage, shaderModule] : m_ShaderModules)
 		{
-			YM_CORE_TRACE("Destroying vulkan shader modules...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Destroying shader modules...")
 			if (shaderModule != VK_NULL_HANDLE)
 				vkDestroyShaderModule(device, shaderModule, VK_NULL_HANDLE);
 		}
 
-		YM_CORE_TRACE("Destroying vulkan pipeline layout...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying pipeline layout...")
 		vkDestroyPipelineLayout(device, m_PipelineLayout, VK_NULL_HANDLE);
 	}
 
@@ -233,29 +236,95 @@ namespace YUME
 		return m_Name;
 	}
 
-	void VulkanShader::PushFloat(const std::string& p_Name, float p_Value)
+	void VulkanShader::SetLayout(const InputLayout& p_Layout)
 	{
-		UploadPushConstantData(p_Name, &p_Value, sizeof(float));
+		YM_PROFILE_FUNCTION()
+
+		VkVertexInputBindingDescription bindingDescription = {};
+		bindingDescription.binding = m_VertexBufferBinding;
+		bindingDescription.stride = p_Layout.GetStride();
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		for (const auto& element : p_Layout)
+		{
+			switch (element.Type)
+			{
+				case DataType::Mat3:
+				{
+					for (int i = 0; i < 3; i++)
+					{
+						VkVertexInputAttributeDescription attDesc;
+
+						attDesc.location = m_VertexBufferLocation;
+						attDesc.binding = m_VertexBufferBinding;
+						attDesc.format = Utils::DataTypeToVkFormat(element.Type);
+						attDesc.offset = element.Size * i;
+
+						m_VertexBufferLocation++;
+						m_AttributeDescs.push_back(attDesc);
+					}
+					break;
+				}
+				case DataType::Mat4:
+				{
+					for (int i = 0; i < 4; i++)
+					{
+						VkVertexInputAttributeDescription attDesc;
+
+						attDesc.location = m_VertexBufferLocation;
+						attDesc.binding = m_VertexBufferBinding;
+						attDesc.format = Utils::DataTypeToVkFormat(element.Type);
+						attDesc.offset = element.Size * i;
+
+						m_VertexBufferLocation++;
+						m_AttributeDescs.push_back(attDesc);
+					}
+					break;
+				}
+				default:
+				{
+					VkVertexInputAttributeDescription attDesc;
+
+					attDesc.location = m_VertexBufferLocation;
+					attDesc.binding = m_VertexBufferBinding;
+					attDesc.format = Utils::DataTypeToVkFormat(element.Type);
+					attDesc.offset = element.Offset;
+
+					m_VertexBufferLocation++;
+					m_AttributeDescs.push_back(attDesc);
+					break;
+				}
+			}
+		}
+
+		//m_VertexBufferBinding++;
+		m_BindingDescs.push_back(bindingDescription);
 	}
 
-	void VulkanShader::PushFloat3(const std::string& p_Name, const glm::vec3& p_Value)
+	void VulkanShader::SetPushValue(const std::string& p_Name, void* p_Value)
 	{
-		UploadPushConstantData(p_Name, glm::value_ptr(p_Value), sizeof(glm::vec3));
+		YM_PROFILE_FUNCTION()
+
+		m_PushConstants[0].SetValue(p_Name, p_Value);
 	}
 
-	void VulkanShader::PushFloat4(const std::string& p_Name, const glm::vec4& p_Value)
-	{
-		UploadPushConstantData(p_Name, glm::value_ptr(p_Value), sizeof(glm::vec4));
-	}
 
-	void VulkanShader::PushMat4(const std::string& p_Name, const glm::mat4& p_Value)
+	void VulkanShader::BindPushConstants() const
 	{
-		UploadPushConstantData(p_Name, glm::value_ptr(p_Value), sizeof(glm::mat4));
-	}
+		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
+		auto commandBuffer = context->GetCommandBuffer();
 
-	void VulkanShader::PushInt(const std::string& p_Name, int p_Value)
-	{
-		UploadPushConstantData(p_Name, &p_Value, sizeof(int));
+		int index = 0;
+		auto& push = m_PushConstants[index];
+
+		vkCmdPushConstants(
+			commandBuffer,
+			m_PipelineLayout,
+			m_Stages,
+			push.Offset,
+			(uint32_t)push.Size,
+			push.Data
+		);
 	}
 
 
@@ -268,7 +337,7 @@ namespace YUME
 
 		if (!shaderFile)
 		{
-			YM_CORE_ERROR("Could not open file '{0}' ", p_Filepath)
+			YM_CORE_ERROR(VULKAN_PREFIX "Could not open file '{0}' ", p_Filepath)
 			return std::string();
 		}
 
@@ -292,7 +361,6 @@ namespace YUME
 		size_t pos = p_Code.find(includeToken, 0);
 		if (pos == std::string::npos)
 		{
-			YM_CORE_TRACE("Not founded any include! continuing...")
 			return p_Code;
 		}
 
@@ -407,6 +475,12 @@ namespace YUME
 				shader.setEnvTarget(glslang::EShTargetSpv, TargetVersion);
 
 				TBuiltInResource Resources = DefaultTBuiltInResource;
+				Resources.limits.generalVaryingIndexing = true;
+				Resources.limits.whileLoops = true;
+				Resources.limits.generalUniformIndexing = true;
+				Resources.limits.generalVariableIndexing = true;
+				Resources.limits.nonInductiveForLoops = true;
+				Resources.limits.generalSamplerIndexing = true;
 				
 				if (auto messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 					!shader.parse(&Resources, 100, false, messages))
@@ -419,6 +493,7 @@ namespace YUME
 
 				glslang::TProgram program;
 				program.addShader(&shader);
+
 
 				if (auto messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 					!program.link(messages))
@@ -467,16 +542,16 @@ namespace YUME
 		YM_CORE_TRACE("    {0} uniform buffers", resources.uniform_buffers.size())
 		YM_CORE_TRACE("    {0} resources", resources.sampled_images.size())
 
-		YM_CORE_TRACE("Uniform buffers:")
+		YM_CORE_TRACE(VULKAN_PREFIX "Uniform buffers:")
 		for (const auto& resource : resources.uniform_buffers)
 		{
 			const auto& bufferType = compiler.get_type(resource.base_type_id);
-			auto bufferSize = (uint32_t)compiler.get_declared_struct_size(bufferType);
+			size_t bufferSize = compiler.get_declared_struct_size(bufferType);
 			uint32_t set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
 			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
-			auto memberCount = (int)bufferType.member_types.size();
-			const auto& Type = compiler.get_type(resource.type_id);
-			auto descriptorCount = (Type.array.size() > 0) ? Type.array[0] : 1;
+			uint32_t memberCount = (uint32_t)bufferType.member_types.size();
+			const auto& type = compiler.get_type(resource.type_id);
+			auto descriptorCount = (type.array.size() > 0) ? type.array[0] : 1;
 
 			YM_CORE_TRACE("  Name: {0}", resource.name)
 			YM_CORE_TRACE("    Size = {0}", bufferSize)
@@ -487,15 +562,14 @@ namespace YUME
 
 			auto& descriptor = m_DescriptorsInfo[set].emplace_back();
 			descriptor.Binding = binding;
-			descriptor.Size = (uint32_t)bufferSize;
+			descriptor.Size = bufferSize;
 			descriptor.Name = resource.name;
 			descriptor.Offset = 0;
 			descriptor.Stage = p_Stage;
 			descriptor.Type = DescriptorType::UNIFORM_BUFFER;
 
-			for (int i = 0; i < memberCount; i++)
+			for (uint32_t i = 0; i < memberCount; i++)
 			{
-				auto type = compiler.get_type(bufferType.member_types[i]);
 				const auto& memberName = compiler.get_member_name(bufferType.self, i);
 				auto size = compiler.get_declared_struct_member_size(bufferType, i);
 				auto offset = compiler.type_struct_member_offset(bufferType, i);
@@ -506,7 +580,7 @@ namespace YUME
 				member.Name = memberName;
 				member.FullName = uniformName;
 				member.Offset = offset;
-				member.Size = (uint32_t)size;
+				member.Size = size;
 			}
 
 			VkDescriptorSetLayoutBinding bindingInfo{};
@@ -519,7 +593,58 @@ namespace YUME
 			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
 		}
 
-		YM_CORE_TRACE("Sampled images:")
+		YM_CORE_TRACE(VULKAN_PREFIX "Storage buffers:")
+		for (const auto& resource : resources.storage_buffers)
+		{
+			const auto& bufferType = compiler.get_type(resource.base_type_id);
+			size_t bufferSize = compiler.get_declared_struct_size(bufferType);
+			uint32_t set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
+			auto memberCount = (int)bufferType.member_types.size();
+			const auto& type = compiler.get_type(resource.type_id);
+			auto descriptorCount = (type.array.size() > 0) ? type.array[0] : 1;
+
+			YM_CORE_TRACE("  Name: {0}", resource.name)
+			YM_CORE_TRACE("    Size = {0}", bufferSize)
+			YM_CORE_TRACE("    Set  = {0}", set)
+			YM_CORE_TRACE("    Binding = {0}", binding)
+			YM_CORE_TRACE("    Members = {0}", memberCount)
+			YM_CORE_TRACE("    Descriptor Count = {0}", descriptorCount)
+
+			auto& descriptor = m_DescriptorsInfo[set].emplace_back();
+			descriptor.Binding = binding;
+			descriptor.Size = bufferSize;
+			descriptor.Name = resource.name;
+			descriptor.Offset = 0;
+			descriptor.Stage = p_Stage;
+			descriptor.Type = DescriptorType::STORAGE_BUFFER;
+
+			for (int i = 0; i < memberCount; i++)
+			{
+				const auto& memberName = compiler.get_member_name(bufferType.self, i);
+				auto size = compiler.get_declared_struct_member_size(bufferType, i);
+				auto offset = compiler.type_struct_member_offset(bufferType, i);
+
+				std::string uniformName = resource.name + "." + memberName;
+
+				auto& member = descriptor.Members.emplace_back();
+				member.Name = memberName;
+				member.FullName = uniformName;
+				member.Offset = offset;
+				member.Size = size;
+			}
+
+			VkDescriptorSetLayoutBinding bindingInfo{};
+			bindingInfo.binding = binding;
+			bindingInfo.descriptorCount = descriptorCount;
+			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
+			bindingInfo.pImmutableSamplers = nullptr;
+
+			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
+		}
+
+		YM_CORE_TRACE(VULKAN_PREFIX "Sampled images:")
 		for (const auto& resource : resources.sampled_images)
 		{
 			const auto& bufferType = compiler.get_type(resource.base_type_id);
@@ -553,47 +678,70 @@ namespace YUME
 			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
 		}
 
-		YM_CORE_TRACE("Push constant buffers:")
+		YM_CORE_TRACE(VULKAN_PREFIX "Storage images:")
+		for (const auto& resource : resources.storage_images)
+		{
+			const auto& bufferType = compiler.get_type(resource.base_type_id);
+			uint32_t set = compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+			uint32_t binding = compiler.get_decoration(resource.id, spv::DecorationBinding);
+			auto memberCount = (int)bufferType.member_types.size();
+			const auto& Type = compiler.get_type(resource.type_id);
+			auto descriptorCount = (Type.array.size() > 0) ? Type.array[0] : 1;
+
+			YM_CORE_TRACE("  Name: {0}", resource.name)
+			YM_CORE_TRACE("    Set  = {0}", set)
+			YM_CORE_TRACE("    Binding = {0}", binding)
+			YM_CORE_TRACE("    Members = {0}", memberCount)
+			YM_CORE_TRACE("    Descriptor Count = {0}", descriptorCount)
+
+			auto& descriptor = m_DescriptorsInfo[set].emplace_back();
+			descriptor.Binding = binding;
+			descriptor.Size = descriptorCount;
+			descriptor.Name = resource.name;
+			descriptor.Offset = 0;
+			descriptor.Stage = p_Stage;
+			descriptor.Type = DescriptorType::STORAGE_IMAGE;
+
+			VkDescriptorSetLayoutBinding bindingInfo{};
+			bindingInfo.binding = binding;
+			bindingInfo.descriptorCount = descriptorCount;
+			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
+			bindingInfo.pImmutableSamplers = nullptr;
+
+			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
+		}
+
+		YM_CORE_TRACE(VULKAN_PREFIX "Push constant buffers:")
 		for (const auto& resource : resources.push_constant_buffers)
 		{
 			const auto& bufferType = compiler.get_type(resource.base_type_id);
-			auto size = (uint32_t)compiler.get_declared_struct_size(bufferType);
-			uint32_t offset = compiler.get_decoration(resource.id, spv::DecorationBinding);
-			auto memberCount = (int)bufferType.member_types.size();
-			std::string resourceName = resource.name;
+			auto memberCount = (uint32_t)bufferType.member_types.size();
+			std::string name = resource.name;
+			size_t size = compiler.get_declared_struct_size(bufferType);
 
-			YM_CORE_TRACE("  Name: {0}", resourceName)
+			YM_CORE_TRACE("  Name: {0}", name)
 			YM_CORE_TRACE("    Size = {0}", size)
-			YM_CORE_TRACE("    Offset = {0}", offset)
 			YM_CORE_TRACE("    Members = {0}", memberCount)
+				
 
+			auto& push_constant = m_PushConstants.emplace_back();
+			push_constant.Name = name;
+			push_constant.Offset = 0;
+			push_constant.Size = size;
+			push_constant.ShaderStage = p_Stage;
 
-			auto stage = Utils::ShaderTypeToVK(p_Stage);
-			if (m_PushConstantRanges.contains(offset))
+			for (uint32_t i = 0; i < memberCount; i++)
 			{
-				m_PushConstantRanges[offset].stageFlags |= stage;
-				m_PushConstantRanges[offset].size = std::max(m_PushConstantRanges[offset].size, size);
+				std::string memberName = compiler.get_member_name(resource.base_type_id, i);
+				auto size = compiler.get_declared_struct_member_size(bufferType, i);
+				auto offset = compiler.type_struct_member_offset(bufferType, i);
 
-				for (int i = 0; i < memberCount; i++)
-				{
-					std::string name = compiler.get_member_name(resource.base_type_id, i);
-					std::string memberName = resourceName.empty() ? name : resourceName + "." + name;
-					m_MemberOffsets[memberName].first |= stage;
-				}
-			}
-			else
-			{
-				m_PushConstantRanges[offset].stageFlags = stage;
-				m_PushConstantRanges[offset].offset = offset;
-				m_PushConstantRanges[offset].size = size;
-
-				for (int i = 0; i < memberCount; i++)
-				{
-					std::string name = compiler.get_member_name(resource.base_type_id, i);
-					std::string memberName = resourceName.empty() ? name : resourceName + "." + name;
-					uint32_t memberOffset = compiler.type_struct_member_offset(bufferType, i);
-					m_MemberOffsets[memberName] = std::make_pair(stage, offset + memberOffset);
-				}
+				auto& member = push_constant.Members.emplace_back();
+				member.FullName = name.empty() ? memberName : name + "." + memberName;
+				member.Name = memberName;
+				member.Offset = offset;
+				member.Size = size;
 			}
 		}
 
@@ -650,8 +798,14 @@ namespace YUME
 
 
 		std::vector<VkPushConstantRange> pushConstantRangeArray;
-		for (const auto& range : m_PushConstantRanges) {
-			pushConstantRangeArray.push_back(range.second);
+		for (const auto& push : m_PushConstants) 
+		{
+			VkPushConstantRange range{};
+			range.offset = push.Offset;
+			range.size = push.Size;
+			range.stageFlags = Utils::ShaderTypeToVK(push.ShaderStage);
+
+			pushConstantRangeArray.push_back(range);
 		}
 
 		VkPipelineLayoutCreateInfo layoutInfo{};
@@ -663,33 +817,5 @@ namespace YUME
 
 		auto res = vkCreatePipelineLayout(device, &layoutInfo, VK_NULL_HANDLE, &m_PipelineLayout);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
-	}
-
-	bool VulkanShader::UploadPushConstantData(const std::string& p_Name, const void* p_Data, size_t p_SizeBytes)
-	{
-		YM_PROFILE_FUNCTION()
-
-		YM_CORE_VERIFY(p_Data != nullptr && p_SizeBytes > 0)
-
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
-		
-		if (auto it = m_MemberOffsets.find(p_Name);
-			it != m_MemberOffsets.end())
-		{
-			auto [stage, offset] = it->second;
-			vkCmdPushConstants(
-				commandBuffer,
-				m_PipelineLayout,
-				m_Stages,
-				offset,
-				(uint32_t)p_SizeBytes,
-				p_Data
-			);
-
-			return true;
-		}
-
-		return false;
 	}
 }

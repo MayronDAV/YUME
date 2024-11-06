@@ -4,6 +4,7 @@
 
 #include "Component/components.h"
 #include "Component/components_2D.h"
+#include "Component/components_3D.h"
 
 #include "scene.h"
 

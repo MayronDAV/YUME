@@ -1,7 +1,7 @@
 #pragma once
-#include "YUME/Core/base.h"
 #include "YUME/Renderer/sub_texture.h"
 #include "YUME/Renderer/texture_importer.h"
+#include "YUME/Core/definitions.h"
 
 #include <variant>
 #include <glm/glm.hpp>
@@ -11,7 +11,6 @@
 namespace YUME
 {
 	struct Square {};
-	struct Triangle {};
 	struct Circle
 	{
 		float Thickness = 1.0f;
@@ -21,7 +20,7 @@ namespace YUME
 		Circle(const Circle&) = default;
 	};
 
-	using ShapeVar = std::variant<Square, Circle, Triangle>;
+	using ShapeVar = std::variant<Square, Circle>;
 
 	struct ShapeComponent
 	{
@@ -33,7 +32,7 @@ namespace YUME
 		template<typename T>
 		T& SetShape(const T& p_Shape = T{})
 		{
-			YM_CORE_VERIFY(std::holds_alternative<T>(Shape), "T isn't a valid shape");
+			//YM_CORE_VERIFY(std::holds_alternative<T>(Shape), "T isn't a valid shape");
 
 			Shape = p_Shape;
 			return std::get<T>(Shape);
@@ -42,7 +41,7 @@ namespace YUME
 		template<typename T, typename... Args>
 		T& SetShape(Args&& ...p_Args)
 		{
-			YM_CORE_VERIFY(std::holds_alternative<T>(Shape), "T isn't a valid shape");
+			//YM_CORE_VERIFY(std::holds_alternative<T>(Shape), "T isn't a valid shape");
 
 			Shape = T(std::forward<Args>(p_Args)...);
 			return std::get<T>(Shape);
@@ -61,13 +60,22 @@ namespace YUME
 
 			}, Shape);
 		}
+
+		template<typename T>
+		T& Get()
+		{
+			YM_CORE_VERIFY(std::holds_alternative<T>(Shape), "T isn't a valid shape");
+			return std::get<T>(Shape);
+		}
 	};
 
 	struct SpriteComponent
 	{
+		SurfaceType Type = SurfaceType::Opaque; // if the color's alpha is less than 0.98f, it will be set to Transparent
 		glm::vec4 Color{ 1.0f };
 		std::string Path = std::string();
 		Ref<SubTexture2D> Texture = nullptr;
+
 
 		glm::vec2 Size = { 1.0f, 1.0f };
 		glm::vec2 Scale = { 1.0f, 1.0f };

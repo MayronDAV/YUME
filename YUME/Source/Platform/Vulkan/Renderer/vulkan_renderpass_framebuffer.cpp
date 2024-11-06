@@ -30,7 +30,7 @@ namespace YUME
 		{
 			if (m_Framebuffer != VK_NULL_HANDLE)
 			{
-				YM_CORE_TRACE("Destroying vulkan swapchain framebuffer...")
+				YM_CORE_TRACE(VULKAN_PREFIX "Destroying framebuffer...")
 				vkDestroyFramebuffer(VulkanDevice::Get().GetDevice(), m_Framebuffer, VK_NULL_HANDLE);
 			}
 		}
@@ -41,7 +41,7 @@ namespace YUME
 			{
 				if (framebuffer != VK_NULL_HANDLE)
 				{
-					YM_CORE_TRACE("Destroying vulkan swapchain framebuffer...")
+					YM_CORE_TRACE(VULKAN_PREFIX "Destroying framebuffer...")
 					vkDestroyFramebuffer(VulkanDevice::Get().GetDevice(), framebuffer, VK_NULL_HANDLE);
 				}
 			});

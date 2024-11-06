@@ -13,6 +13,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
+		m_SizeBytes = p_SizeBytes;
 		m_Buffer = CreateScope<VulkanMemoryBuffer>(
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -37,6 +38,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
+		m_SizeBytes = p_SizeBytes;
 		m_Offset = p_Offset;
 		m_Buffer->SetData(p_SizeBytes, p_Data, (uint64_t)p_Offset);
 	}

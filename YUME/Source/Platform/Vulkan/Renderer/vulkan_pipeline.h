@@ -1,7 +1,6 @@
 #pragma once
 #include "YUME/Core/base.h"
 #include "YUME/Renderer/shader.h"
-#include "YUME/Renderer/vertex_array.h"
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 
 #include "YUME/Renderer/renderpass.h"
@@ -46,8 +45,6 @@ namespace YUME
 			const VkPipelineLayout& GetLayout() const { return m_Layout; }
 			const VkPipeline& GetPipeline() const { return m_Pipeline; }
 
-			void AddVertexArray(const Ref<VertexArray>& p_VertexArray) { m_VertexArrays.push_back(p_VertexArray); Invalidade(); }
-
 		private:
 			void TransitionAttachments();
 			void CreateFramebuffers();
@@ -62,7 +59,5 @@ namespace YUME
 
 			VkPipeline m_Pipeline = VK_NULL_HANDLE;
 			VkPipelineLayout m_Layout = VK_NULL_HANDLE;
-
-			std::vector<Ref<VertexArray>> m_VertexArrays;
 	};
 }

@@ -46,18 +46,17 @@ namespace YUME
 					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 				}
 				
-				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				if (spec.RenderTarget)
 				{
-					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 					attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				}
+				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			}
 
 			attachmentDesc.samples = p_Samples > 1 ? (VkSampleCountFlagBits)p_Samples : VK_SAMPLE_COUNT_1_BIT;
-			attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			//attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			attachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 			attachmentDesc.flags = 0;
@@ -109,7 +108,7 @@ namespace YUME
 			}
 			else
 			{
-				YM_CORE_ERROR("Unsupported texture attachment!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unsupported texture attachment!")
 			}
 
 			// Dependencies
@@ -216,7 +215,7 @@ namespace YUME
 		{
 			if (m_RenderPass != VK_NULL_HANDLE)
 			{
-				YM_CORE_TRACE("Destroying vulkan renderpass")
+				YM_CORE_TRACE(VULKAN_PREFIX "Destroying renderpass")
 				vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), m_RenderPass, VK_NULL_HANDLE);
 			}
 		}
@@ -227,7 +226,7 @@ namespace YUME
 			{
 				if (renderpass != VK_NULL_HANDLE)
 				{
-					YM_CORE_TRACE("Destroying vulkan renderpass")
+					YM_CORE_TRACE(VULKAN_PREFIX "Destroying renderpass")
 					vkDestroyRenderPass(VulkanDevice::Get().GetDevice(), renderpass, VK_NULL_HANDLE);
 				}
 			});

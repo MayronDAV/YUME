@@ -2,6 +2,7 @@
 #include "YUME/Core/base.h"
 #include "YUME/Core/reference.h"
 #include "uniform_buffer.h"
+#include "YUME/Renderer/storage_buffer.h"
 #include "texture.h"
 #include "shader.h"
 
@@ -27,8 +28,12 @@ namespace YUME
 			virtual void SetUniform(const std::string& p_BufferName, const std::string& p_MemberName, void* p_Data) = 0;
 			virtual void SetUniform(const std::string& p_BufferName, const std::string& p_MemberName, void* p_Data, uint32_t p_Size) = 0;
 
+			virtual void SetStorageData(const std::string& p_Name, const Ref<StorageBuffer>& p_StorageBuffer) = 0;
+
 			virtual void SetTexture2D(const std::string& p_Name, const Ref<Texture2D>& p_Texture) = 0;
 			virtual void SetTexture2D(const std::string& p_Name, const Ref<Texture2D>* p_TextureData, uint32_t p_Count) = 0;
+
+			virtual void SetStorageImage(const std::string& p_Name, const Ref<Texture2D>& p_Texture) = 0;
 
 			virtual void Upload() = 0;
 

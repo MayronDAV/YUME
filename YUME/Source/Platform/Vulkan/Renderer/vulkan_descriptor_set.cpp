@@ -9,6 +9,7 @@
 #include "vulkan_texture.h"
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 #include "Platform/Vulkan/Core/vulkan_descriptor_pool.h"
+#include "vulkan_storage_buffer.h"
 
 
 
@@ -36,7 +37,7 @@ namespace YUME
 		auto res = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSet);
 		if ( res != VK_SUCCESS)
 		{
-			YM_CORE_ERROR("Failed to allocate Vulkan descriptor sets!")
+			YM_CORE_ERROR(VULKAN_PREFIX "Failed to allocate descriptor sets!")
 		}
 	}
 
@@ -54,21 +55,21 @@ namespace YUME
 			auto& descriptor = m_DescriptorsInfo[i];
 			if (descriptor.Name == p_Name && descriptor.Type == DescriptorType::UNIFORM_BUFFER)
 			{
-				if (descriptor.Buffer)
+				if (descriptor.UBuffer)
 				{
-					descriptor.Buffer.reset();
+					descriptor.UBuffer.reset();
 				}
 
-				descriptor.Buffer = p_UniformBuffer;
+				descriptor.UBuffer = p_UniformBuffer;
 				descriptor.Offset = 0;
-				descriptor.Size = VK_WHOLE_SIZE;
+				descriptor.Size = p_UniformBuffer.As<VulkanUniformBuffer>()->GetSizeBytes();
 				m_Queue.push_back((int)i);
 				m_MustToBeUploaded = true;
 				return;
 			}
 		}
 
-		YM_CORE_ERROR("Unkown name {}", p_Name)
+		YM_CORE_ERROR(VULKAN_PREFIX "Unkown name {}", p_Name)
 	}
 
 	void VulkanDescriptorSet::SetUniform(const std::string& p_BufferName, const std::string& p_MemberName, void* p_Data)
@@ -84,12 +85,12 @@ namespace YUME
 				{
 					if (member.Name == p_MemberName)
 					{
-						if (descriptor.Buffer)
+						if (descriptor.UBuffer)
 						{
-							descriptor.Buffer.reset();
+							descriptor.UBuffer.reset();
 						}
 
-						descriptor.Buffer = UniformBuffer::Create(p_Data, member.Size);
+						descriptor.UBuffer = UniformBuffer::Create(p_Data, (uint32_t)member.Size);
 						descriptor.Offset = member.Offset;
 						descriptor.Size = member.Size;
 						m_Queue.push_back((int)i);
@@ -100,7 +101,7 @@ namespace YUME
 			}
 		}
 
-		YM_CORE_ERROR("Unkown buffer name {} or member name {}", p_BufferName, p_MemberName)
+		YM_CORE_ERROR(VULKAN_PREFIX "Unkown buffer name {} or member name {}", p_BufferName, p_MemberName)
 	}
 
 	void VulkanDescriptorSet::SetUniform(const std::string& p_BufferName, const std::string& p_MemberName, void* p_Data, uint32_t p_Size)
@@ -116,12 +117,12 @@ namespace YUME
 				{
 					if (member.Name == p_MemberName)
 					{
-						if (descriptor.Buffer)
+						if (descriptor.UBuffer)
 						{
-							descriptor.Buffer.reset();
+							descriptor.UBuffer.reset();
 						}
 
-						descriptor.Buffer = UniformBuffer::Create(p_Data, p_Size);
+						descriptor.UBuffer = UniformBuffer::Create(p_Data, p_Size);
 						descriptor.Offset = member.Offset;
 						descriptor.Size = p_Size;
 						m_Queue.push_back((int)i);
@@ -132,7 +133,33 @@ namespace YUME
 			}
 		}
 
-		YM_CORE_ERROR("Unkown buffer name {} or member name {}", p_BufferName, p_MemberName)
+		YM_CORE_ERROR(VULKAN_PREFIX "Unkown buffer name {} or member name {}", p_BufferName, p_MemberName)
+	}
+
+	void VulkanDescriptorSet::SetStorageData(const std::string& p_Name, const Ref<StorageBuffer>& p_StorageBuffer)
+	{
+		YM_PROFILE_FUNCTION()
+
+		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
+		{
+			auto& descriptor = m_DescriptorsInfo[i];
+			if (descriptor.Name == p_Name && descriptor.Type == DescriptorType::STORAGE_BUFFER)
+			{
+				if (descriptor.SBuffer)
+				{
+					descriptor.SBuffer.reset();
+				}
+
+				descriptor.SBuffer = p_StorageBuffer;
+				descriptor.Offset = 0;
+				descriptor.Size = VK_WHOLE_SIZE;
+				m_Queue.push_back((int)i);
+				m_MustToBeUploaded = true;
+				return;
+			}
+		}
+
+		YM_CORE_ERROR(VULKAN_PREFIX "Unkown name {}", p_Name)
 	}
 
 	void VulkanDescriptorSet::SetTexture2D(const std::string& p_Name, const Ref<Texture2D>& p_Texture)
@@ -152,8 +179,9 @@ namespace YUME
 			}
 		}
 
-		YM_CORE_ERROR("Unkown name {}", p_Name)
+		YM_CORE_ERROR(VULKAN_PREFIX "Unkown name {}", p_Name)
 	}
+
 
 	void VulkanDescriptorSet::SetTexture2D(const std::string& p_Name, const Ref<Texture2D>* p_TextureData, uint32_t p_Count)
 	{
@@ -176,15 +204,35 @@ namespace YUME
 			}
 		}
 
-		YM_CORE_ERROR("Unkown name {}", p_Name)
+		YM_CORE_ERROR(VULKAN_PREFIX "Unkown name {}", p_Name)
+	}
+
+	void VulkanDescriptorSet::SetStorageImage(const std::string& p_Name, const Ref<Texture2D>& p_Texture)
+	{
+		YM_PROFILE_FUNCTION()
+
+		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
+		{
+			auto& descriptor = m_DescriptorsInfo[i];
+			if (descriptor.Name == p_Name && descriptor.Type == DescriptorType::STORAGE_IMAGE)
+			{
+				descriptor.Textures.clear();
+				descriptor.Textures.push_back(p_Texture);
+				m_Queue.push_back((int)i);
+				m_MustToBeUploaded = true;
+				return;
+			}
+		}
+
+		YM_CORE_ERROR(VULKAN_PREFIX "Unkown name {}", p_Name)
 	}
 
 	void VulkanDescriptorSet::Upload()
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_VERIFY(m_SetLayout)
-		YM_CORE_VERIFY(m_DescriptorSet)
+		YM_CORE_ASSERT(m_SetLayout)
+		YM_CORE_ASSERT(m_DescriptorSet)
 
 		std::vector<VkWriteDescriptorSet> descWrites;
 		std::vector<VkDescriptorBufferInfo> buffersInfo;
@@ -222,9 +270,32 @@ namespace YUME
 				descriptorWrite.descriptorCount = (uint32_t)data.Size;
 				descriptorWrite.pImageInfo = imagesInfo.data();
 			}
+			else if (data.Type == DescriptorType::STORAGE_IMAGE)
+			{
+				for (const auto& texture : data.Textures)
+				{
+					TransitionImageToCorrectLayout(texture);
+					auto vkTexture = texture.As<VulkanTexture2D>();
+
+					auto& info = imagesInfo.emplace_back();
+					info.imageLayout = vkTexture->GetLayout();
+					info.imageView = vkTexture->GetImageView();
+				}
+
+				descriptorWrite.descriptorCount = (uint32_t)data.Size;
+				descriptorWrite.pImageInfo = imagesInfo.data();
+			}
 			else if (data.Type == DescriptorType::UNIFORM_BUFFER)
 			{
-				bufferInfo.buffer = data.Buffer.As<VulkanUniformBuffer>()->GetBuffer();
+				bufferInfo.buffer = data.UBuffer.As<VulkanUniformBuffer>()->GetBuffer();
+				bufferInfo.offset = data.Offset;
+				bufferInfo.range = data.Size;
+
+				descriptorWrite.pBufferInfo = &bufferInfo;
+			}
+			else if (data.Type == DescriptorType::STORAGE_BUFFER)
+			{
+				bufferInfo.buffer = data.SBuffer.As<VulkanStorageBuffer>()->GetBuffer();
 				bufferInfo.offset = data.Offset;
 				bufferInfo.range = data.Size;
 
@@ -269,17 +340,15 @@ namespace YUME
 		const auto& vkTexture = p_Texture.As<VulkanTexture2D>();
 		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED)
 		{
-			if (vkTexture->GetLayout() != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-			{
-				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			}
+			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		}
+		else if (spec.Usage == TextureUsage::TEXTURE_STORAGE)
+		{
+			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_GENERAL);
 		}
 		else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
 		{
-			if (vkTexture->GetLayout() != VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
-			{
-				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
-			}
+			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
 		}
 	}
 

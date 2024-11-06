@@ -35,7 +35,7 @@ namespace YUME::Utils
 			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:			 return "Error";
 			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT: return "Critical";
 			default:
-				YM_CORE_ERROR("Unknown Message Severity!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Message Severity!")
 				return "Trace";
 		}
 	}
@@ -52,7 +52,7 @@ namespace YUME::Utils
 			case VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT: return "Device address binding";
 	#endif
 			default:
-				YM_CORE_ERROR("Unknown Message Type!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Message Type!")
 				return "General";
 		}
 	}
@@ -65,7 +65,7 @@ namespace YUME::Utils
 			case YUME::PolygonMode::LINE:  return VK_POLYGON_MODE_LINE;
 			case YUME::PolygonMode::POINT: return VK_POLYGON_MODE_POINT;
 			default:
-				YM_CORE_ERROR("Unknown Polygon Mode!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Polygon Mode!")
 				return VK_POLYGON_MODE_FILL;
 		}
 	}
@@ -78,7 +78,7 @@ namespace YUME::Utils
 			case YUME::DrawType::LINES:    return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 			case YUME::DrawType::POINT:    return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 			default:
-				YM_CORE_ERROR("Unknown Draw Type!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Draw Type!")
 				return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		}
 	}
@@ -90,7 +90,7 @@ namespace YUME::Utils
 			case YUME::FrontFace::CLOCKWISE:		 return VK_FRONT_FACE_CLOCKWISE;
 			case YUME::FrontFace::COUNTER_CLOCKWISE: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
 			default:
-				YM_CORE_ERROR("Unknown Front Face!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Front Face!")
 				return VK_FRONT_FACE_CLOCKWISE;
 		}
 	}
@@ -104,7 +104,7 @@ namespace YUME::Utils
 			case CullMode::FRONTANDBACK: return VK_CULL_MODE_FRONT_AND_BACK;
 			case CullMode::NONE:		 return VK_CULL_MODE_NONE;
 			default:
-				YM_CORE_ERROR("Unknown Cull Mode!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Cull Mode!")
 				return VK_CULL_MODE_BACK_BIT;
 		}
 	}
@@ -127,8 +127,8 @@ namespace YUME::Utils
 
 	struct BarrierData
 	{
-		VkAccessFlagBits SrcAccessMask;
-		VkAccessFlagBits DstAccessMask;
+		VkAccessFlags SrcAccessMask;
+		VkAccessFlags DstAccessMask;
 		VkPipelineStageFlags SrcStage;
 		VkPipelineStageFlags DstStage;
 	};
@@ -139,6 +139,7 @@ namespace YUME::Utils
 		{{VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, {(VkAccessFlagBits)0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
 		{{VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL}, {(VkAccessFlagBits)0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT}},
 		{{VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, {(VkAccessFlagBits)0, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
+		{{VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL}, {(VkAccessFlagBits)0, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
 
 		{{VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, {VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
 		{{VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL}, {VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}},
@@ -151,6 +152,8 @@ namespace YUME::Utils
 		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, {VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
 		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, {VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
 		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR}, {VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT}},
+		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL}, {VK_ACCESS_TRANSFER_WRITE_BIT,  VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT}},
+		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL}, {VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
 
 		{{VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, {VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
 
@@ -161,6 +164,8 @@ namespace YUME::Utils
 		{{VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, {(VkAccessFlagBits)0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
 		{{VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, {VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
 		{{VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL}, {VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}},
+	
+		{{VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL}, {VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT}}
 	};
 
 
@@ -312,6 +317,9 @@ namespace YUME::Utils
 			case R8_INT:			 return VK_FORMAT_R8_SINT;
 			case R8_UINT:			 return VK_FORMAT_R8_UINT;
 			case R32_INT:			 return VK_FORMAT_R32_SINT;
+			case R32_UINT:			 return VK_FORMAT_R32_UINT;
+			case R32_FLOAT:			 return VK_FORMAT_R32_SFLOAT;
+			case R16_FLOAT:			 return VK_FORMAT_R16_SFLOAT;
 
 			case RG8_SRGB:			 return VK_FORMAT_R8G8_SRGB;
 			case RG32_UINT:			 return VK_FORMAT_R32G32_UINT;
@@ -319,6 +327,7 @@ namespace YUME::Utils
 			case RGB8_SRGB:			 return VK_FORMAT_R8G8B8_SRGB;
 
 			case RGBA8_SRGB:		 return VK_FORMAT_R8G8B8A8_SRGB;
+			case RGBA16_FLOAT:		 return VK_FORMAT_R16G16B16A16_SFLOAT;
 			case RGBA32_FLOAT:		 return VK_FORMAT_R32G32B32A32_SFLOAT;
 
 			case D16_UNORM:			 return VK_FORMAT_D16_UNORM;
@@ -328,7 +337,7 @@ namespace YUME::Utils
 			case D32_FLOAT_S8_UINT:  return VK_FORMAT_D32_SFLOAT_S8_UINT;
 
 			default:
-				YM_CORE_ERROR("Unknown texture format!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown texture format!")
 				return VK_FORMAT_UNDEFINED;
 		}
 	}
@@ -343,6 +352,9 @@ namespace YUME::Utils
 			case R8_INT:
 			case R8_UINT:
 			case R32_INT:
+			case R32_UINT:
+			case R32_FLOAT:
+			case R16_FLOAT:
 				return 1;
 
 			case RG8_SRGB:
@@ -353,6 +365,7 @@ namespace YUME::Utils
 				return 3;
 
 			case RGBA8_SRGB:
+			case RGBA16_FLOAT:
 			case RGBA32_FLOAT:
 				return 4;
 
@@ -366,7 +379,7 @@ namespace YUME::Utils
 				return 2;
 
 			default:
-				YM_CORE_ERROR("Unknown texture format!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown texture format!")
 				return 0;
 		}
 	}
@@ -385,7 +398,13 @@ namespace YUME::Utils
 			case RGBA8_SRGB:
 				return 1;
 
+			case RGBA16_FLOAT:
+			case R16_FLOAT:
+				return 2;
+
 			case R32_INT:
+			case R32_UINT:
+			case R32_FLOAT:
 			case RG32_UINT:
 			case RGBA32_FLOAT:
 			case D32_FLOAT:
@@ -397,7 +416,7 @@ namespace YUME::Utils
 			case D32_FLOAT_S8_UINT:  return 5;
 
 			default:
-				YM_CORE_ERROR("Unknown texture format!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown texture format!")
 				return 1;
 		}
 	}
@@ -409,7 +428,7 @@ namespace YUME::Utils
 			case YUME::TextureFilter::LINEAR:  return VK_FILTER_LINEAR;
 			case YUME::TextureFilter::NEAREST: return VK_FILTER_NEAREST;
 			default: 
-				YM_CORE_WARN("Unknown texture filter, returning default...")
+				YM_CORE_WARN(VULKAN_PREFIX "Unknown texture filter, returning default...")
 				return VK_FILTER_LINEAR;
 		}
 	}
@@ -423,7 +442,7 @@ namespace YUME::Utils
 			case YUME::TextureWrap::CLAMP_TO_EDGE:   return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 			case YUME::TextureWrap::CLAMP_TO_BORDER: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 			default:
-				YM_CORE_WARN("Unknown texture wrap, returning default...")
+				YM_CORE_WARN(VULKAN_PREFIX "Unknown texture wrap, returning default...")
 				return VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		}
 	}
@@ -443,7 +462,7 @@ namespace YUME::Utils
 			case CUSTOM_FLOAT:			   return VK_BORDER_COLOR_FLOAT_CUSTOM_EXT;
 			case CUSTOM_SRGB:			   return VK_BORDER_COLOR_INT_CUSTOM_EXT;
 			default:
-				YM_CORE_WARN("Unknown texture border color, returning default...")
+				YM_CORE_WARN(VULKAN_PREFIX "Unknown texture border color, returning default...")
 				return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		}
 	}
@@ -457,9 +476,10 @@ namespace YUME::Utils
 			case TEXTURE_SAMPLED:					return (VkImageUsageFlagBits)0;
 			case TEXTURE_COLOR_ATTACHMENT:			return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			case TEXTURE_DEPTH_STENCIL_ATTACHMENT:  return VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			case TEXTURE_STORAGE:					return VK_IMAGE_USAGE_STORAGE_BIT;
 
 			default:
-				YM_CORE_ERROR("Unknown texture format!")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown texture format!")
 				return (VkImageUsageFlagBits)0;
 		}
 	}
@@ -538,7 +558,7 @@ namespace YUME::Utils
 			case ShaderType::VERTEX: return VK_SHADER_STAGE_VERTEX_BIT;
 			case ShaderType::FRAGMENT: return VK_SHADER_STAGE_FRAGMENT_BIT;
 			default:
-				YM_CORE_ERROR("Unknown shader type")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown shader type")
 				return (VkShaderStageFlagBits)0;
 		}
 	}
@@ -548,10 +568,42 @@ namespace YUME::Utils
 		switch (p_Type)
 		{
 			case YUME::DescriptorType::UNIFORM_BUFFER: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			case YUME::DescriptorType::IMAGE_SAMPLER: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			case YUME::DescriptorType::STORAGE_BUFFER: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			case YUME::DescriptorType::IMAGE_SAMPLER:  return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			case YUME::DescriptorType::STORAGE_IMAGE:  return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 			default:
-				YM_CORE_ERROR("Unknown descriptor type")
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown descriptor type")
 				return (VkDescriptorType)0;
+		}
+	}
+
+	VkFormat DataTypeToVkFormat(DataType p_Type)
+	{
+		switch (p_Type)
+		{
+			using enum YUME::DataType;
+
+			case Float:  return VK_FORMAT_R32_SFLOAT;
+			case Float2: return VK_FORMAT_R32G32_SFLOAT;
+			case Float3: return VK_FORMAT_R32G32B32_SFLOAT;
+			case Float4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+
+			case Mat3:   return VK_FORMAT_R32G32B32_SFLOAT;
+			case Mat4:   return VK_FORMAT_R32G32B32A32_SFLOAT;
+
+			case UInt:   return VK_FORMAT_R32_UINT;
+			case UInt2:  return VK_FORMAT_R32G32_UINT;
+
+			case Int:    return VK_FORMAT_R32_SINT;
+			case Int2:   return VK_FORMAT_R32G32_SINT;
+			case Int3:   return VK_FORMAT_R32G32B32_SINT;
+			case Int4:   return VK_FORMAT_R32G32B32A32_SINT;
+
+			case Bool:   return VK_FORMAT_R8_UINT;
+
+			default:
+				YM_CORE_ASSERT(false, "Unknown DataType!")
+				return (VkFormat)0;
 		}
 	}
 

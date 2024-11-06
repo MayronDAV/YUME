@@ -12,7 +12,7 @@ namespace YUME
 	class VulkanTexture2D : public Texture2D
 	{
 		public:
-			explicit VulkanTexture2D(const TextureSpecification& p_Spec = {});
+			explicit VulkanTexture2D(const TextureSpecification& p_Spec);
 			VulkanTexture2D(const TextureSpecification& p_Spec, const unsigned char* p_Data, uint32_t p_Size);
 			VulkanTexture2D(VkImage p_Image, VkImageView p_ImageView, VkFormat p_Format = VK_FORMAT_R8G8B8A8_SRGB, uint32_t p_Width = 1, uint32_t p_Height = 1);
 			~VulkanTexture2D() override;
@@ -43,18 +43,6 @@ namespace YUME
 
 		private:
 			void Init(const TextureSpecification& p_Spec);
-			void GenerateMipmaps(VkImage p_Image, VkFormat p_Format, int32_t p_Width, int32_t p_Height, uint32_t p_MipLevels);
-
-
-#ifdef USE_VMA_ALLOCATOR
-		void CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
-			VkImageUsageFlags p_Usage, VkImage& p_Image, uint32_t p_MipLevels, VmaAllocation& p_Allocation) const;
-#else
-		void CreateImage(uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, VkImageTiling p_Tiling,
-			VkImageUsageFlags p_Usage, VkMemoryPropertyFlags p_Properties, VkImage& p_Image, uint32_t p_MipLevels, VkDeviceMemory& p_ImageMemory);
-		void AllocateImageMemory(VkImage& p_Image, VkDeviceMemory& p_ImageMemory, VkMemoryPropertyFlags p_Properties);
-#endif
-			VkImageView CreateImageView(VkImage p_Image, VkFormat p_Format, uint32_t p_MipLevels);
 
 		private:
 			TextureSpecification m_Specification;

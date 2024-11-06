@@ -20,12 +20,12 @@ namespace YUME
 
 		auto device = VulkanDevice::Get().GetDevice();
 
-		YM_CORE_TRACE("Destroying vulkan image views...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying image views...")
 		for (auto imageView : m_ImageViews) {
 			vkDestroyImageView(device, imageView, nullptr);
 		}
 
-		YM_CORE_TRACE("Destroying vulkan swapchain...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying swapchain...")
 		if (m_SwapChain != VK_NULL_HANDLE)
 			vkDestroySwapchainKHR(device, m_SwapChain, VK_NULL_HANDLE);
 	}
@@ -120,8 +120,7 @@ namespace YUME
 			imgViewInfo.subresourceRange.layerCount = 1;
 
 			res = vkCreateImageView(device, &imgViewInfo, nullptr, &m_ImageViews[i]);
-			YM_CORE_ASSERT(res == VK_SUCCESS)
-
+			YM_CORE_VERIFY(res == VK_SUCCESS)
 		}
 	}
 
@@ -161,18 +160,18 @@ namespace YUME
 			{
 				if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
 				{
-					YM_CORE_INFO("Choosing present mode - VK_PRESENT_MODE_MAILBOX_KHR")
+					YM_CORE_INFO(VULKAN_PREFIX "Choosing present mode - VK_PRESENT_MODE_MAILBOX_KHR")
 					m_PresentMode = availablePresentMode;
 					return;
 				}
 			}
 
-			YM_CORE_INFO("Choosing present mode - VK_PRESENT_MODE_FIFO_KHR")
+			YM_CORE_INFO(VULKAN_PREFIX "Choosing present mode - VK_PRESENT_MODE_FIFO_KHR")
 			m_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 			return;
 		}
 
-		YM_CORE_INFO("Choosing present mode - VK_PRESENT_MODE_IMMEDIATE_KHR")
+		YM_CORE_INFO(VULKAN_PREFIX "Choosing present mode - VK_PRESENT_MODE_IMMEDIATE_KHR")
 		m_PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 	}
 
@@ -186,7 +185,7 @@ namespace YUME
 				return;
 		}
 
-		YM_CORE_WARN("Format not found [ VK_FORMAT_R8G8B8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR ], using the first available surface format...")
+		YM_CORE_WARN(VULKAN_PREFIX "Format not found [ VK_FORMAT_R8G8B8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR ], using the first available surface format...")
 		m_Format = surfaceFormats[0];
 	}
 }

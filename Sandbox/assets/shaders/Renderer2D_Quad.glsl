@@ -12,6 +12,7 @@ layout(location = 3) in int a_TexIndex;
 layout(set = 0, binding = 0) uniform u_Camera
 {
 	mat4 ViewProjection;
+	glm::vec3 Position;
 } u_camera;
 
 struct VertexOutput
@@ -47,7 +48,6 @@ struct VertexOutput
 layout (location = 0) in VertexOutput Input;
 layout (location = 3) in flat int TexIndex;
 
-// Maybe change this in vulkan
 #define MAX_TEXTURE_SLOTS 32
 layout (set = 1, binding = 0) uniform sampler2D u_Textures[MAX_TEXTURE_SLOTS];
 
@@ -91,6 +91,9 @@ void main()
 		case 30: texColor *= texture(u_Textures[30], Input.TexCoord); break;
 		case 31: texColor *= texture(u_Textures[31], Input.TexCoord); break;
 	}
+
+	if (texColor.a == 0.0f)
+		discard;
 
 	o_Color = texColor;
 }

@@ -17,20 +17,21 @@ namespace YUME
 			~VulkanMemoryBuffer();
 
 			void Init(VkBufferUsageFlags p_Usage, VkMemoryPropertyFlags p_MemoryProperyFlags, VkDeviceSize p_SizeBytes);
-			void Resize(VkDeviceSize p_SizeBytes, const void* p_Data);
+			void Resize(VkDeviceSize p_SizeBytes);
 			void SetData(VkDeviceSize p_SizeBytes, const void* p_Data, VkDeviceSize p_Offset = 0);
-			const VkBuffer& GetBuffer() const { return m_Buffer; }
+			void Fill(uint32_t p_Data, size_t  p_SizeBytes);
 
 			void Map(VkDeviceSize p_SizeBytes = VK_WHOLE_SIZE, VkDeviceSize p_Offset = 0);
 			void UnMap();
-			void* GetMapped() { return m_Mapped; }
 			void Flush(VkDeviceSize p_SizeBytes = VK_WHOLE_SIZE, VkDeviceSize p_Offset = 0);
 			void Invalidate(VkDeviceSize p_SizeBytes = VK_WHOLE_SIZE, VkDeviceSize p_Offset = 0);
 			void Destroy(bool p_DeletionQueue = false) noexcept;
-			void SetUsage(VkBufferUsageFlags p_Flags) { m_UsageFlags = p_Flags; }
+
 			void SetMemoryProperyFlags(VkBufferUsageFlags p_Flags) { m_MemoryPropertyFlags = p_Flags; }
 			void SetDeleteWithoutQueue(bool p_Value) { m_DeleteWithoutQueue = p_Value; }
-
+			void SetUsage(VkBufferUsageFlags p_Flags) { m_UsageFlags = p_Flags; }
+			void* GetMapped() { return m_Mapped; }
+			const VkBuffer& GetBuffer() const { return m_Buffer; }
 		private:
 			VkBuffer m_Buffer{};			
 			VkDeviceSize m_SizeBytes = 0;
@@ -38,8 +39,6 @@ namespace YUME
 			VkMemoryPropertyFlags m_MemoryPropertyFlags{};
 			void* m_Mapped = nullptr;
 			bool m_DeleteWithoutQueue = false;
-
-			bool m_Updated = false;
 
 	#ifdef USE_VMA_ALLOCATOR
 			VmaAllocation m_Allocation = VK_NULL_HANDLE;

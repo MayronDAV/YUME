@@ -22,17 +22,12 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_TRACE("Destroying vulkan vertex array...")
-
-		for (auto& buffer : m_VertexArrays)
-		{
-			buffer.reset();
-		}
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying vertex array...")
 
 		auto pipeline = m_Pipeline;
 		VulkanContext::PushFunction([pipeline]()
 		{
-			YM_CORE_TRACE("Destroying vulkan pipeline...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Destroying pipeline...")
 			if (pipeline != VK_NULL_HANDLE)
 				vkDestroyPipeline(VulkanDevice::Get().GetDevice(), pipeline, VK_NULL_HANDLE);
 		});
@@ -42,12 +37,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		for (auto& buffer : m_VertexArrays)
-		{
-			buffer.reset();
-		}
-
-		YM_CORE_TRACE("Destroying vulkan pipeline...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying pipeline...")
 		if (m_Pipeline != VK_NULL_HANDLE)
 			vkDestroyPipeline(VulkanDevice::Get().GetDevice(), m_Pipeline, VK_NULL_HANDLE);
 	}
@@ -56,7 +46,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_VERIFY(p_CreateInfo.Shader != nullptr)
+		YM_CORE_ASSERT(p_CreateInfo.Shader != nullptr)
 
 		m_Context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
 		m_CreateInfo = p_CreateInfo;
@@ -66,31 +56,13 @@ namespace YUME
 		CreateFramebuffers();
 
 		auto shader = m_Shader.As<VulkanShader>();
-		m_VertexArrays = shader->GetVertexArrays();
+		size_t totalBindingSize = shader->GetBindingDescription().size();
+		size_t totalInputAttribSize = shader->GetAttributeDescription().size();
 
-		size_t totalBindingSize = 0;
-		size_t totalInputAttribSize = 0;
-
-		for (size_t i = 0; i < m_VertexArrays.size(); i++)
-		{
-			auto vkVAO = m_VertexArrays[i].As<VulkanVertexArray>();
-			totalBindingSize += vkVAO->GetBindingDescription().size();
-			totalInputAttribSize += vkVAO->GetAttributeDescription().size();
-		}
-
-		std::vector<VkVertexInputBindingDescription> bindingDescriptions;
-		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-		bindingDescriptions.reserve(totalBindingSize);
-		attributeDescriptions.reserve(totalInputAttribSize);
-
-		for (size_t i = 0; i < m_VertexArrays.size(); i++)
-		{
-			auto vkVAO = m_VertexArrays[i].As<VulkanVertexArray>();
-			const auto& bindingDescs = vkVAO->GetBindingDescription();
-			bindingDescriptions.insert(bindingDescriptions.end(), bindingDescs.begin(), bindingDescs.end());
-			const auto& attribDescs = vkVAO->GetAttributeDescription();
-			attributeDescriptions.insert(attributeDescriptions.end(), attribDescs.begin(), attribDescs.end());
-		}
+		const auto& bindingDescs = shader->GetBindingDescription();
+		std::vector<VkVertexInputBindingDescription> bindingDescriptions(bindingDescs.begin(), bindingDescs.end(), bindingDescs.get_allocator());
+		const auto& attribDescs = shader->GetAttributeDescription();
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions(attribDescs.begin(), attribDescs.end(), attribDescs.get_allocator());
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -165,29 +137,39 @@ namespace YUME
 				blendAttachState[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 				blendAttachState[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 
-				if (p_CreateInfo.BlendMode == BlendMode::SrcAlphaOneMinusSrcAlpha)
+				if (p_CreateInfo.BlendModes[i] == BlendMode::SrcAlphaOneMinusSrcAlpha)
 				{
 					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 					blendAttachState[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 					blendAttachState[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 				}
-				else if (p_CreateInfo.BlendMode == BlendMode::SrcAlphaOne)
+				else if (p_CreateInfo.BlendModes[i] == BlendMode::SrcAlphaOne)
 				{
 					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
 					blendAttachState[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 					blendAttachState[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 				}
-				else if (p_CreateInfo.BlendMode == BlendMode::ZeroSrcColor)
+				else if (p_CreateInfo.BlendModes[i] == BlendMode::ZeroSrcColor)
 				{
 					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
 					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
 				}
-				else if (p_CreateInfo.BlendMode == BlendMode::OneZero)
+				else if (p_CreateInfo.BlendModes[i] == BlendMode::OneZero)
 				{
 					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
 					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+				}
+				else if (p_CreateInfo.BlendModes[i] == BlendMode::OneOne)
+				{
+					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+				}
+				else if (p_CreateInfo.BlendModes[i] == BlendMode::ZeroOneMinusSrcColor)
+				{
+					blendAttachState[i].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+					blendAttachState[i].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
 				}
 				else
 				{
@@ -296,8 +278,6 @@ namespace YUME
 		}
 
 		m_RenderPass->Begin(framebuffer, GetWidth(), GetHeight(), glm::make_vec4(m_CreateInfo.ClearColor));
-
-		m_Context->HasDrawCommands(true);
 
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
 	}

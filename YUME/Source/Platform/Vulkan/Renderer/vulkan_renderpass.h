@@ -1,6 +1,5 @@
 #pragma once
 #include "YUME/Renderer/renderpass.h"
-#include "Platform/Vulkan/Renderer/vulkan_vertex_array.h"
 
 // Lib
 #include <vulkan/vulkan.h>

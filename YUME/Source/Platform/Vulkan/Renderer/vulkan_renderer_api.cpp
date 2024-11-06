@@ -56,6 +56,28 @@ namespace YUME
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	}
 
+	void VulkanRendererAPI::ClearRenderTarget(const Ref<Texture2D>& p_Texture, uint32_t p_Value)
+	{
+		VkImageSubresourceRange subresourceRange = p_Texture.As<VulkanTexture2D>()->GetSubresourceRange();
+		const auto& spec = p_Texture->GetSpecification();
+		const auto& commandBuffer = m_Context->GetCommandBuffer();
+
+		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED || spec.Usage == TextureUsage::TEXTURE_STORAGE)
+		{
+			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, false);
+
+			VkClearColorValue clearColorValue;
+			clearColorValue.uint32[0] = p_Value;
+			vkCmdClearColorImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, 1, &subresourceRange);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_GENERAL, false);
+		}
+		else
+		{
+			YM_CORE_ERROR(VULKAN_PREFIX "Unsupported texture usage!")
+		}
+	}
+
 	void VulkanRendererAPI::ClearRenderTarget(const Ref<Texture2D>& p_Texture, const glm::vec4& p_Value)
 	{
 		VkImageSubresourceRange subresourceRange = p_Texture.As<VulkanTexture2D>()->GetSubresourceRange();
@@ -67,8 +89,6 @@ namespace YUME
 			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
 			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, false);
 
-			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
 			VkClearColorValue clearColorValue = VkClearColorValue({ { p_Value.x, p_Value.y, p_Value.z, p_Value.w } });
 			vkCmdClearColorImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, 1, &subresourceRange);
 			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout, false);
@@ -78,37 +98,41 @@ namespace YUME
 			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
 			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, false);
 
-			subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
 			VkClearDepthStencilValue clear_depth_stencil = { 1.0f, 1 };
 			vkCmdClearDepthStencilImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil, 1, &subresourceRange);
 			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout, false);
 		}
 		else
 		{
-			YM_CORE_ERROR("Unsupported texture usage!")
+			YM_CORE_ERROR(VULKAN_PREFIX "Unsupported texture usage!")
 		}
 	}
 
-	void VulkanRendererAPI::Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount)
+	void VulkanRendererAPI::Draw(const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount)
 	{
 		YM_PROFILE_FUNCTION()
 
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 
-		if (p_VertexArray != nullptr)
-			p_VertexArray->Bind();
-		vkCmdDraw(commandBuffer, p_VertexCount, 1, 0, 0);
+		if (p_VertexBuffer != nullptr)
+			p_VertexBuffer->Bind();
+
+		vkCmdDraw(commandBuffer, p_VertexCount, p_InstanceCount, 0, 0);
 	}
 
-	void VulkanRendererAPI::DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount)
+	void VulkanRendererAPI::DrawIndexed(const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount)
 	{
 		YM_PROFILE_FUNCTION()
+		YM_CORE_ASSERT(p_IndexBuffer)
 
 		auto& commandBuffer = m_Context->GetCommandBuffer();
 
-		p_VertexArray->Bind();
-		vkCmdDrawIndexed(commandBuffer, p_IndexCount, 1, 0, 0, 0);
+		if (p_VertexBuffer != nullptr)
+			p_VertexBuffer->Bind();
+		
+		p_IndexBuffer->Bind();
+
+		vkCmdDrawIndexed(commandBuffer, p_IndexBuffer->GetCount(), p_InstanceCount, 0, 0, 0);
 	}
 
 }

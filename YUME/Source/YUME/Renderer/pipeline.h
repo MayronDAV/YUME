@@ -20,7 +20,7 @@ namespace YUME
 		FrontFace FrontFace = FrontFace::CLOCKWISE;
 		PolygonMode PolygonMode = PolygonMode::FILL;
 		DrawType DrawType = DrawType::TRIANGLE;
-		BlendMode BlendMode = BlendMode::None;
+		std::array<BlendMode, MAX_RENDER_TARGETS> BlendModes;
 
 		bool TransparencyEnabled = false;
 		bool ClearTargets = true;

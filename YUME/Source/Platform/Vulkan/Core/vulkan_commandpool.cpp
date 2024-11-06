@@ -10,7 +10,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_TRACE("Creating vulkan command pool...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Creating command pool...")
 		VkCommandPoolCreateInfo cmdPoolCI{};
 		cmdPoolCI.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		cmdPoolCI.queueFamilyIndex = p_QueueIndex;
@@ -23,7 +23,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_TRACE("Destroying vulkan command pool...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying command pool...")
 		vkDestroyCommandPool(VulkanDevice::Get().GetDevice(), m_Handle, nullptr);
 	}
 

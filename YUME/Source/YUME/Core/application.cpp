@@ -33,7 +33,12 @@ namespace YUME
 
 		Engine::Init();
 
-		m_Window = std::unique_ptr<Window>(Window::Create());
+		WindowProps props{};
+		props.Title = "Sandbox";
+		props.Width = 1360;
+		props.Height = 766;
+
+		m_Window = std::unique_ptr<Window>(Window::Create(props));
 		m_Window->SetEventCallback(YM_BIND_EVENT_FN(Application::OnEvent));
 
 		RendererCommand::Init(m_Window->GetContext());

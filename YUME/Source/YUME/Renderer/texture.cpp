@@ -8,6 +8,7 @@
 #include "YUME/Utils/hash_combiner.h"
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Platform/Vulkan/Utils/vulkan_utils.h"
 
 
 namespace YUME

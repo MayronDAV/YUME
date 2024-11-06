@@ -47,7 +47,9 @@ namespace YUME
 		OneZero,
 		ZeroSrcColor,
 		SrcAlphaOneMinusSrcAlpha,
-		SrcAlphaOne
+		SrcAlphaOne,
+		OneOne,
+		ZeroOneMinusSrcColor
 	};
 
 	enum class DrawType : uint8_t
@@ -77,6 +79,7 @@ namespace YUME
 	enum class TextureUsage : uint8_t
 	{
 		TEXTURE_SAMPLED = 0,
+		TEXTURE_STORAGE,
 		TEXTURE_COLOR_ATTACHMENT,
 		TEXTURE_DEPTH_STENCIL_ATTACHMENT,
 	};
@@ -122,6 +125,9 @@ namespace YUME
 		R8_INT,
 		R8_UINT,
 		R32_INT,
+		R32_UINT,
+		R32_FLOAT,
+		R16_FLOAT,
 
 		RG8_SRGB,
 		RG32_UINT,
@@ -129,6 +135,7 @@ namespace YUME
 		RGB8_SRGB,
 
 		RGBA8_SRGB,
+		RGBA16_FLOAT,
 		RGBA32_FLOAT,
 
 		// Depth Format
@@ -143,35 +150,88 @@ namespace YUME
 		D32_FLOAT_S8_UINT,
 	};
 
+	enum class DataType
+	{
+		None = 0, Float, Float2, Float3, Float4,
+		Mat3, Mat4,
+		UInt, UInt2,
+		Int, Int2, Int3, Int4,
+		Bool
+	};
+
 	enum class DescriptorType : uint8_t
 	{
 		UNIFORM_BUFFER,
+		STORAGE_BUFFER,
+		STORAGE_IMAGE,
 		IMAGE_SAMPLER
 	};
 
-	struct DescriptorMemberInfo
+	struct MemberInfo
 	{
-		uint32_t Size;
+		size_t Size;
 		uint32_t Offset;
 		std::string Name;
 		std::string FullName;
 	};
 
+	struct PushConstant
+	{
+		uint32_t Size;
+		ShaderType ShaderStage;
+		uint8_t* Data;
+		uint32_t Offset = 0;
+		std::string Name;
+
+		std::vector<MemberInfo> Members;
+
+		inline void SetValue(const std::string& p_Name, void* p_Value)
+		{
+			for (auto& member : Members)
+			{
+				if (member.Name == p_Name)
+				{
+					memcpy(Data + member.Offset, p_Value, member.Size);
+					return;
+				}
+			}
+
+			YM_CORE_ERROR("Push Constant not found: {}", p_Name.c_str());
+		}
+
+		~PushConstant()
+		{
+			if (Data != nullptr)
+			{
+				delete Data;
+			}
+		}
+	};
+
 	class Texture2D;
 	class UniformBuffer;
+	class StorageBuffer;
 
 	struct DescriptorInfo
 	{
 		std::vector<Ref<Texture2D>> Textures;
-		Ref<UniformBuffer> Buffer = nullptr;
+		Ref<UniformBuffer> UBuffer = nullptr;
+		Ref<StorageBuffer> SBuffer = nullptr;
 
 		int Binding;
-		uint64_t Size;
 		int Offset;
+		size_t Size;
 		std::string Name;
 		DescriptorType Type;
 		ShaderType Stage;
 
-		std::vector<DescriptorMemberInfo> Members;
+		std::vector<MemberInfo> Members;
+	};
+	
+	// Maybe move to another file?
+	enum class SurfaceType
+	{
+		Opaque = 0,
+		Transparent
 	};
 }

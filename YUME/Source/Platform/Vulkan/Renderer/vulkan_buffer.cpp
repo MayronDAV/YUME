@@ -36,7 +36,7 @@ namespace YUME
 		}
 		else
 		{
-			YM_CORE_ERROR("Unknwon buffer usage!")
+			YM_CORE_ERROR(VULKAN_PREFIX "Unknwon buffer usage!")
 		}
 	}
 
@@ -56,12 +56,6 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
-
-		VkBuffer nullBuffer = VK_NULL_HANDLE;
-		VkDeviceSize nullOffset = 0;
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &nullBuffer, &nullOffset);
 	}
 
 	void VulkanVertexBuffer::SetData(const void* p_Data, uint64_t p_SizeBytes)
@@ -73,8 +67,6 @@ namespace YUME
 	{
 		m_Buffer->Flush();
 	}
-
-
 
 	VulkanIndexBuffer::VulkanIndexBuffer(const uint32_t* p_Indices, uint32_t p_Count)
 		: m_Count(p_Count)
@@ -103,15 +95,10 @@ namespace YUME
 		auto buffer = m_Buffer->GetBuffer();
 		vkCmdBindIndexBuffer(commandBuffer, buffer, offset, VK_INDEX_TYPE_UINT32);
 	}
+
 	void VulkanIndexBuffer::Unbind() const
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
-
-		VkDeviceSize offset = 0;
-		VkBuffer nullBuffer = VK_NULL_HANDLE;
-		vkCmdBindIndexBuffer(commandBuffer, nullBuffer, offset, VK_INDEX_TYPE_UINT32);
 	}
 }

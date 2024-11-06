@@ -10,6 +10,7 @@ IncludeDir["stb"] = "%{wks.location}/YUME/Thirdparty/stb"
 IncludeDir["optick"] = "%{wks.location}/YUME/Thirdparty/optick/src"
 IncludeDir["vma"] = "%{wks.location}/YUME/Thirdparty/VulkanMemoryAllocator/include"
 IncludeDir["entt"] = "%{wks.location}/Thirdparty/entt/include"
+IncludeDir["tinyobjloader"] = "%{wks.location}/YUME/Thirdparty/tinyobjloader"
 IncludeDir["Vulkan"] = "%{VULKAN_SDK}/Include"
 
 LibraryDir = {}

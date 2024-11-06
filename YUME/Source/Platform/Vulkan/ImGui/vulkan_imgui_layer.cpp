@@ -105,26 +105,33 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
+		vkDeviceWaitIdle(VulkanDevice::Get().GetDevice());
+
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying imgui framebuffers...")
 		for (auto framebuffer : m_Framebuffers)
 		{
 			VulkanContext::PushFunction([framebuffer]()
-			{
-				framebuffer->CleanUp();
-			});
+				{
+					framebuffer->CleanUp();
+				});
 		}
 
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying imgui render pass...")
 		auto renderpass = m_RenderPass;
 		VulkanContext::PushFunction([renderpass]()
 		{
 			renderpass->CleanUp();
 		});
 
+
 		ClearTextures();
 
+
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying imgui descriptor set layout...")
 		if (g_DescriptorSetLayout)
 			vkDestroyDescriptorSetLayout(VulkanDevice::Get().GetDevice(), g_DescriptorSetLayout, VK_NULL_HANDLE);
 
-		YM_CORE_TRACE("Destroying vulkan imgui descriptor pool...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying imgui descriptor pool...")
 		if (g_DescriptorPool)
 			vkDestroyDescriptorPool(VulkanDevice::Get().GetDevice(), g_DescriptorPool, VK_NULL_HANDLE);
 	}
@@ -262,7 +269,7 @@ namespace YUME
 
 		for (size_t i = 0; i < images.size(); i++)
 		{
-			YM_CORE_TRACE("Creating vulkan swapchain framebuffer...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Creating imgui framebuffer...")
 
 			RenderPassFramebufferSpec fbSpec{};
 			fbSpec.Attachments.push_back(CreateRef<VulkanTexture2D>(images[i], imageViews[i],
@@ -390,7 +397,9 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_TRACE("Destroying vulkan imgui impl...")
+		vkDeviceWaitIdle(VulkanDevice::Get().GetDevice());
+
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying imgui...")
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();

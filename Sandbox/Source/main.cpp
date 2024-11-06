@@ -1,146 +1,94 @@
 #include "YUME/yume.h"
 #include "YUME/Core/entry_point.h"
+#include "editor_camera.h"
+
 
 #include <string>
 #include <imgui/imgui.h>
-
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui_internal.h>
+#include <random>
 
 
 
 
-class ExampleLayer : public YUME::Layer
+namespace YUME
 {
+	class ExampleLayer : public Layer
+	{
 	public:
 		ExampleLayer()
 			: Layer("Example")
 		{
-			m_Scene = new YUME::Scene();
+			m_Scene = new Scene();
 
-			auto tile1Texture = YUME::TextureImporter::LoadTexture2D("Resources/window.png");
-			auto tile2Texture = YUME::TextureImporter::LoadTexture2D("Resources/grass.png");
-			auto playerTexture = YUME::TextureImporter::LoadTexture2D("Resources/star.png");
+			auto sphere = CreateRef<Model>("Resources/Meshes/sphere.obj");
+			auto backpack = CreateRef<Model>("Resources/Meshes/backpack/backpack.obj", /* FlipYTexCoord */ false);
+			auto artisansHub = CreateRef<Model>("Resources/Meshes/Spyro/ArtisansHub.obj");
 
-			m_PlayerEntt = m_Scene->CreateEntity("Player");
-			m_PlayerEntt.AddComponent<YUME::SpriteComponent>(m_PlayerColor, playerTexture);
-
-			for (int x = 0; x < 10; x++)
+			m_PointLight = m_Scene->CreateEntity("PointLight");
+			m_PointLight.AddComponent<LightComponent>(LightType::Point, m_PointLightColor);
+			m_PointLight.AddComponent<ModelComponent>(sphere);
 			{
-				for (int y = 0; y < 10; y++)
-				{
-					glm::vec4 color{ 1.0f, 1.0f, 1.0f, 1.0f };
-					glm::vec3 pos{ x, y, 0.0f };
+				auto& tc = m_PointLight.GetComponent<TransformComponent>();
+				tc.Scale = glm::vec3(0.5f);
+			}
 
-					auto entt = m_Scene->CreateEntity("Tile");
-					if (x % 2 == 0)
-					{
-						entt.AddComponent<YUME::SpriteComponent>(color, tile1Texture);
-						entt.AddOrReplaceComponent<YUME::TransformComponent>(pos);
-					}
-					else
-					{
-						entt.AddComponent<YUME::SpriteComponent>(color, tile2Texture);
-						entt.AddOrReplaceComponent<YUME::TransformComponent>(pos);
-					}
-				}
+			m_DirectionalLight = m_Scene->CreateEntity("DirectionalLight");
+			m_DirectionalLight.AddComponent<LightComponent>(LightType::Directional, m_DirectionalLightColor);
+
+			{
+				auto entt = m_Scene->CreateEntity("Backpack");
+				entt.AddComponent<ModelComponent>(backpack);
+				auto& tc = entt.AddOrReplaceComponent<TransformComponent>(glm::vec3{ 5.0f, 3.0f, -4.0f });
+			}
+
+			{
+				auto entt = m_Scene->CreateEntity("ArtisansHub");
+				entt.AddComponent<ModelComponent>(artisansHub);
+				auto& tc = entt.AddOrReplaceComponent<TransformComponent>(glm::vec3{ 5.0f, 0.0f, -4.0f });
 			}
 		}
 		~ExampleLayer() { delete m_Scene; }
 
 
-		void OnUpdate(const YUME::Timestep& p_Ts) override
+		void OnUpdate(const Timestep& p_Ts) override
 		{
-			float speed = 5.0f * (float)p_Ts;
+			m_Camera.SetViewportSize((float)m_Width, (float)m_Height);
+			m_Camera.OnUpdate(p_Ts);
 
-			glm::vec3 direction(0.0f);
-			if (YUME::Input::IsKeyPressed(YUME::Key::W))
 			{
-				m_CurrentKeyPressed = "W";
-				direction.y = -1;
-			}
-			if (YUME::Input::IsKeyPressed(YUME::Key::S))
-			{
-				m_CurrentKeyPressed = "S";
-				direction.y = 1;
-			}
-			if (YUME::Input::IsKeyPressed(YUME::Key::A))
-			{
-				m_CurrentKeyPressed = "A";
-				direction.x = -1;
-			}
-			if (YUME::Input::IsKeyPressed(YUME::Key::D))
-			{
-				m_CurrentKeyPressed = "D";
-				direction.x = 1;
-			}
-			auto length = glm::length(direction);
-			auto normalized = glm::normalize(direction);
-			m_Position += ((length == 0) ? direction : normalized) * speed;
-
-
-			//uint32_t width = YUME::Application::Get().GetWindow().GetWidth();
-			//uint32_t height = YUME::Application::Get().GetWindow().GetHeight();
-			float aspectRatio = (float)m_Width / (float)m_Height;
-			auto projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
-			auto transform = glm::translate(glm::mat4(1.0f), m_Position);
-
-			auto& sc = m_PlayerEntt.GetComponent<YUME::SpriteComponent>();
-			sc.Color = m_PlayerColor;
-
-			auto& tc = m_PlayerEntt.GetComponent<YUME::TransformComponent>();
-			tc.Translation = glm::vec3(m_Position.x, m_Position.y, m_PlayerZ);
-		
-			// MORE EASIER
-			for (auto entts = m_Scene->GetEntitiesWithTag("Tile");
-				auto& entt : entts)
-			{
-				auto& sc = entt.GetComponent<YUME::SpriteComponent>();
-				sc.Color = m_TileColor;
+				auto& tc = m_PointLight.GetComponent<TransformComponent>();
+				tc.Translation = m_PointLightPosition;
+				auto& lc = m_PointLight.GetComponent<LightComponent>();
+				lc.Color = m_PointLightColor;
 			}
 
-			// MORE OPTIMIZED
-			//m_Scene->GetRegistry().view<YUME::TagComponent>().each([&](auto p_Entity, const YUME::TagComponent& p_TC)
-			//{
-			//	if (p_TC.Tag == "Tile")
-			//	{
-			//		auto entt = YUME::Entity{ p_Entity, m_Scene };
-			//		auto& sc = entt.GetComponent<YUME::SpriteComponent>();
-			//		sc.Color = m_TileColor;
-			//	}
-			//});
+			{
+				auto& lc = m_DirectionalLight.GetComponent<LightComponent>();
+				lc.Color = m_DirectionalLightColor;
+				lc.Direction = glm::normalize(m_Direction);
+			}
 
-			YUME::TextureSpecification texSpec{};
-			texSpec.Width = m_Width;
-			texSpec.Height = m_Height;
-			texSpec.Format = YUME::TextureFormat::RGBA8_SRGB;
-			texSpec.Usage = YUME::TextureUsage::TEXTURE_COLOR_ATTACHMENT;
-			texSpec.GenerateMips = false;
-			texSpec.RenderTarget = true;
-			texSpec.DebugName = "Render Target";
-			m_RenderTarget = YUME::Texture2D::Get(texSpec);
-
-			YUME::RendererBeginInfo rbi{};
-			rbi.MainCamera = YUME::Camera(projection);
-			rbi.CameraTransform = transform;
+			RendererBeginInfo rbi{};
+			rbi.MainCamera = m_Camera;
 			rbi.ClearColor = m_Color;
 			rbi.SwapchainTarget = false;
-			rbi.RenderTarget = m_RenderTarget;
 			rbi.Width = m_Width;
 			rbi.Height = m_Height;
 
-			YUME::Renderer::Begin(rbi);
+			Renderer::Begin(rbi);
 
 			m_Scene->OnRender();
 
-			YUME::Renderer::End();
+			Renderer::End();
 		}
 
 		void BeginDockSpace()
 		{
 			static bool opt_fullscreen = true;
 			static bool opt_padding = false;
-			static ImGuiDockNodeFlags DockspaceFlags = ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton; /* ImGuiDockNodeFlags_None  */
+			static ImGuiDockNodeFlags DockspaceFlags = ImGuiDockNodeFlags_NoWindowMenuButton; /* ImGuiDockNodeFlags_None  */
 
 			ImGuiID DockspaceID = ImGui::GetID("MyDockspace");
 
@@ -171,7 +119,7 @@ class ExampleLayer : public YUME::Layer
 			ImGui::Begin("Editor Dockspace", nullptr, WindowFlags);
 			if (!opt_padding)
 				ImGui::PopStyleVar();
-			
+
 			if (opt_fullscreen)
 				ImGui::PopStyleVar(2);
 
@@ -193,72 +141,92 @@ class ExampleLayer : public YUME::Layer
 			BeginDockSpace();
 
 			ImGui::Begin("Visualizer");
-			ImGui::Text("FPS: %.0f", (float)YUME::Application::Get().GetFPS());
-			ImGui::Text("Key Pressed: %s", m_CurrentKeyPressed.c_str());
+			ImGui::Text("FPS: %.0f", (float)Application::Get().GetFPS());
+
+			ImGui::Spacing();
+			ImGui::Spacing();
+			auto stats = Renderer::GetStats();
+
+			ImGui::Text("Statistics: ");
+			ImGui::Spacing();
+			ImGui::Text("Quad Count: %i", stats.QuadCount);
+			ImGui::Text("Circle Count: %i", stats.CircleCount);
+			ImGui::Spacing();
+			ImGui::Text("RenderScene Elapsed: %0.3f ms", stats.RenderSceneTimeMs);
+			ImGui::Text("End Elapsed: %0.3f ms", stats.EndTimeMs);
+			ImGui::Spacing();
+			ImGui::Text("DrawCalls: %i", stats.DrawCalls);
 			ImGui::End();
 
 			ImGui::Begin("Editor");
-			ImGui::DragFloat3("Player.Position", glm::value_ptr(m_Position), 1.0f);
-			ImGui::DragFloat("Player.Position.z", &m_PlayerZ, 0.1f);
-			ImGui::ColorEdit4("Player Color", glm::value_ptr(m_PlayerColor));
-			ImGui::ColorEdit4("Tile Color", glm::value_ptr(m_TileColor));
+			auto& position = m_Camera.GetPosition();
+			ImGui::DragFloat3("Camera.Position", glm::value_ptr(position), 1.0f);
 			ImGui::ColorEdit4("Background", glm::value_ptr(m_Color));
+			ImGui::Spacing();
+			ImGui::Spacing();
+			ImGui::DragFloat3("PointLight.Position", glm::value_ptr(m_PointLightPosition), 0.1f);
+			ImGui::ColorEdit3("PointLight.Color", glm::value_ptr(m_PointLightColor));
+			ImGui::Spacing();
+			ImGui::Spacing();
+			ImGui::DragFloat3("DirectionalLight.Direction", glm::value_ptr(m_Direction), 0.1f, -1.0f, 1.0f);
+			ImGui::ColorEdit3("DirectionalLight.Color", glm::value_ptr(m_DirectionalLightColor));
 			ImGui::End();
 
 			ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
 			ImGui::Begin("Scene View");
-			ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-			m_Width = (uint32_t)viewportSize.x;
-			m_Height = (uint32_t)viewportSize.y;
+			{
+				ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+				m_Width = (uint32_t)viewportSize.x;
+				m_Height = (uint32_t)viewportSize.y;
 
-			auto imgui = YUME::Application::Get().GetImGuiLayer();
-			ImGui::Image(imgui->AddTexture(m_RenderTarget), { (float)m_Width, (float)m_Height });
+				auto imgui = Application::Get().GetImGuiLayer();
+				ImGui::Image(imgui->AddTexture(Renderer::GetRenderTexture()), { (float)m_Width, (float)m_Height });
+			}
 			ImGui::End();
 			ImGui::PopStyleColor();
 
 			EndDockSpace();
 		}
 
-		void OnEvent(YUME::Event& p_Event) override
+		void OnEvent(Event& p_Event) override
 		{
-			if (YUME::Input::IsKeyPressedOnce(p_Event, YUME::Key::P))
-			{
-				m_CurrentKeyPressed = "P";
-				YUME::Application::Get().ReloadImGui();
-			}
+			m_Camera.OnEvent(p_Event);
 		}
 
 	private:
-		glm::vec4 m_Color{0, 0, 0, 1};
-		glm::vec4 m_TileColor{ 1.0f, 1.0f, 1.0f, 1.0f };
-		glm::vec3 m_Position = { 0.0f, 0.0f, 10.0f };
-		float m_PlayerZ = 0.0f;
-		std::string m_CurrentKeyPressed = " ";
+		glm::vec4 m_Color{ 0, 0, 0, 1 };
+		EditorCamera m_Camera{ 90.0f, 1.778f, 0.1f, 1000.0f};
 
-		glm::vec4 m_PlayerColor{ 1.0f, 1.0f, 1.0f, 1.0f };
-		YUME::Entity m_PlayerEntt;
-
-		YUME::Scene* m_Scene = nullptr;
-		YUME::Ref<YUME::Texture2D> m_RenderTarget;
+		Scene* m_Scene = nullptr;
 		uint32_t m_Width = 800, m_Height = 600;
-};
+
+		glm::vec3 m_PointLightPosition{ 0.0f };
+		glm::vec3 m_PointLightColor{ 1.0f };
+		Entity m_PointLight;
+
+		glm::vec3 m_DirectionalLightColor{ 1.0f };
+		glm::vec3 m_Direction{ 1.0f, -1.0f, 0.0f };
+		Entity m_DirectionalLight;
+	};
 
 
-class Sandbox : public YUME::Application
-{
+	class Sandbox : public Application
+	{
 	public:
 		Sandbox()
 		{
-			ImGui::SetCurrentContext(YUME::Application::Get().GetImGuiLayer()->GetCurrentContext());
+			ImGui::SetCurrentContext(Application::Get(
+			).GetImGuiLayer()->GetCurrentContext());
 
 			PushLayer(new ExampleLayer());
 		}
 
 		~Sandbox() override = default;
-};
+	};
 
 
-YUME::Application* YUME::CreateApplication()
-{
-	return new Sandbox();
+	Application* CreateApplication()
+	{
+		return new Sandbox();
+	}
 }

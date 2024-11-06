@@ -59,7 +59,7 @@ namespace YUME
 #else
 		if (vkCreateBuffer(device, &bufferInfo, VK_NULL_HANDLE, &m_Buffer) != VK_SUCCESS)
 		{
-			YM_CORE_ERROR("Failed to create vertex buffer!")
+			YM_CORE_ERROR(VULKAN_PREFIX "Failed to create buffer!")
 			return;
 		}
 
@@ -72,20 +72,44 @@ namespace YUME
 
 		if (vkAllocateMemory(device, &allocInfo, VK_NULL_HANDLE, &m_Memory) != VK_SUCCESS)
 		{
-			YM_CORE_ERROR("Failed to allocate index buffer memory!")
+			YM_CORE_ERROR(VULKAN_PREFIX "Failed to allocate buffer memory!")
 			return;
 		}
-
-		vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
 #endif
 	}
 
-	void VulkanMemoryBuffer::Resize(VkDeviceSize p_SizeBytes, const void* p_Data)
+	void VulkanMemoryBuffer::Resize(VkDeviceSize p_SizeBytes)
 	{
 		YM_PROFILE_FUNCTION()
+		YM_CORE_VERIFY(p_SizeBytes > 0)
 
-		Destroy(!m_DeleteWithoutQueue);
+		YM_CORE_INFO(VULKAN_PREFIX "Resizing memory buffer!")
+
+		auto buffer = m_Buffer;
+		auto device = VulkanDevice::Get().GetDevice();
+
+#ifdef USE_VMA_ALLOCATOR
+		auto alloc = m_Allocation;
+		VulkanContext::PushFunction([device, buffer, alloc]()
+		{
+			vkDeviceWaitIdle(device);
+			vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), buffer, alloc);
+		});
+#else
+		auto memory = m_Memory;
+		VulkanContext::PushFunction([device, buffer, memory]()
+		{
+			vkDeviceWaitIdle(device);
+
+			if (buffer != VK_NULL_HANDLE)
+				vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
+			if (memory != VK_NULL_HANDLE)
+				vkFreeMemory(device, memory, VK_NULL_HANDLE);
+		});
+#endif
+
 		Init(m_UsageFlags, m_MemoryPropertyFlags, p_SizeBytes);
+
 	}
 
 	void VulkanMemoryBuffer::SetData(VkDeviceSize p_SizeBytes, const void* p_Data, VkDeviceSize p_Offset)
@@ -93,34 +117,9 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 		YM_CORE_VERIFY(p_Data != nullptr && p_SizeBytes > 0)
 
-		if (m_Updated)
+		if (p_SizeBytes != m_SizeBytes)
 		{
-			auto buffer = m_Buffer;
-			auto device = VulkanDevice::Get().GetDevice();
-
-		#ifdef USE_VMA_ALLOCATOR
-			auto alloc = m_Allocation;
-			VulkanContext::PushFunctionToFrameEnd([device, buffer, alloc]()
-			{
-				vkDeviceWaitIdle(device);
-				vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), buffer, alloc);
-			});
-		#else
-			auto memory = m_Memory;
-			VulkanContext::PushFunctionToFrameEnd([device, buffer, memory]()
-			{
-				vkDeviceWaitIdle(device);
-
-				if (buffer != VK_NULL_HANDLE)
-					vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
-				if (memory != VK_NULL_HANDLE)
-					vkFreeMemory(device, memory, VK_NULL_HANDLE);
-			});
-		#endif
-
-			Init(m_UsageFlags, m_MemoryPropertyFlags, p_SizeBytes);
-
-			m_Updated = false;
+			Resize(p_SizeBytes);
 		}
 
 		if (m_MemoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
@@ -164,7 +163,7 @@ namespace YUME
 				auto res = vmaMapMemory(allocator, stagingAlloc, (void**)&destData);
 				if (res != VK_SUCCESS)
 				{
-					YM_CORE_CRITICAL("Failed to map buffer")
+					YM_CORE_CRITICAL(VULKAN_PREFIX "Failed to map buffer")
 					vmaDestroyBuffer(allocator, stagingBuffer, stagingAlloc);
 					return;
 				}
@@ -199,8 +198,8 @@ namespace YUME
 			VkBuffer stagingBuffer;
 			if (vkCreateBuffer(device, &stagingBufferInfo, VK_NULL_HANDLE, &stagingBuffer) != VK_SUCCESS)
 			{
-				YM_CORE_ERROR("Failed to create vertex buffer!")
-					return;
+				YM_CORE_ERROR(VULKAN_PREFIX "Failed to create buffer!")
+				return;
 			}
 
 			VkMemoryRequirements stagingMemRequirements;
@@ -213,8 +212,8 @@ namespace YUME
 
 			VkDeviceMemory stagingBufferMemory;
 			if (vkAllocateMemory(device, &stagingAllocInfo, VK_NULL_HANDLE, &stagingBufferMemory) != VK_SUCCESS) {
-				YM_CORE_ERROR("Failed to allocate staging buffer memory!")
-					vkDestroyBuffer(device, stagingBuffer, VK_NULL_HANDLE);
+				YM_CORE_ERROR(VULKAN_PREFIX "Failed to allocate staging buffer memory!")
+				vkDestroyBuffer(device, stagingBuffer, VK_NULL_HANDLE);
 				return;
 			}
 
@@ -243,9 +242,19 @@ namespace YUME
 			vkFreeMemory(device, stagingBufferMemory, VK_NULL_HANDLE);
 #endif
 		}
-
-		m_Updated = true;
 	}
+
+	void VulkanMemoryBuffer::Fill(uint32_t p_Data, size_t p_SizeBytes)
+	{
+		YM_PROFILE_FUNCTION()
+
+		auto commandBuffer = Utils::BeginSingleTimeCommand();
+
+		vkCmdFillBuffer(commandBuffer, m_Buffer, 0, p_SizeBytes, p_Data);
+
+		Utils::EndSingleTimeCommand(commandBuffer);
+	}
+
 
 	void VulkanMemoryBuffer::Map(VkDeviceSize p_SizeBytes, VkDeviceSize p_Offset)
 	{
@@ -261,7 +270,7 @@ namespace YUME
 
 		if (res != VK_SUCCESS)
 		{
-			YM_CORE_ERROR("Failed to map memory!")
+			YM_CORE_ERROR(VULKAN_PREFIX "Failed to map memory!")
 			Destroy(false);
 		}
 	}
@@ -282,7 +291,7 @@ namespace YUME
 			return;
 		}
 
-		YM_CORE_ERROR("Did you call Map()?")
+		YM_CORE_ERROR(VULKAN_PREFIX "Did you call Map()?")
 		Destroy(false);
 	}
 
@@ -339,14 +348,14 @@ namespace YUME
 			auto alloc = m_Allocation;
 			VulkanContext::PushFunction([buffer, alloc]()
 			{
-				YM_CORE_TRACE("Destroying vulkan vertex buffer...")
+				YM_CORE_TRACE(VULKAN_PREFIX "Destroying buffer...")
 				vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), buffer, alloc);
 			});
 	#else
 			auto memory = m_Memory;
 			VulkanContext::PushFunction([device, buffer, memory]()
 			{
-				YM_CORE_TRACE("Destroying vulkan vertex buffer")
+				YM_CORE_TRACE(VULKAN_PREFIX "Destroying buffer")
 
 				if (buffer != VK_NULL_HANDLE)
 					vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
@@ -357,7 +366,7 @@ namespace YUME
 		}
 		else
 		{
-			YM_CORE_TRACE("Destroying vulkan vertex buffer...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Destroying buffer...")
 
 	#ifdef USE_VMA_ALLOCATOR			
 			vmaDestroyBuffer(VulkanDevice::Get().GetAllocator(), buffer, m_Allocation);

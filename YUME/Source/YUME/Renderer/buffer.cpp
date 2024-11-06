@@ -21,7 +21,7 @@ namespace YUME
 	}
 
 
-	Ref<IndexBuffer> IndexBuffer::Create(uint32_t* p_Indices, uint32_t p_Count)
+	Ref<IndexBuffer> IndexBuffer::Create(const uint32_t* p_Indices, uint32_t p_Count)
 	{
 		YM_PROFILE_FUNCTION()
 

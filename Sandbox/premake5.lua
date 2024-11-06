@@ -11,19 +11,24 @@ project "Sandbox"
 	{
 		"Source/**.h",
 		"Source/**.cpp",
+
+		"%{IncludeDir.optick}/**.h",
+		"%{IncludeDir.optick}/**.cpp"
 	}
 
 	includedirs
 	{
 		"Source",
 		"%{wks.location}/YUME/Source",
-		
+		"%{IncludeDir.optick}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.imgui}",
 		"%{IncludeDir.imgui}/imgui",
 		"%{IncludeDir.imgui}/backends",
 		"%{IncludeDir.spdlog}",
-		"%{IncludeDir.entt}"
+		"%{IncludeDir.entt}",
+
+		"%{IncludeDir.Vulkan}"
 	}
 
 	links 

@@ -22,15 +22,15 @@ namespace YUME
 {
 
 #ifdef YM_DEBUG
-	#define YM_VK_DEBUG_LOG(Type)															 \
-		YM_CORE_##Type("Debug Callback:")													 \
-		YM_CORE_##Type("{}", p_CallbackData->pMessage)										 \
-		YM_CORE_##Type("\t Severity: {}", Utils::GetMessageSeverityStr(p_Severity))			 \
-		YM_CORE_##Type("\t Type: {}", Utils::GetMessageType(p_Type))						 \
-		YM_CORE_##Type("\t Objects: ")														 \
-																							 \
-		for (uint32_t i = 0; i < p_CallbackData->objectCount; i++) {						 \
-			YM_CORE_##Type("\t\t {}", p_CallbackData->pObjects[i].objectHandle)				 \
+	#define YM_VK_DEBUG_LOG(Type)																	\
+		YM_CORE_##Type(VULKAN_PREFIX "Debug Callback:")												\
+		YM_CORE_##Type(VULKAN_PREFIX " Message: {}", p_CallbackData->pMessage)						\
+		YM_CORE_##Type(VULKAN_PREFIX " Severity: {}", Utils::GetMessageSeverityStr(p_Severity))		\
+		YM_CORE_##Type(VULKAN_PREFIX " Type: {}", Utils::GetMessageType(p_Type))					\
+		YM_CORE_##Type(VULKAN_PREFIX " Objects: ")													\
+																									\
+		for (uint32_t i = 0; i < p_CallbackData->objectCount; i++) {								\
+			YM_CORE_##Type("\t\t\t {}", p_CallbackData->pObjects[i].objectHandle)					\
 		}
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
@@ -79,7 +79,6 @@ namespace YUME
 
 	VkInstance VulkanContext::s_Instance = VK_NULL_HANDLE;
 	DeletionQueue VulkanContext::m_MainDeletionQueue = DeletionQueue();
-	DeletionQueue VulkanContext::m_FrameEndDeletionQueue = DeletionQueue();
 
 	static std::vector<std::function<void(int, int)>> s_SwapchainOnResizeQueue;
 
@@ -89,7 +88,7 @@ namespace YUME
 
 		s_SwapchainOnResizeQueue.clear();
 
-		YM_CORE_TRACE("Destroying vulkan context...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying context...")
 
 		auto& device = VulkanDevice::Get().GetDevice();
 		vkDeviceWaitIdle(device);
@@ -98,7 +97,7 @@ namespace YUME
 
 		VulkanSurface::Release();
 
-		YM_CORE_TRACE("Destroying vulkan sync objs...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying sync objs...")
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 		{
 			vkDestroySemaphore(device, m_SignalSemaphores[i], VK_NULL_HANDLE);
@@ -113,14 +112,14 @@ namespace YUME
 		VulkanDevice::Release();
 
 	#ifdef YM_DEBUG
-		YM_CORE_TRACE("Destroying vulkan debugger...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying debugger...")
 		PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessenger = VK_NULL_HANDLE;
 		vkDestroyDebugUtilsMessenger = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(s_Instance, "vkDestroyDebugUtilsMessengerEXT");
 		YM_CORE_VERIFY(vkDestroyDebugUtilsMessenger, "Cannot find address of vkDestroyDebugUtilsMessengerEXT")
 		vkDestroyDebugUtilsMessenger(s_Instance, m_Debugger, VK_NULL_HANDLE);
 	#endif
 
-		YM_CORE_TRACE("Destroying vulkan instance...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying instance...")
 		vkDestroyInstance(s_Instance, VK_NULL_HANDLE);
 	}
 
@@ -128,15 +127,15 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_VERIFY(p_Window)
+		YM_CORE_ASSERT(p_Window)
 		m_Window = (GLFWwindow*)p_Window;
 
-		YM_CORE_TRACE("Initializing vulkan context...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Initializing context...")
 		CreateInstance();
 
 	#ifdef YM_DEBUG	
 		{
-			YM_CORE_TRACE("Creating vulkan debugger...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Creating debugger...")
 			VkDebugUtilsMessengerCreateInfoEXT msgCreateInfo = CreateDebugMessengerInfo();
 
 			PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessenger = VK_NULL_HANDLE;
@@ -148,13 +147,15 @@ namespace YUME
 		}
 	#endif
 
-		YM_CORE_TRACE("Creating vulkan surface...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Creating surface...")
 		VulkanSurface::Get().Init(p_Window);
 
-		YM_CORE_TRACE("Creating vulkan logical device...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Creating logical device...")
 		VulkanDevice::Get().Init();
 
 	#if defined(YM_PLATFORM_WINDOWS) && defined(YM_PROFILE)
+		YM_CORE_TRACE(VULKAN_PREFIX "Initializing gpu optick...")
+
 		auto device = VulkanDevice::Get().GetDevice();
 		auto physicalDevice = VulkanDevice::Get().GetPhysicalDevice();
 		auto queue = VulkanDevice::Get().GetGraphicQueue();
@@ -185,7 +186,7 @@ namespace YUME
 
 		m_CommandBuffers.Init(MAX_FRAMES_IN_FLIGHT);
 
-		YM_CORE_TRACE("Creating vulkan swapchain...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Creating swapchain...")
 		VulkanSwapchain::Get().Init(false /* Vsync */, m_Window);
 
 		CreateSyncObjs();
@@ -195,47 +196,41 @@ namespace YUME
 	{	
 		YM_PROFILE_FUNCTION()
 
-		if (m_HasDrawCommands)
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		VkSemaphore waitSemaphores[] = { m_WaitSemaphores[m_CurrentFrame] };
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = waitSemaphores;
+
+		VkSwapchainKHR swapChains[] = { VulkanSwapchain::Get().GetSwapChain() };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &m_CurrentImageIndex;
+		presentInfo.pResults = nullptr; // Optional
+
+		YM_PROFILE_GPU_FLIP(VulkanSwapchain::Get().GetSwapChain())
+		YM_PROFILE_SCOPE_T("Present", Optick::Category::Wait)
+
+		auto& presentQueue = VulkanDevice::Get().GetPresentQueue();
+		auto res = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+		if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || m_ViewportResized)
 		{
-			VkPresentInfoKHR presentInfo{};
-			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-			VkSemaphore waitSemaphores[] = { m_WaitSemaphores[m_CurrentFrame] };
-			presentInfo.waitSemaphoreCount = 1;
-			presentInfo.pWaitSemaphores = waitSemaphores;
-
-			VkSwapchainKHR swapChains[] = { VulkanSwapchain::Get().GetSwapChain() };
-			presentInfo.swapchainCount = 1;
-			presentInfo.pSwapchains = swapChains;
-			presentInfo.pImageIndices = &m_CurrentImageIndex;
-			presentInfo.pResults = nullptr; // Optional
-
-			YM_PROFILE_GPU_FLIP(VulkanSwapchain::Get().GetSwapChain())
-#if defined(YM_PLATFORM_WINDOWS) && defined(YM_PROFILE)
-			OPTICK_CATEGORY("Present", Optick::Category::Wait)
-#endif
-			auto& presentQueue = VulkanDevice::Get().GetPresentQueue();
-			auto res = vkQueuePresentKHR(presentQueue, &presentInfo);
-
-			if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || m_ViewportResized)
-			{
-				RecreateSwapchain();
-			}
-			else
-			{
-				YM_CORE_VERIFY(res == VK_SUCCESS)
-			}
+			RecreateSwapchain();
 		}
-		else if (m_ViewportResized)
+		else
+		{
+			YM_CORE_VERIFY(res == VK_SUCCESS)
+		}
+
+		if (m_ViewportResized)
 		{
 			RecreateSwapchain();
 		}
 
 		m_CurrentFrame = (m_CurrentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-		m_HasDrawCommands = false; // Reset the flag for the next frame
 
-#if defined(YM_PLATFORM_WINDOWS) && defined(YM_PROFILE)
-		OPTICK_GPU_CONTEXT(m_CommandBuffers.Get(m_CurrentFrame))
-#endif
+		YM_PROFILE_GPU_CONTEXT(m_CommandBuffers.Get(m_CurrentFrame))
 	}
 
 	void VulkanContext::RecreateSwapchain()
@@ -305,6 +300,10 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
+		vkDeviceWaitIdle(VulkanDevice::Get().GetDevice());
+
+		m_MainDeletionQueue.Flush();
+
 		auto& device = VulkanDevice::Get().GetDevice();
 		vkWaitForFences(device, 1, &m_InFlightFences[m_CurrentFrame], VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &m_InFlightFences[m_CurrentFrame]);
@@ -359,8 +358,6 @@ namespace YUME
 
 		auto res = vkQueueSubmit(VulkanDevice::Get().GetGraphicQueue(), 1, &submitInfo, VK_NULL_HANDLE);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
-
-		m_FrameEndDeletionQueue.Flush();
 	}
 
 	void VulkanContext::PushFunctionToSwapchainOnResizeQueue(const std::function<void(int, int)>& p_Function)
@@ -372,7 +369,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_TRACE("Creating vulkan instance...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Creating instance...")
 
 		VkApplicationInfo appInfo = {
 			.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -390,17 +387,17 @@ namespace YUME
 
 		std::vector<const char*> requiredValidationLayers;
 
-		YM_CORE_TRACE("Searching for required layers...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Searching for required layers...")
 		for (auto layer : validationLayers)
 		{
 			if (CheckLayerSupport(layer))
 			{
-				YM_CORE_INFO("Extension {} found!", layer)
+				YM_CORE_INFO(VULKAN_PREFIX "Extension {} found!", layer)
 				requiredValidationLayers.push_back(layer);
 			}
 			else
 			{
-				YM_CORE_ERROR("Required layer {} is missing!", layer)
+				YM_CORE_ERROR(VULKAN_PREFIX "Required layer {} is missing!", layer)
 			}
 		}
 		std::cout << "\n";
@@ -410,30 +407,30 @@ namespace YUME
 		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 		std::vector<const char*> requiredExtensions;
 
-		YM_CORE_TRACE("Searching for required extensions...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Searching for required extensions...")
 
 		for (uint32_t i = 0; i < glfwExtensionCount; i++)
 		{
 			if (CheckExtensionSupport(glfwExtensions[i]))
 			{
-				YM_CORE_INFO("Extension {} found!", glfwExtensions[i])
+				YM_CORE_INFO(VULKAN_PREFIX "Extension {} found!", glfwExtensions[i])
 				requiredExtensions.push_back(glfwExtensions[i]);
 			}
 			else
 			{
-				YM_CORE_ERROR("Required extension {} is missing!", glfwExtensions[i])
+				YM_CORE_ERROR(VULKAN_PREFIX "Required extension {} is missing!", glfwExtensions[i])
 			}
 		}
 
 	#ifdef YM_DEBUG
 		if (CheckExtensionSupport(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
 		{
-			YM_CORE_INFO("Extension {} found!", VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
+			YM_CORE_INFO(VULKAN_PREFIX "Extension {} found!", VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
 			requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
 		else
 		{
-			YM_CORE_ERROR("Required extension {} is missing!", VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
+			YM_CORE_ERROR(VULKAN_PREFIX "Required extension {} is missing!", VK_EXT_DEBUG_UTILS_EXTENSION_NAME)
 		}
 	#endif
 
@@ -458,7 +455,7 @@ namespace YUME
 	#endif
 
 		auto res = vkCreateInstance(&instInfo, VK_NULL_HANDLE, &s_Instance);
-		YM_CORE_VERIFY(res == VK_SUCCESS, "Failed to create instance!")
+		YM_CORE_VERIFY(res == VK_SUCCESS, VULKAN_PREFIX "Failed to create instance!")
 	}
 
 	void VulkanContext::CreateSyncObjs()
@@ -494,12 +491,12 @@ namespace YUME
 	{
 		uint32_t extensionCount = 0;
 		auto res = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-		YM_CORE_ASSERT(res == VK_SUCCESS, "Check extension support has failed!")
+		YM_CORE_ASSERT(res == VK_SUCCESS, VULKAN_PREFIX "Check extension support has failed!")
 		YM_CORE_ASSERT(extensionCount > 0)
 
 		std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 		res = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
-		YM_CORE_ASSERT(res == VK_SUCCESS, "Check extension support has failed!")
+		YM_CORE_ASSERT(res == VK_SUCCESS, VULKAN_PREFIX "Check extension support has failed!")
 		YM_CORE_ASSERT(!availableExtensions.empty())
 
 		for (const auto& extension : availableExtensions)
@@ -515,12 +512,12 @@ namespace YUME
 	{
 		uint32_t layerCount = 0;
 		auto res = vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-		YM_CORE_ASSERT(res == VK_SUCCESS, "Check layer support has failed!")
+		YM_CORE_ASSERT(res == VK_SUCCESS, VULKAN_PREFIX "Check layer support has failed!")
 		YM_CORE_ASSERT(layerCount > 0)
 
 		std::vector<VkLayerProperties> availableLayers(layerCount);
 		res = vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-		YM_CORE_ASSERT(res == VK_SUCCESS, "Check layer support has failed!")
+		YM_CORE_ASSERT(res == VK_SUCCESS, VULKAN_PREFIX "Check layer support has failed!")
 		YM_CORE_ASSERT(!availableLayers.empty())
 
 		for (const auto& layer : availableLayers)

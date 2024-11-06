@@ -10,6 +10,8 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
+		YM_CORE_TRACE(VULKAN_PREFIX "Creating descriptor pool...")
+
 		std::array<VkDescriptorPoolSize, 11> poolSizes = {
 			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_SAMPLER, p_MaxSets / 2 },
 			VkDescriptorPoolSize { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, p_MaxSets * 4 },
@@ -46,7 +48,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_TRACE("Destroying vulkan descriptor pool...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying descriptor pool...")
 		vkDestroyDescriptorPool(VulkanDevice::Get().GetDevice(), m_Handle, VK_NULL_HANDLE);
 	}
 }

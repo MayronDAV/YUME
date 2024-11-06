@@ -49,7 +49,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_TRACE("Getting gpus...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Getting gpus...")
 
 		auto instance = VulkanContext::GetInstance();
 		auto surface = VulkanSurface::Get().GetSurface();
@@ -337,7 +337,7 @@ namespace YUME
 		m_DescriptorPool->Destroy();
 
 		{
-			YM_CORE_TRACE("Saving vulkan pipeline cache...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Saving pipeline cache...")
 			size_t cacheSize;
 			vkGetPipelineCacheData(m_Device, m_PipelineCache, &cacheSize, nullptr);
 
@@ -359,10 +359,10 @@ namespace YUME
 			vmaDestroyAllocator(m_Allocator);
 		#endif
 
-		YM_CORE_TRACE("Destroying vulkan pipeline cache...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying pipeline cache...")
 		vkDestroyPipelineCache(m_Device, m_PipelineCache, VK_NULL_HANDLE);
 
-		YM_CORE_TRACE("Destroying vulkan device...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying device...")
 		vkDestroyDevice(m_Device, VK_NULL_HANDLE);
 	}
 
@@ -370,33 +370,38 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		YM_CORE_TRACE("Creating vulkan device...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Creating device...")
 
 		m_PhysicalDevice = CreateScope<VulkanPhysicalDevice>();
 
 		std::vector<const char*> devExts = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
-			VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME
+			VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME,
+			VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME
 		};
 		std::vector<const char*> requiredExts;
 
-		YM_CORE_TRACE("Checking device extensions...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Checking device extensions...")
 		for (auto ext : devExts)
 		{
 			if (m_PhysicalDevice->IsExtensionSupported(ext)) 
 			{
-				YM_CORE_INFO("Device extension {} founded!", ext)
+				YM_CORE_INFO(VULKAN_PREFIX "Device extension {} founded!", ext)
 				requiredExts.push_back(ext);
 			}
 			else
 			{
-				YM_CORE_ERROR("Device extension {} not founded!", ext)
+				YM_CORE_ERROR(VULKAN_PREFIX "Device extension {} not founded!", ext)
 			}
 		}
 		std::cout << "\n";
 
 		auto physDevice = m_PhysicalDevice->Selected();
+
+		// TEMPORARY VERIFY
+		YM_CORE_VERIFY(physDevice.Features.independentBlend == VK_TRUE, "The feature independentBlend isn't supported :c")
+		YM_CORE_VERIFY(physDevice.Features.fragmentStoresAndAtomics == VK_TRUE, "The feature fragmentStoresAndAtomics isn't supported :c")
 
 		VkPhysicalDeviceFeatures physFeatures{ 0 };
 		physFeatures.geometryShader = physDevice.Features.geometryShader;
@@ -404,6 +409,10 @@ namespace YUME
 		physFeatures.samplerAnisotropy = physDevice.Features.samplerAnisotropy;
 		physFeatures.wideLines = physDevice.Features.wideLines;
 		physFeatures.fillModeNonSolid = physDevice.Features.fillModeNonSolid;
+		physFeatures.independentBlend = VK_TRUE;
+		physFeatures.fragmentStoresAndAtomics = VK_TRUE;
+		physFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+		physFeatures.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
 
 		auto queueCreateInfos = ConsolidateQueueCreateInfos(physDevice.QueueCreateInfos);
 
@@ -431,6 +440,8 @@ namespace YUME
 		vkGetDeviceQueue(m_Device, physDevice.Indices.Transfer, 0, &m_TransferQueue);
 
 #ifdef USE_VMA_ALLOCATOR
+		YM_CORE_TRACE(VULKAN_PREFIX "Creating vma...")
+
 		VmaAllocatorCreateInfo allocatorInfo = {};
 		allocatorInfo.physicalDevice = GetPhysicalDevice();
 		allocatorInfo.device = m_Device;
@@ -480,7 +491,7 @@ namespace YUME
 		std::ifstream cacheFile(m_PipelineCachePath, std::ios::binary | std::ios::ate);
 		if (cacheFile.is_open())
 		{
-			YM_CORE_TRACE("Loading vulkan pipeline cache file...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Loading pipeline cache file...")
 
 			auto cacheSize = (size_t)cacheFile.tellg();
 			cacheFile.seekg(0, std::ios::beg);
@@ -511,7 +522,7 @@ namespace YUME
 		if (m_SmallAllocPools.contains(p_MemTypeIndex))
 			return m_SmallAllocPools[p_MemTypeIndex];
 
-		YM_CORE_INFO("Creating VMA small objects pool for memory type index {0}", p_MemTypeIndex)
+		YM_CORE_INFO(VULKAN_PREFIX "Creating VMA small objects pool for memory type index {0}", p_MemTypeIndex)
 
 		VmaPoolCreateInfo pci;
 		pci.memoryTypeIndex = p_MemTypeIndex;

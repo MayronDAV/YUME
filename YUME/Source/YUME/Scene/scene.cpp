@@ -13,6 +13,8 @@ namespace YUME
 
 		m_EntityManager->AddDependency<SpriteComponent, ShapeComponent>();
 		m_EntityManager->AddDependency<SpriteComponent, TransformComponent>();
+		m_EntityManager->AddDependency<ModelComponent, TransformComponent>();
+		m_EntityManager->AddDependency<LightComponent, TransformComponent>();
 		m_EntityManager->AddDependency<ShapeComponent, TransformComponent>();
 	}
 

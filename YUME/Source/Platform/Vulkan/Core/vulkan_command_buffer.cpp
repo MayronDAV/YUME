@@ -21,7 +21,7 @@ namespace YUME
 
 		if (!m_CommandBuffers.empty())
 		{
-			YM_CORE_TRACE("Destroying vulkan command buffer...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Destroying command buffer...")
 			vkFreeCommandBuffers(VulkanDevice::Get().GetDevice(), VulkanDevice::Get().GetCommandPool(), 1, &m_CommandBuffers[p_Index]);
 			m_CommandBuffers.erase(m_CommandBuffers.begin() + p_Index);
 		}
@@ -33,7 +33,7 @@ namespace YUME
 
 		if (!m_CommandBuffers.empty())
 		{
-			YM_CORE_TRACE("Destroying vulkan command buffers...")
+			YM_CORE_TRACE(VULKAN_PREFIX "Destroying command buffers...")
 			vkFreeCommandBuffers(VulkanDevice::Get().GetDevice(), VulkanDevice::Get().GetCommandPool(), (uint32_t)m_CommandBuffers.size(), m_CommandBuffers.data());
 			m_CommandBuffers.clear();
 		}

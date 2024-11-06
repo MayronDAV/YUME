@@ -20,16 +20,12 @@ namespace YUME
 			void Bind() const override;
 			void Unbind() const override;
 
-			const BufferLayout& GetLayout() const override { return m_Layout; }
-			void SetLayout(const BufferLayout& p_Layout) override { m_Layout = p_Layout; }
-
 			void SetData(const void* p_Data, uint64_t p_SizeBytes) override;
 
 			void Flush() override;
 
 		private:
 			Scope<VulkanMemoryBuffer> m_Buffer;
-			BufferLayout m_Layout{};
 	};
 
 

@@ -16,17 +16,21 @@ namespace YUME
 	{
 		glm::vec4 ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 		bool SwapchainTarget = true;
-		Ref<Texture2D> RenderTarget = nullptr;
 		uint32_t Width = 0;
 		uint32_t Height = 0;
 		Camera MainCamera;
 		glm::mat4 CameraTransform{ 1.0f };
 	};
 
+	// Maybe move to application or project settings?
 	struct RenderSettings
 	{
-		bool DepthTest = false;
-		bool Renderer2D = true;
+		bool PBR = true;
+		bool OIT = false;
+		bool Renderer3D = true;
+		bool Renderer2D = false;
+		bool Renderer2D_Quad = true;
+		bool Renderer2D_Circle = true;
 	};
 
 	class YM_API Renderer
@@ -44,12 +48,24 @@ namespace YUME
 
 			static void Shutdown();
 
-		private:
-			static void Render2DInit();
-			static void Render2DFlush();
-			static void Render2DStartBatch();
-			static void Render2DFlushAndReset();
+			static Ref<Texture2D> GetRenderTexture();
 
+			static void SetPolygonMode(PolygonMode p_Mode);
+
+			struct Statistics
+			{
+				uint32_t QuadCount = 0;
+				uint32_t CircleCount = 0;
+
+				double RenderSceneTimeMs = 0.0;
+				double EndTimeMs = 0.0;
+
+				uint32_t DrawCalls = 0;
+			};
+			static Statistics GetStats();
+
+		private:
+			static void ResetStats();
 
 			static void FinalPass();
 	};

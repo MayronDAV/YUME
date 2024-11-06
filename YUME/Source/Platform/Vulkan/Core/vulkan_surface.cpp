@@ -11,7 +11,7 @@ namespace YUME
 {
 	VulkanSurface::~VulkanSurface()
 	{
-		YM_CORE_TRACE("Destroying vulkan surface...")
+		YM_CORE_TRACE(VULKAN_PREFIX "Destroying surface...")
 		vkDestroySurfaceKHR(VulkanContext::GetInstance(), m_Surface, VK_NULL_HANDLE);
 	}
 

@@ -42,4 +42,6 @@ namespace YUME::Utils
 	VkShaderStageFlagBits ShaderTypeToVK(ShaderType p_Type);
 
 	VkDescriptorType DescriptorTypeToVk(DescriptorType p_Type);
+
+	VkFormat DataTypeToVkFormat(DataType p_Type);
 }

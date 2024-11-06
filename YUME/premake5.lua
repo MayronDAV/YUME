@@ -17,6 +17,8 @@ project "YUME"
 		"%{IncludeDir.optick}/**.h",
 		"%{IncludeDir.optick}/**.cpp",
 
+		"%{IncludeDir.tinyobjloader}/*.h",
+
 		"%{IncludeDir.vma}/**.h"
 	}
 
@@ -36,6 +38,7 @@ project "YUME"
 		"%{IncludeDir.vma}",
 		"%{IncludeDir.Vulkan}",
 		"%{IncludeDir.entt}",
+		"%{IncludeDir.tinyobjloader}",
 
 		"%{LibraryDir.VulkanSDK}"
 	}

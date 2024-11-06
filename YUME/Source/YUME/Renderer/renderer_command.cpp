@@ -38,6 +38,13 @@ namespace YUME
 		s_RendererAPI->ClearColor(p_Color);
 	}
 
+	void RendererCommand::ClearRenderTarget(const Ref<Texture2D> p_Texture, uint32_t p_Value)
+	{
+		YM_PROFILE_FUNCTION()
+
+		s_RendererAPI->ClearRenderTarget(p_Texture, p_Value);
+	}
+
 	void RendererCommand::ClearRenderTarget(const Ref<Texture2D> p_Texture, const glm::vec4& p_Value)
 	{
 		YM_PROFILE_FUNCTION()
@@ -45,17 +52,24 @@ namespace YUME
 		s_RendererAPI->ClearRenderTarget(p_Texture, p_Value);
 	}
 
-	void RendererCommand::Draw(const Ref<VertexArray>& p_VertexArray, uint32_t p_VertexCount)
+	void RendererCommand::Draw(const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount)
 	{
 		YM_PROFILE_FUNCTION()
 
-		s_RendererAPI->Draw(p_VertexArray, p_VertexCount);
+		s_RendererAPI->Draw(p_VertexBuffer, p_VertexCount, p_InstanceCount);
 	}
-	void RendererCommand::DrawIndexed(const Ref<VertexArray>& p_VertexArray, uint32_t p_IndexCount)
+	void RendererCommand::DrawIndexed(const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount)
 	{
 		YM_PROFILE_FUNCTION()
 
-		s_RendererAPI->DrawIndexed(p_VertexArray, p_IndexCount);
+		s_RendererAPI->DrawIndexed(p_VertexBuffer, p_IndexBuffer, p_InstanceCount);
+	}
+
+	void RendererCommand::DrawMesh(const Ref<Mesh>& p_Mesh)
+	{
+		YM_PROFILE_FUNCTION()
+
+		DrawIndexed(p_Mesh->GetVertexBuffer(), p_Mesh->GetIndexBuffer());
 	}
 
 	const Capabilities& RendererCommand::GetCapabilities()
