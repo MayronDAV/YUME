@@ -24,11 +24,11 @@ namespace YUME
 			delete s_RendererAPI;
 	}
 
-	void RendererCommand::SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height)
+	void RendererCommand::SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height, CommandBuffer* p_CommandBuffer)
 	{
 		YM_PROFILE_FUNCTION()
 
-		s_RendererAPI->SetViewport(p_X, p_Y, p_Width, p_Height);
+		s_RendererAPI->SetViewport(p_X, p_Y, p_Width, p_Height, p_CommandBuffer);
 	}
 
 	void RendererCommand::ClearColor(const glm::vec4& p_Color)
@@ -52,24 +52,24 @@ namespace YUME
 		s_RendererAPI->ClearRenderTarget(p_Texture, p_Value);
 	}
 
-	void RendererCommand::Draw(const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount)
+	void RendererCommand::Draw(CommandBuffer* p_CommandBuffer, const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount)
 	{
 		YM_PROFILE_FUNCTION()
 
-		s_RendererAPI->Draw(p_VertexBuffer, p_VertexCount, p_InstanceCount);
+		s_RendererAPI->Draw(p_CommandBuffer, p_VertexBuffer, p_VertexCount, p_InstanceCount);
 	}
-	void RendererCommand::DrawIndexed(const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount)
+	void RendererCommand::DrawIndexed(CommandBuffer* p_CommandBuffer, const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount)
 	{
 		YM_PROFILE_FUNCTION()
 
-		s_RendererAPI->DrawIndexed(p_VertexBuffer, p_IndexBuffer, p_InstanceCount);
+		s_RendererAPI->DrawIndexed(p_CommandBuffer, p_VertexBuffer, p_IndexBuffer, p_InstanceCount);
 	}
 
-	void RendererCommand::DrawMesh(const Ref<Mesh>& p_Mesh)
+	void RendererCommand::DrawMesh(CommandBuffer* p_CommandBuffer, const Ref<Mesh>& p_Mesh)
 	{
 		YM_PROFILE_FUNCTION()
 
-		DrawIndexed(p_Mesh->GetVertexBuffer(), p_Mesh->GetIndexBuffer());
+		DrawIndexed(p_CommandBuffer, p_Mesh->GetVertexBuffer(), p_Mesh->GetIndexBuffer());
 	}
 
 	const Capabilities& RendererCommand::GetCapabilities()
@@ -79,10 +79,10 @@ namespace YUME
 		return s_RendererAPI->GetCapabilities();
 	}
 
-	void RendererCommand::BindDescriptorSets(const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count)
+	void RendererCommand::BindDescriptorSets(CommandBuffer* p_CommandBuffer, const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count)
 	{
 		YM_PROFILE_FUNCTION()
 
-		s_RendererAPI->BindDescriptorSets(p_DescriptorSets, p_Count);
+		s_RendererAPI->BindDescriptorSets(p_CommandBuffer, p_DescriptorSets, p_Count);
 	}
 }

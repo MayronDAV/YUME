@@ -35,7 +35,7 @@ namespace YUME
 			const Ref<VertexBuffer>& GetVertexBuffer() const { return m_VertexBuffer; }
 			const Ref<IndexBuffer>& GetIndexBuffer() const { return m_IndexBuffer; }
 		
-			void BindMaterial(const Ref<Shader>& p_Shader, bool p_PBR = true);
+			void BindMaterial(CommandBuffer* p_CommandBuffer, const Ref<Shader>& p_Shader, bool p_PBR = true);
 
 			void SetMaterial(const Ref<Material>& p_Material) { m_Material = p_Material; }
 			const Ref<Material>& GetMaterial() { return m_Material; }

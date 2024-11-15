@@ -4,27 +4,21 @@
 #include "Platform/Vulkan/Core/vulkan_device.h"
 #include "Platform/Vulkan/Renderer/vulkan_context.h"
 #include "YUME/Core/application.h"
+#include "Platform/Vulkan/Core/vulkan_command_buffer.h"
 
 #include <utility>
 
 
-namespace std 
+
+
+
+namespace YUME::VKUtils
 {
-	template <>
-	struct hash<std::pair<VkImageLayout, VkImageLayout>>
+	void WaitIdle()
 	{
-		size_t operator()(const std::pair<VkImageLayout, VkImageLayout>& p_Pair) const 
-		{
-			return hash<int>()(static_cast<int>(p_Pair.first)) ^ (hash<int>()(static_cast<int>(p_Pair.second)) << 1);
-		}
-	};
-}
+		vkDeviceWaitIdle(VulkanDevice::Get().GetDevice());
+	}
 
-
-
-
-namespace YUME::Utils
-{
 	std::string GetMessageSeverityStr(VkDebugUtilsMessageSeverityFlagBitsEXT p_Severity)
 	{
 		switch (p_Severity)
@@ -38,6 +32,56 @@ namespace YUME::Utils
 				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Message Severity!")
 				return "Trace";
 		}
+	}
+
+	std::string VkResultToString(VkResult p_Result)
+	{
+		switch (p_Result)
+		{
+		#define STR(r)		\
+			case VK_##r:	\
+				return #r
+
+			STR(SUCCESS);
+			STR(NOT_READY);
+			STR(TIMEOUT);
+			STR(EVENT_SET);
+			STR(EVENT_RESET);
+			STR(INCOMPLETE);
+			STR(ERROR_OUT_OF_HOST_MEMORY);
+			STR(ERROR_OUT_OF_DEVICE_MEMORY);
+			STR(ERROR_INITIALIZATION_FAILED);
+			STR(ERROR_DEVICE_LOST);
+			STR(ERROR_MEMORY_MAP_FAILED);
+			STR(ERROR_LAYER_NOT_PRESENT);
+			STR(ERROR_EXTENSION_NOT_PRESENT);
+			STR(ERROR_FEATURE_NOT_PRESENT);
+			STR(ERROR_INCOMPATIBLE_DRIVER);
+			STR(ERROR_TOO_MANY_OBJECTS);
+			STR(ERROR_FORMAT_NOT_SUPPORTED);
+			STR(ERROR_SURFACE_LOST_KHR);
+			STR(ERROR_NATIVE_WINDOW_IN_USE_KHR);
+			STR(SUBOPTIMAL_KHR);
+			STR(ERROR_OUT_OF_DATE_KHR);
+			STR(ERROR_INCOMPATIBLE_DISPLAY_KHR);
+			STR(ERROR_VALIDATION_FAILED_EXT);
+			STR(ERROR_INVALID_SHADER_NV);
+			STR(ERROR_FRAGMENTED_POOL);
+			STR(ERROR_OUT_OF_POOL_MEMORY);
+			STR(ERROR_INVALID_EXTERNAL_HANDLE);
+			STR(ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT);
+			STR(ERROR_FRAGMENTATION_EXT);
+			STR(ERROR_NOT_PERMITTED_EXT);
+			STR(ERROR_INVALID_DEVICE_ADDRESS_EXT);
+			STR(ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT);
+			STR(ERROR_UNKNOWN);
+			STR(RESULT_MAX_ENUM);
+
+			#undef STR
+			default:
+				return "UNKNOWN_ERROR";
+		}
+		
 	}
 
 	std::string GetMessageType(VkDebugUtilsMessageTypeFlagsEXT p_Type)
@@ -57,6 +101,45 @@ namespace YUME::Utils
 		}
 	}
 
+	VkPrimitiveTopology DrawTypeToVk(DrawType p_Type)
+	{
+		switch (p_Type)
+		{
+		case YUME::DrawType::TRIANGLE: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		case YUME::DrawType::LINES:    return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+		case YUME::DrawType::POINT:    return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+		default:
+			YM_CORE_ERROR(VULKAN_PREFIX "Unknown Draw Type!")
+				return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		}
+	}
+
+	VkFrontFace FrontFaceToVk(FrontFace p_Face)
+	{
+		switch (p_Face)
+		{
+		case YUME::FrontFace::CLOCKWISE:		 return VK_FRONT_FACE_CLOCKWISE;
+		case YUME::FrontFace::COUNTER_CLOCKWISE: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		default:
+			YM_CORE_ERROR(VULKAN_PREFIX "Unknown Front Face!")
+				return VK_FRONT_FACE_CLOCKWISE;
+		}
+	}
+
+	VkCullModeFlags CullModeToVk(CullMode p_Mode)
+	{
+		switch (p_Mode)
+		{
+		case CullMode::BACK:		 return VK_CULL_MODE_BACK_BIT;
+		case CullMode::FRONT:		 return VK_CULL_MODE_FRONT_BIT;
+		case CullMode::FRONTANDBACK: return VK_CULL_MODE_FRONT_AND_BACK;
+		case CullMode::NONE:		 return VK_CULL_MODE_NONE;
+		default:
+			YM_CORE_ERROR(VULKAN_PREFIX "Unknown Cull Mode!")
+				return VK_CULL_MODE_BACK_BIT;
+		}
+	}
+
 	VkPolygonMode PolygonModeToVk(PolygonMode p_Mode)
 	{
 		switch (p_Mode)
@@ -67,45 +150,6 @@ namespace YUME::Utils
 			default:
 				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Polygon Mode!")
 				return VK_POLYGON_MODE_FILL;
-		}
-	}
-
-	VkPrimitiveTopology DrawTypeToVk(DrawType p_Type)
-	{
-		switch (p_Type)
-		{
-			case YUME::DrawType::TRIANGLE: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			case YUME::DrawType::LINES:    return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-			case YUME::DrawType::POINT:    return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-			default:
-				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Draw Type!")
-				return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		}
-	}
-
-	VkFrontFace FrontFaceToVk(FrontFace p_Face)
-	{
-		switch (p_Face)
-		{
-			case YUME::FrontFace::CLOCKWISE:		 return VK_FRONT_FACE_CLOCKWISE;
-			case YUME::FrontFace::COUNTER_CLOCKWISE: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
-			default:
-				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Front Face!")
-				return VK_FRONT_FACE_CLOCKWISE;
-		}
-	}
-
-	VkCullModeFlags CullModeToVk(CullMode p_Mode)
-	{
-		switch (p_Mode)
-		{
-			case CullMode::BACK:		 return VK_CULL_MODE_BACK_BIT;
-			case CullMode::FRONT:		 return VK_CULL_MODE_FRONT_BIT;
-			case CullMode::FRONTANDBACK: return VK_CULL_MODE_FRONT_AND_BACK;
-			case CullMode::NONE:		 return VK_CULL_MODE_NONE;
-			default:
-				YM_CORE_ERROR(VULKAN_PREFIX "Unknown Cull Mode!")
-				return VK_CULL_MODE_BACK_BIT;
 		}
 	}
 
@@ -125,140 +169,251 @@ namespace YUME::Utils
 				p_Format == VK_FORMAT_D32_SFLOAT_S8_UINT;
 	}
 
-	struct BarrierData
+	static VkPipelineStageFlags AccessFlagsToPipelineStage(VkAccessFlags p_AccessFlags, const VkPipelineStageFlags p_StageFlags)
 	{
-		VkAccessFlags SrcAccessMask;
-		VkAccessFlags DstAccessMask;
-		VkPipelineStageFlags SrcStage;
-		VkPipelineStageFlags DstStage;
-	};
-	static const std::unordered_map<std::pair<VkImageLayout, VkImageLayout>, BarrierData> s_TransitionLayouts
+		VkPipelineStageFlags stages = 0;
+
+		while (p_AccessFlags != 0)
+		{
+			VkAccessFlagBits AccessFlag = static_cast<VkAccessFlagBits>(p_AccessFlags & (~(p_AccessFlags - 1)));
+			YM_CORE_ASSERT(AccessFlag != 0 && (AccessFlag & (AccessFlag - 1)) == 0, "Error");
+			p_AccessFlags &= ~AccessFlag;
+
+			switch (AccessFlag)
+			{
+			case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
+				stages |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+				break;
+
+			case VK_ACCESS_INDEX_READ_BIT:
+				stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+				break;
+
+			case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
+				stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+				break;
+
+			case VK_ACCESS_UNIFORM_READ_BIT:
+				stages |= p_StageFlags | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+				break;
+
+			case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:
+				stages |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				break;
+
+			case VK_ACCESS_SHADER_READ_BIT:
+				stages |= p_StageFlags | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+				break;
+
+			case VK_ACCESS_SHADER_WRITE_BIT:
+				stages |= p_StageFlags | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+				break;
+
+			case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:
+				stages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				break;
+
+			case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
+				stages |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				break;
+
+			case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT:
+				stages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+				break;
+
+			case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
+				stages |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+				break;
+
+			case VK_ACCESS_TRANSFER_READ_BIT:
+				stages |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+				break;
+
+			case VK_ACCESS_TRANSFER_WRITE_BIT:
+				stages |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+				break;
+
+			case VK_ACCESS_HOST_READ_BIT:
+				stages |= VK_PIPELINE_STAGE_HOST_BIT;
+				break;
+
+			case VK_ACCESS_HOST_WRITE_BIT:
+				stages |= VK_PIPELINE_STAGE_HOST_BIT;
+				break;
+
+			case VK_ACCESS_MEMORY_READ_BIT:
+				break;
+
+			case VK_ACCESS_MEMORY_WRITE_BIT:
+				break;
+
+			default:
+				YM_CORE_ERROR("Unknown access flag");
+				break;
+			}
+		}
+		return stages;
+	}
+
+	static VkPipelineStageFlags LayoutToAccessMask(const VkImageLayout p_Layout, const bool p_IsDestination)
 	{
-		// CURRENT LAYOUT							NEW LAYOUT														BARRIER DATA
-		{{VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL}, {(VkAccessFlagBits)0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}},
-		{{VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, {(VkAccessFlagBits)0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
-		{{VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL}, {(VkAccessFlagBits)0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT}},
-		{{VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, {(VkAccessFlagBits)0, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
-		{{VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL}, {(VkAccessFlagBits)0, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
+		VkPipelineStageFlags accessMask = 0;
 
-		{{VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, {VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
-		{{VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL}, {VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}},
+		switch (p_Layout)
+		{
+			case VK_IMAGE_LAYOUT_UNDEFINED:
+				if (p_IsDestination)
+				{
+					YM_CORE_ERROR("The new layout used in a transition must not be VK_IMAGE_LAYOUT_UNDEFINED.");
+				}
+				break;
 
-		{{VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR}, {VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, (VkAccessFlagBits)0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT}},
-		{{VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL}, {VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}},
-		{{VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, {VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
-		{{VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL}, {VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}},
+			case VK_IMAGE_LAYOUT_GENERAL:
+				accessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				break;
 
-		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, {VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
-		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, {VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
-		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR}, {VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT}},
-		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL}, {VK_ACCESS_TRANSFER_WRITE_BIT,  VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT}},
-		{{VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL}, {VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
+			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+				accessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				break;
 
-		{{VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, {VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+				accessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				break;
 
-		{{VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL}, {VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}},
-		{{VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, {VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
-		{{VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR}, {VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_MEMORY_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+				accessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+				break;
 
-		{{VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}, {(VkAccessFlagBits)0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}},
-		{{VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, {VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}},
-		{{VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL}, {VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}},
-	
-		{{VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL}, {VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT}}
-	};
+			case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+				accessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+				accessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				accessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_PREINITIALIZED:
+				if (!p_IsDestination)
+				{
+					accessMask = VK_ACCESS_HOST_WRITE_BIT;
+				}
+				else
+				{
+					YM_CORE_ERROR("The new layout used in a transition must not be VK_IMAGE_LAYOUT_PREINITIALIZED.");
+				}
+				break;
+
+			case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
+				accessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
+				accessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+				break;
+
+			case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+				accessMask = VK_ACCESS_2_NONE;
+				break;
+
+			default:
+				YM_CORE_ERROR("Unexpected image layout");
+				break;
+		}
+
+		return accessMask;
+	}
 
 
-	void TransitionImageLayout(const VkImage& p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout, bool p_UseSingleTime, uint32_t p_MipLevels)
+	void TransitionImageLayout(const VkImage& p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout, CommandBuffer* p_CommandBuffer, uint32_t p_MipLevels, uint32_t p_LayerCount)
 	{
 		YM_PROFILE_FUNCTION()
 
 		VkCommandBuffer commandBuffer;
-		if (p_UseSingleTime)
+		bool singleTime	  = false;
+		if (p_CommandBuffer == nullptr)
 		{
 			commandBuffer = BeginSingleTimeCommand();
+			singleTime	  = true;
 		}
 		else
 		{
-			auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-			commandBuffer = context->GetCommandBuffer();
+			commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
 		}
 
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.oldLayout = p_CurrentLayout;
-		barrier.newLayout = p_NewLayout;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = p_Image;
-		
-		if (HasDepthComponent(p_Format) && HasStencilComponent(p_Format))
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask		 = HasDepthComponent(p_Format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+
+		if (HasStencilComponent(p_Format))
+			subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		subresourceRange.baseMipLevel	 = 0;
+		subresourceRange.levelCount		 = p_MipLevels;
+		subresourceRange.baseArrayLayer  = 0;
+		subresourceRange.layerCount		 = p_LayerCount;
+
+		VkImageMemoryBarrier barrier	 = {};
+		barrier.sType					 = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout				 = p_CurrentLayout;
+		barrier.newLayout				 = p_NewLayout;
+		barrier.image					 = p_Image;
+		barrier.subresourceRange		 = subresourceRange;
+		barrier.srcQueueFamilyIndex		 = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex		 = VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcAccessMask			 = LayoutToAccessMask(p_CurrentLayout, false);
+		barrier.dstAccessMask			 = LayoutToAccessMask(p_NewLayout, true);
+
+		VkPipelineStageFlags sourceStage = 0;
 		{
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-		else if (HasDepthComponent(p_Format))
-		{
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		}
-		else
-		{
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			if (barrier.oldLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+			{
+				sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			}
+			else if (barrier.srcAccessMask != 0)
+			{
+				sourceStage = AccessFlagsToPipelineStage(barrier.srcAccessMask, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+			}
+			else
+			{
+				sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			}
 		}
 
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = p_MipLevels;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-
-		VkPipelineStageFlags srcStage;
-		VkPipelineStageFlags dstStage;
-
-		auto it = s_TransitionLayouts.find(std::make_pair(p_CurrentLayout, p_NewLayout));
-		if (it != s_TransitionLayouts.end())
+		VkPipelineStageFlags destinationStage = 0;
 		{
-			barrier.srcAccessMask = it->second.SrcAccessMask;
-			barrier.dstAccessMask = it->second.DstAccessMask;
-
-			srcStage = it->second.SrcStage;
-			dstStage = it->second.DstStage;
-		}
-		else 
-		{
-			YM_CORE_ASSERT(false, "Unsupported layout transition!")
-			if (p_UseSingleTime)
-				EndSingleTimeCommand(commandBuffer);
-			return;
+			if (barrier.newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+			{
+				destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			}
+			else if (barrier.dstAccessMask != 0)
+			{
+				destinationStage = AccessFlagsToPipelineStage(barrier.dstAccessMask, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+			}
+			else
+			{
+				destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			}
 		}
 
 		vkCmdPipelineBarrier(
 			commandBuffer,
-			srcStage, dstStage,
+			sourceStage,
+			destinationStage,
 			0,
 			0, nullptr,
 			0, nullptr,
 			1, &barrier
 		);
 
-		if (p_UseSingleTime)
+		if (singleTime)
+		{
 			EndSingleTimeCommand(commandBuffer);
+		}
 	}
 
-
-	VkRenderingAttachmentInfo AttachmentInfo(VkImageView p_View, VkClearValue* p_Clear, VkImageLayout p_Layout)
-	{
-		VkRenderingAttachmentInfo colorAttachment{};
-		colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.pNext = nullptr;
-
-		colorAttachment.imageView = p_View;
-		colorAttachment.imageLayout = p_Layout;
-		colorAttachment.loadOp = p_Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		if (p_Clear)
-			colorAttachment.clearValue = *p_Clear;
-
-		return colorAttachment;
-	}
 
 	VkCommandBuffer BeginSingleTimeCommand()
 	{
@@ -400,6 +555,7 @@ namespace YUME::Utils
 
 			case RGBA16_FLOAT:
 			case R16_FLOAT:
+			case D16_UNORM:
 				return 2;
 
 			case R32_INT:
@@ -411,7 +567,6 @@ namespace YUME::Utils
 			case D24_UNORM_S8_UINT:
 				return 4;
 
-			case D16_UNORM:			 return 2;
 			case D16_UNORM_S8_UINT:  return 3;
 			case D32_FLOAT_S8_UINT:  return 5;
 
@@ -605,6 +760,80 @@ namespace YUME::Utils
 				YM_CORE_ASSERT(false, "Unknown DataType!")
 				return (VkFormat)0;
 		}
+	}
+
+	VkSubpassContents SubpassContentsToVk(SubpassContents p_Contents)
+	{
+		switch (p_Contents)
+		{
+			case YUME::SubpassContents::INLINE:				  return VK_SUBPASS_CONTENTS_INLINE;
+			case YUME::SubpassContents::SECONDARY:			  return VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS;
+			case YUME::SubpassContents::INLINE_AND_SECONDARY: return VK_SUBPASS_CONTENTS_INLINE_AND_SECONDARY_COMMAND_BUFFERS_KHR;
+			default:
+				YM_CORE_ERROR(VULKAN_PREFIX "Unknown subpass contents")
+				return VK_SUBPASS_CONTENTS_INLINE;
+		}
+	}
+
+	bool IsPresentModeSupported(const std::vector<VkPresentModeKHR>& p_SupportedModes, VkPresentModeKHR p_PresentMode)
+	{
+		for (const auto& mode : p_SupportedModes)
+		{
+			if (mode == p_PresentMode)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& p_SupportedModes, bool p_Vsync)
+	{
+		VkPresentModeKHR presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+		if (p_Vsync)
+		{
+			if (IsPresentModeSupported(p_SupportedModes, VK_PRESENT_MODE_MAILBOX_KHR))
+			{
+				presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+			}
+			else if (IsPresentModeSupported(p_SupportedModes, VK_PRESENT_MODE_FIFO_KHR))
+			{
+				presentMode = VK_PRESENT_MODE_FIFO_KHR;
+			}
+			else
+			{
+				YM_CORE_ERROR(VULKAN_PREFIX "Failed to find supported presentation mode.");
+			}
+		}
+
+		return presentMode;
+	}
+
+	void SetDebugUtilsObjectName(const VkDevice& p_Device, const VkObjectType& p_ObjectType, const char* p_Name, const void* p_Handle)
+	{
+		VkDebugUtilsObjectNameInfoEXT nameInfo;
+		nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+		nameInfo.objectType = p_ObjectType;
+		nameInfo.pObjectName = p_Name;
+		nameInfo.objectHandle = (uint64_t)p_Handle;
+		nameInfo.pNext = VK_NULL_HANDLE;
+
+		auto res = fpSetDebugUtilsObjectNameEXT(p_Device, &nameInfo);
+		YM_CORE_ASSERT(res == VK_SUCCESS)
+	}
+
+	void BeginDebugUtils(VkCommandBuffer p_CommandBuffer, const char* p_Name)
+	{
+		VkDebugUtilsLabelEXT debugLabel{};
+		debugLabel.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+		debugLabel.pLabelName = p_Name;
+		fpCmdBeginDebugUtilsLabelEXT(p_CommandBuffer, &debugLabel);
+	}
+
+	void EndDebugUtils(VkCommandBuffer p_CommandBuffer)
+	{
+		fpCmdEndDebugUtilsLabelEXT(p_CommandBuffer);
 	}
 
 }

@@ -62,7 +62,7 @@ namespace YUME
 
 				descriptor.UBuffer = p_UniformBuffer;
 				descriptor.Offset = 0;
-				descriptor.Size = p_UniformBuffer.As<VulkanUniformBuffer>()->GetSizeBytes();
+				descriptor.Size = VK_WHOLE_SIZE;
 				m_Queue.push_back((int)i);
 				m_MustToBeUploaded = true;
 				return;
@@ -227,7 +227,7 @@ namespace YUME
 		YM_CORE_ERROR(VULKAN_PREFIX "Unkown name {}", p_Name)
 	}
 
-	void VulkanDescriptorSet::Upload()
+	void VulkanDescriptorSet::Upload(CommandBuffer* p_CommandBuffer)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -242,13 +242,13 @@ namespace YUME
 		{
 			auto& data = m_DescriptorsInfo[index];
 
-			VkWriteDescriptorSet& descriptorWrite = descWrites.emplace_back();
+			VkWriteDescriptorSet descriptorWrite{};
 
-			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = m_DescriptorSet;
-			descriptorWrite.dstBinding = data.Binding;
+			descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet			= m_DescriptorSet;
+			descriptorWrite.dstBinding		= data.Binding;
 			descriptorWrite.dstArrayElement = 0;
-			descriptorWrite.descriptorType = Utils::DescriptorTypeToVk(data.Type);
+			descriptorWrite.descriptorType  = VKUtils::DescriptorTypeToVk(data.Type);
 			descriptorWrite.descriptorCount = 1;
 
 			auto& bufferInfo = buffersInfo.emplace_back();
@@ -258,38 +258,39 @@ namespace YUME
 			{
 				for (const auto& texture : data.Textures)
 				{
-					TransitionImageToCorrectLayout(texture);
 					auto vkTexture = texture.As<VulkanTexture2D>();
+					TransitionImageToCorrectLayout(vkTexture, p_CommandBuffer);
 
-					auto& info = imagesInfo.emplace_back();
+					auto& info		 = imagesInfo.emplace_back();
 					info.imageLayout = vkTexture->GetLayout();
-					info.imageView = vkTexture->GetImageView();
-					info.sampler = vkTexture->GetImageSampler();
+					info.imageView	 = vkTexture->GetImageView();
+					info.sampler	 = vkTexture->GetImageSampler();
 				}
 
 				descriptorWrite.descriptorCount = (uint32_t)data.Size;
-				descriptorWrite.pImageInfo = imagesInfo.data();
+				descriptorWrite.pImageInfo		= imagesInfo.data();
 			}
 			else if (data.Type == DescriptorType::STORAGE_IMAGE)
 			{
 				for (const auto& texture : data.Textures)
 				{
-					TransitionImageToCorrectLayout(texture);
 					auto vkTexture = texture.As<VulkanTexture2D>();
+					TransitionImageToCorrectLayout(vkTexture, p_CommandBuffer);
 
-					auto& info = imagesInfo.emplace_back();
+					auto& info		 = imagesInfo.emplace_back();
 					info.imageLayout = vkTexture->GetLayout();
-					info.imageView = vkTexture->GetImageView();
+					info.imageView	 = vkTexture->GetImageView();
+					info.sampler	 = vkTexture->GetImageSampler();
 				}
 
 				descriptorWrite.descriptorCount = (uint32_t)data.Size;
-				descriptorWrite.pImageInfo = imagesInfo.data();
+				descriptorWrite.pImageInfo		= imagesInfo.data();
 			}
 			else if (data.Type == DescriptorType::UNIFORM_BUFFER)
 			{
 				bufferInfo.buffer = data.UBuffer.As<VulkanUniformBuffer>()->GetBuffer();
 				bufferInfo.offset = data.Offset;
-				bufferInfo.range = data.Size;
+				bufferInfo.range  = data.Size;
 
 				descriptorWrite.pBufferInfo = &bufferInfo;
 			}
@@ -297,10 +298,17 @@ namespace YUME
 			{
 				bufferInfo.buffer = data.SBuffer.As<VulkanStorageBuffer>()->GetBuffer();
 				bufferInfo.offset = data.Offset;
-				bufferInfo.range = data.Size;
+				bufferInfo.range  = data.Size;
 
 				descriptorWrite.pBufferInfo = &bufferInfo;
 			}
+			else
+			{
+				YM_CORE_ERROR(VULKAN_PREFIX "Unsupported descriptor type {} !", (int)data.Type)
+				continue;
+			}
+
+			descWrites.push_back(descriptorWrite);
 		}
 
 		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), (uint32_t)descWrites.size(), descWrites.data(), 0, nullptr);
@@ -309,13 +317,12 @@ namespace YUME
 		m_MustToBeUploaded = false;
 	}
 
-	void VulkanDescriptorSet::Bind()
+	void VulkanDescriptorSet::Bind(CommandBuffer* p_CommandBuffer)
 	{
 		YM_PROFILE_FUNCTION()
 		YM_CORE_ASSERT(!m_MustToBeUploaded, "Did you call Upload()?")
 
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
+		auto& commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
 
 		vkCmdBindDescriptorSets(
 			commandBuffer,
@@ -329,7 +336,7 @@ namespace YUME
 		);
 	}
 
-	void VulkanDescriptorSet::TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture)
+	void VulkanDescriptorSet::TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture, CommandBuffer* p_CommandBuffer)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -338,17 +345,19 @@ namespace YUME
 
 		const auto& spec = p_Texture->GetSpecification();
 		const auto& vkTexture = p_Texture.As<VulkanTexture2D>();
+		auto cmd = p_CommandBuffer ? p_CommandBuffer : VulkanSwapchain::Get().GetCurrentFrameData().MainCommandBuffer.get();
+
 		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED)
 		{
-			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmd);
 		}
 		else if (spec.Usage == TextureUsage::TEXTURE_STORAGE)
 		{
-			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_GENERAL);
+			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_GENERAL, cmd);
 		}
 		else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
 		{
-			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, cmd);
 		}
 	}
 

@@ -19,13 +19,12 @@ namespace YUME
 		int Graphics = -1;
 		int Compute = -1;
 		int Transfer = -1;
-		int Present = -1;
 	};
 
 	struct PhysicalDeviceInfo
 	{
 		std::string GetVendorName() const;
-		std::string DecodeDriverVersion(const uint32_t p_Version) const;
+		std::string DecodeVersion(const uint32_t p_Version) const;
 
 		uint32_t Memory;
 		uint32_t VendorID;
@@ -42,11 +41,7 @@ namespace YUME
 		VkPhysicalDeviceProperties Properties;
 		VkPhysicalDeviceFeatures Features;
 		std::vector<VkQueueFamilyProperties> FamilyProperties;
-		std::vector<VkBool32> QueueSupportsPresent;
-		std::vector<VkSurfaceFormatKHR> SurfaceFormats;
-		VkSurfaceCapabilitiesKHR SurfaceCapabilities;
 		VkPhysicalDeviceMemoryProperties MemoryProperties;
-		std::vector<VkPresentModeKHR> PresentModes;
 		std::vector<VkExtensionProperties> SupportedExtensions;
 		std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
 
@@ -64,7 +59,6 @@ namespace YUME
 			~VulkanPhysicalDevice() = default;
 
 			bool IsExtensionSupported(const char* p_Extension);
-			bool IsPresentModeSupported(const VkPresentModeKHR& p_Mode);
 
 			PhysicalDevice& Selected() { return m_PhysicalDevices[m_SelectedIndex]; }
 			VkPhysicalDevice& Handle() { return m_PhysicalDevices[m_SelectedIndex].Handle; }
@@ -95,6 +89,7 @@ namespace YUME
 			VkPhysicalDevice& GetPhysicalDevice() { return m_PhysicalDevice->Handle(); }
 			PhysicalDevice& GetPhysicalDeviceStruct() { return m_PhysicalDevice->Selected(); }
 			const VkPhysicalDeviceFeatures& GetFeatures() const { return m_PhysicalDevice->Selected().Features; }
+			const QueueFamilyIndices& GetQueueFamilyIndices() const { return m_PhysicalDevice->Selected().Indices; }
 			bool SupportCompute() const { return m_PhysicalDevice->Selected().SupportCompute; }
 
 			uint32_t FindMemoryType(uint32_t p_TypeFilter, VkMemoryPropertyFlags p_Properties) const { return m_PhysicalDevice->FindMemoryType(p_TypeFilter, p_Properties); }
@@ -104,7 +99,6 @@ namespace YUME
 			VkPipelineCache GetPipelineCache() const { return m_PipelineCache; }
 
 			VkQueue& GetGraphicQueue() { return m_GraphicQueue; }
-			VkQueue& GetPresentQueue() { return m_PresentQueue; }
 			VkQueue& GetTransferQueue() { return m_TransferQueue; }
 			VkQueue& GetComputeQueue() { return m_ComputeQueue; }
 
@@ -124,7 +118,7 @@ namespace YUME
 
 
 		private:
-			Scope<VulkanPhysicalDevice> m_PhysicalDevice;
+			Unique<VulkanPhysicalDevice> m_PhysicalDevice;
 
 			VkDevice m_Device;
 
@@ -133,7 +127,6 @@ namespace YUME
 			std::filesystem::path m_PipelineCachePath = m_PipelineCacheDir / "vulkan_pipeline.cache";
 
 			VkQueue m_GraphicQueue;
-			VkQueue m_PresentQueue;
 			VkQueue m_TransferQueue;
 			VkQueue m_ComputeQueue;
 

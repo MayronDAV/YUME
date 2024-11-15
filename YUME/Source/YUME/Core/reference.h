@@ -11,6 +11,7 @@
 
 namespace YUME
 {
+
 	#define YM_NODISCARD [[nodiscard]]
 
 	#define YM_REFERENCE_DEBUG
@@ -448,60 +449,60 @@ namespace YUME
 	};
 
 	template <class T>
-	class YM_API Unique
+	class YM_API Owned
 	{
 		public:
-			explicit Unique(std::nullptr_t)
+			explicit Owned(std::nullptr_t)
 				: m_Ptr(nullptr)
 			{
 			}
 
-			Unique(T* ptr = nullptr)
+			Owned(T* ptr = nullptr)
 			{
 				m_Ptr = ptr;
 			}
 
 			template <class U>
-			explicit Unique(U* p_Ptr)
+			explicit Owned(U* p_Ptr)
 			{
 				m_Ptr = dynamic_cast<T*>(p_Ptr);
 			}
 
-			~Unique()
+			~Owned()
 			{
 				delete m_Ptr;
 			}
 
-			Unique(const Unique&) = delete;
-			Unique& operator=(const Unique&) = delete;
+			Owned(const Owned&) = delete;
+			Owned& operator=(const Owned&) = delete;
 
-			inline Unique(Unique&& p_Moving) noexcept
+			inline Owned(Owned&& p_Moving) noexcept
 			{
 				p_Moving.swap(*this);
 			}
 
-			inline Unique& operator=(Unique&& p_Moving) noexcept
+			inline Owned& operator=(Owned&& p_Moving) noexcept
 			{
 				p_Moving.swap(*this);
 				return *this;
 			}
 
 			template <class U>
-			explicit inline Unique(Unique<U>&& p_Moving)
+			explicit inline Owned(Owned<U>&& p_Moving)
 			{
-				Unique<T> tmp(p_Moving.release());
+				Owned<T> tmp(p_Moving.release());
 				tmp.swap(*this);
 			}
 
 			template <class U>
-			inline Unique& operator=(Unique<U>&& p_Moving)
+			inline Owned& operator=(Owned<U>&& p_Moving)
 			{
-				Unique<T> tmp(p_Moving.release());
+				Owned<T> tmp(p_Moving.release());
 				tmp.swap(*this);
 				return *this;
 			}
 
-			inline Unique& operator=(std::nullptr_t)
+			inline Owned& operator=(std::nullptr_t)
 			{
 				reset();
 				return *this;
@@ -548,15 +549,15 @@ namespace YUME
 				delete tmp;
 			}
 
-			inline void swap(Unique& src) noexcept
+			inline void swap(Owned& src) noexcept
 			{
 				std::swap(m_Ptr, src.m_Ptr);
 			}
 
 			template <class U>
-			inline Unique<U> As() const
+			inline Owned<U> As() const
 			{
-				return Unique<U>(*this);
+				return Owned<U>(*this);
 			}
 
 		private:
@@ -564,7 +565,7 @@ namespace YUME
 	};
 
 	template <class T>
-	void swap(Unique<T>& p_Lhs, Unique<T>& p_Rhs) noexcept
+	void swap(Owned<T>& p_Lhs, Owned<T>& p_Rhs) noexcept
 	{
 		p_Lhs.swap(p_Rhs);
 	}
@@ -573,13 +574,13 @@ namespace YUME
 #ifdef CUSTOM_REFERENCE
 
 	template <class T>
-	using Scope = Unique<T>;
+	using Unique = Owned<T>;
 
 	template <class T, typename... Args>
-	constexpr Scope<T> CreateScope(Args&&... p_Args)
+	constexpr Unique<T> CreateUnique(Args&&... p_Args)
 	{
 		auto ptr = new T(std::forward<Args>(p_Args)...);
-		return Scope<T>(ptr);
+		return Unique<T>(ptr);
 	}
 
 	template <class T>
@@ -598,27 +599,27 @@ namespace YUME
 #else
 
 	template<class T>
-	class YM_API Scope : public std::unique_ptr<T>
+	class YM_API Unique : public std::unique_ptr<T>
 	{
 		public:
 			using std::unique_ptr<T>::unique_ptr;
 
 			template<class U>
-			Scope(std::unique_ptr<U>&& p_Other)
+			Unique(std::unique_ptr<U>&& p_Other)
 				: std::unique_ptr<T>(std::move(p_Other)) {}
 
 			template<class U>
-			Scope<U> As() const
+			Unique<U> As() const
 			{
 				static_assert(std::is_convertible_v<U*, T*>);
-				return Scope<U>(std::dynamic_pointer_cast<U>(*this));
+				return Unique<U>(std::dynamic_pointer_cast<U>(*this));
 			}
 	};
 
 	template<class T, typename ... Args>
-	constexpr Scope<T> CreateScope(Args&& ... p_Args)
+	constexpr Unique<T> CreateUnique(Args&& ... p_Args)
 	{
-		return Scope<T>(std::make_unique<T>(std::forward<Args>(p_Args)...));
+		return Unique<T>(std::make_unique<T>(std::forward<Args>(p_Args)...));
 	}
 
 	template<class T>

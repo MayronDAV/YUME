@@ -1,7 +1,7 @@
 #include "YUME/yumepch.h"
 #include "renderpass.h"
 #include "YUME/Core/engine.h"
-#include "YUME/Renderer/renderpass_framebuffer.h"
+#include "YUME/Renderer/framebuffer.h"
 
 #include "Platform/Vulkan/Renderer/vulkan_renderpass.h"
 
@@ -34,13 +34,12 @@ namespace YUME
 		return nullptr;
 	}
 
-	// TODO: Change this when add UUID
 	Ref<RenderPass> RenderPass::Get(const RenderPassSpecification& p_Spec)
 	{
 		YM_PROFILE_FUNCTION()
 
 		uint64_t hash = 0;
-		HashCombine(hash, p_Spec.Samples, p_Spec.ClearEnable, p_Spec.SwapchainTarget);
+		HashCombine(hash, p_Spec.Samples, p_Spec.ClearEnable, p_Spec.SwapchainTarget, p_Spec.DebugName);
 
 		for (const auto& texture : p_Spec.Attachments)
 		{

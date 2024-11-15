@@ -1,13 +1,23 @@
 #pragma once
 #include "YUME/Core/base.h"
 #include "YUME/Core/singleton.h"
-#include "Platform/Vulkan/Core/vulkan_surface.h"
+#include "YUME/Renderer/texture.h"
 #include "Platform/Vulkan/Core/vulkan_commandpool.h"
+#include "Platform/Vulkan/Core/vulkan_command_buffer.h"
+#include "Platform/Vulkan/Core/vulkan_sync.h"
+#include "YUME/Core/reference.h"
 
 
 
 namespace YUME
 {
+	struct FrameData
+	{
+		Unique<VulkanSemaphore> ImageAcquireSemaphore;
+		Unique<VulkanCommandPool> CommandPool;
+		Unique<VulkanCommandBuffer> MainCommandBuffer;
+	};
+
 
 	class VulkanSwapchain : public ThreadSafeSingleton<VulkanSwapchain>
 	{
@@ -17,37 +27,50 @@ namespace YUME
 			VulkanSwapchain() = default;
 			~VulkanSwapchain();
 
-			void CleanUp();
-			void Invalidade(uint32_t p_Width, uint32_t p_Height);
+			void OnResize(uint32_t p_Width, uint32_t p_Height, bool p_Force = false, void* p_WindowHandle = nullptr);
 
 			void Init(bool p_Vsync, void* p_Window, VkExtent2D p_Extent = {0, 0});
 
-			VkSwapchainKHR GetSwapChain() { return m_SwapChain; }
+			void AcquireNextImage();
+			void Present(const std::vector<VulkanSemaphore>& p_WaitSemaphores = {});
+			void QueueSubmit();
+			void Begin();
+			void End();
+
+			void SetVsync(bool p_Enable);
+			
+			VkSurfaceKHR& GetSurface() { return m_Surface; }
+			VkSwapchainKHR& GetSwapChain() { return m_SwapChain; }
 			VkExtent2D GetExtent2D() const { return m_Extent2D; }
 			VkSurfaceFormatKHR GetFormat() const { return m_Format; }
 
-			std::vector<VkImage>& GetImages() { return m_Images; }
-			std::vector<VkImageView>& GetImageViews() { return m_ImageViews; }
+			const FrameData& GetCurrentFrameData() const { return m_Frames[m_CurrentBuffer]; }
 
-			void SetVsync(bool p_Enable) { if (p_Enable != m_Vsync) { m_Vsync = p_Enable; Invalidade(m_Extent2D.width, m_Extent2D.height); } }
+			uint32_t GetBufferCount() const { return m_BufferCount; }
+			uint32_t GetCurrentBuffer() const { return m_CurrentBuffer; }
+			uint32_t GetImageIndex() const { return m_AcquireImageIndex; }
+			const Ref<Texture2D>* GetBuffers() const { return m_Buffers; }
 
 		private:
 			void ChooseSwapExtent2D(void* p_Window);
-			void ChoosePresentMode(bool p_Vsync);
-			void CheckSurfaceFormat();
+			void ChooseSurfaceFormat();
+			void CreateFrameData();
 
 		private:
-			VkSwapchainKHR m_SwapChain = VK_NULL_HANDLE;
-
-			VkSurfaceFormatKHR m_Format = { .format = VK_FORMAT_R8G8B8A8_SRGB, .colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR };
-			bool m_VsyncIsEnable = false; // try to use VK_PRESENT_MODE_MAILBOX_KHR, if not available use VK_PRESENT_MODE_FIFO_KHR
-			VkPresentModeKHR m_PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-			VkExtent2D m_Extent2D{};
-
-			std::vector<VkImage> m_Images;
+			FrameData				 m_Frames[MAX_SWAPCHAIN_BUFFERS];
+			Ref<Texture2D>			 m_Buffers[MAX_SWAPCHAIN_BUFFERS];
 			std::vector<VkImageView> m_ImageViews;
 
-			void* m_Window = nullptr;
-			bool m_Vsync = false;
+			bool	 m_Vsync				  = false;
+			uint32_t m_CurrentBuffer		  = 0;
+			uint32_t m_BufferCount			  = 0;
+			uint32_t m_AcquireImageIndex	  = 0;
+
+			VkSurfaceKHR	   m_Surface	  = VK_NULL_HANDLE;
+			VkSwapchainKHR	   m_OldSwapChain = VK_NULL_HANDLE;
+			VkSwapchainKHR	   m_SwapChain	  = VK_NULL_HANDLE;
+			VkSurfaceFormatKHR m_Format		  = { .format = VK_FORMAT_R8G8B8A8_SRGB, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+			VkPresentModeKHR   m_PresentMode  = VK_PRESENT_MODE_IMMEDIATE_KHR;
+			VkExtent2D		   m_Extent2D	  = { 0, 0 };
 	};
 }

@@ -12,11 +12,11 @@ layout(location = 3) in vec4 a_Color;
 
 struct VertexOutput
 {
-	vec3 WorldPos;
-	vec3 Normal;
-	vec2 TexCoord;
-	vec4 Color;
-	vec3 CameraPosition;
+	vec3  WorldPos;
+	vec3  Normal;
+	vec2  TexCoord;
+	vec4  Color;
+	vec3  CameraPosition;
 };
 layout(location = 0) out VertexOutput Output;
 
@@ -26,6 +26,7 @@ layout(set = 0, binding = 0) uniform u_Camera
 	mat4 ViewProjection;
 	vec3 Position;
 } u_camera;
+
 
 layout(push_constant) uniform model
 {
@@ -42,7 +43,7 @@ void main()
 	Output.Normal = a_Normal;
 	Output.CameraPosition = u_camera.Position;
 
-	gl_Position = u_camera.ViewProjection * Model.Transform * vec4(a_Position, 1.0);
+	gl_Position = u_camera.ViewProjection * vec4(Output.WorldPos, 1.0);
 }
 
 
@@ -53,11 +54,11 @@ layout(location = 0) out vec4 o_Color;
 
 struct VertexOutput
 {
-	vec3 WorldPos;
-	vec3 Normal;
-	vec2 TexCoord;
-	vec4 Color;
-	vec3 CameraPosition;
+	vec3  WorldPos;
+	vec3  Normal;
+	vec2  TexCoord;
+	vec4  Color;
+	vec3  CameraPosition;
 };
 layout(location = 0) in VertexOutput Input;
 
@@ -73,8 +74,9 @@ layout(push_constant) uniform model
 struct Light 
 {
 	vec4  Position;
-	vec4  Color;
+	vec4  Color; // w is Intensity
 	vec4  Direction;
+	vec3  AttenuationProps; // x: const, y: linear, z: quadratic
 	float Type;
 };
 layout(set = 0, binding = 1) uniform LightBuffer
@@ -115,7 +117,7 @@ vec3  DeGamma(vec3 p_Color, float p_Gamma);
 
 void main()
 {
-	vec3  albedo    = pow(texture(u_AlbedoTexture, Input.TexCoord).rgb, vec3(2.2));
+	vec3  albedo    = Input.Color.rgb * pow(texture(u_AlbedoTexture, Input.TexCoord).rgb, vec3(2.2));
 	float metallic  = texture(u_MetallicTexture, Input.TexCoord).r;
 	float roughness = texture(u_RoughnessTexture, Input.TexCoord).r;
 	float ao        = texture(u_AoTexture, Input.TexCoord).r;
@@ -136,7 +138,6 @@ void main()
 		specular 	= texture(u_SpecularTexture, Input.TexCoord).rgb;
 	}
 
-
 	// Reflectance
 	vec3 Lo = vec3(0.0);
 	for (int i = 0; i < NumLights; ++i)
@@ -146,21 +147,27 @@ void main()
 		// calculate per-light radiance
 		vec3 L;
 		vec3 radiance;
+		float attenuation = 1.0;
 		if (curLight.Type == LIGHT_TYPE_POINT)
 		{
 			// Point light calculations
 	
 			L 				   = normalize(vec3(curLight.Position) - Input.WorldPos);
 			float distance     = length(vec3(curLight.Position) - Input.WorldPos);
-			float attenuation  = 1.0 / (distance * distance);
-			radiance 		   = vec3(curLight.Color) * attenuation;
+
+			float constant     = curLight.AttenuationProps.x;
+			float linear 	   = curLight.AttenuationProps.y;
+			float quadratic    = curLight.AttenuationProps.z;
+			attenuation  	   = 1.0 / (constant + (linear * distance) + (quadratic * (distance * distance)));
+
+			radiance 		   = vec3(curLight.Color) * attenuation * curLight.Color.w;
 		}
 		else if (curLight.Type == LIGHT_TYPE_DIRECTIONAL)
 		{
 			// Directional light calculations
-	
-			L 		  		   = normalize(-vec3(curLight.Direction));
-			radiance  		   = vec3(curLight.Color);
+
+			L 		  		    = normalize(-vec3(curLight.Direction));
+			radiance  		    = vec3(curLight.Color);
 		}
 		
 		vec3  H   		      = normalize(V + L);
@@ -178,6 +185,8 @@ void main()
 			float denominator = (4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0)) + EPSILON;
 			specular     	  = numerator / denominator;
 		}
+
+		specular 			 *= attenuation;
             
         // Add to outgoing radiance Lo
         float NdotL 	      = max(dot(N, L), 0.0);         
@@ -186,7 +195,7 @@ void main()
 
 	// Ambient lighting
     vec3 ambient = vec3(0.03) * albedo * ao;
-    vec3 color = ambient + Lo;
+	vec3 color = ambient + Lo;
 
     // HDR tonemapping
     color = color / (color + vec3(1.0));

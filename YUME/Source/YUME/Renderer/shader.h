@@ -5,6 +5,7 @@
 #include "pipeline.h"
 #include "uniform_buffer.h"
 #include "YUME/Core/definitions.h"
+#include "YUME/Core/command_buffer.h"
 
 // std
 #include <string_view>
@@ -137,7 +138,7 @@ namespace YUME
 			virtual void SetLayout(const InputLayout& p_Layout) = 0;
 
 			virtual void SetPushValue(const std::string& p_Name, void* p_Value) = 0;
-			virtual void BindPushConstants() const = 0;
+			virtual void BindPushConstants(CommandBuffer* p_CommandBuffer) const = 0;
 
 			static Ref<Shader> Create(const std::string& p_ShaderPath);
 	};

@@ -3,6 +3,7 @@
 #include "YUME/Core/reference.h"
 #include "uniform_buffer.h"
 #include "YUME/Renderer/storage_buffer.h"
+#include "YUME/Core/command_buffer.h"
 #include "texture.h"
 #include "shader.h"
 
@@ -35,11 +36,11 @@ namespace YUME
 
 			virtual void SetStorageImage(const std::string& p_Name, const Ref<Texture2D>& p_Texture) = 0;
 
-			virtual void Upload() = 0;
+			virtual void Upload(CommandBuffer* p_CommandBuffer = nullptr) = 0;
 
 			static Ref<DescriptorSet> Create(const DescriptorSpec& p_Spec);
 
 		protected:
-			virtual void Bind() = 0;
+			virtual void Bind(CommandBuffer* p_CommandBuffer) = 0;
 	};
 }

@@ -11,7 +11,7 @@
 #include "YUME/Core/engine.h"
 
 #include "YUME/Renderer/renderpass.h"
-#include "YUME/Renderer/renderpass_framebuffer.h"
+#include "YUME/Renderer/framebuffer.h"
 #include "YUME/Renderer/pipeline.h"
 
 #include <iostream>
@@ -51,7 +51,7 @@ namespace YUME
 	Application::~Application()
 	{
 		Pipeline::ClearCache();
-		RenderPassFramebuffer::ClearCache();
+		Framebuffer::ClearCache();
 		RenderPass::ClearCache();
 		Texture2D::ClearCache();
 
@@ -73,19 +73,6 @@ namespace YUME
 			Timestep timestep = time - m_LastFrameTime;
 			m_LastFrameTime = time;
 
-			if (m_ReloadImGui)
-			{
-				YM_PROFILE_SCOPE("Appliation::Run - ReloadImGui")
-
-				m_LayerStack.PopOverlay(m_ImGuiLayer);
-				m_ImGuiLayer = ImGuiLayer::Create();
-				PushOverlay(m_ImGuiLayer);
-
-				ImGui::StyleColorsLight();
-
-				m_ReloadImGui = false;
-			}
-
 			if (!m_Minimized)
 			{
 				if (double currentTime = Clock::GetTime();
@@ -94,6 +81,21 @@ namespace YUME
 					m_FPS = m_FPSCounter / (currentTime - m_LastTime);
 					m_LastTime = currentTime;
 					m_FPSCounter = 0;
+				}
+
+				if (m_ReloadImGui)
+				{
+					// TODO: 
+
+					YM_PROFILE_SCOPE("Appliation::Run - ReloadImGui")
+
+					m_LayerStack.PopOverlay(m_ImGuiLayer);
+					m_ImGuiLayer = ImGuiLayer::Create();
+					PushOverlay(m_ImGuiLayer);
+
+					ImGui::StyleColorsLight();
+
+					m_ReloadImGui = false;
 				}
 
 				m_Window->BeginFrame();
@@ -112,15 +114,17 @@ namespace YUME
 
 				m_Window->EndFrame();
 
-				Pipeline::DeleteUnusedCache();
-				RenderPassFramebuffer::DeleteUnusedCache();
-				RenderPass::DeleteUnusedCache();
-				Texture2D::DeleteUnusedCache();
-
 				m_FPSCounter++;
+
+				m_Window->GetContext()->SwapBuffer();
 			}
 
 			m_Window->OnUpdate();
+
+			Pipeline::DeleteUnusedCache();
+			Framebuffer::DeleteUnusedCache();
+			RenderPass::DeleteUnusedCache();
+			Texture2D::DeleteUnusedCache();
 		}
 	}
 

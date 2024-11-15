@@ -46,6 +46,9 @@ namespace YUME
 		
 		glm::vec3 Color{ 1.0f };
 		glm::vec3 Direction{ glm::normalize(glm::vec3{1.0f, -1.0f, 0.0f}) };
+		float     Intensity = 1.0f;
+		float     Linear = 0.09f;
+		float     Quadratic = 0.032f;
 
 		LightComponent() = default;
 		LightComponent(const LightComponent&) = default;

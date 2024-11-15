@@ -4,8 +4,8 @@
 #include "YUME/Renderer/graphics_context.h"
 #include "Platform/Vulkan/Renderer/vulkan_swapchain.h"
 #include "vulkan_renderpass.h"
-#include "vulkan_renderpass_framebuffer.h"
-#include "Platform/Vulkan/Core/vulkan_command_buffer.h"
+#include "vulkan_framebuffer.h"
+#include "YUME/Core/command_buffer.h"
 
 #include "YUME/Utils/deletion_queue.h"
 
@@ -24,46 +24,29 @@ namespace YUME
 	class VulkanContext : public GraphicsContext
 	{
 		public:
+			VulkanContext() = default;
 			~VulkanContext() override;
 
-			void Init(void* p_Window) override;
+			void Init(const char* p_Name, void* p_Window) override;
+
+			void Begin() override;
+			void End() override;
 
 			void SwapBuffer() override;
 
-			void RecreateSwapchain();
+			void OnResize(uint32_t p_Width, uint32_t p_Height) override;
 
-			void OnResize() { m_ViewportResized = true; }
-
-
-			// Sync Objs
-			void WaitFence();
-			void ResetFence();
-
-			// Draw
-			void BeginFrame();
-			void EndFrame();
-
-			uint32_t GetCurrentFrame() const { return m_CurrentFrame;  }
-			uint32_t GetCurrentImageIndex() const { return m_CurrentImageIndex; }
-
-			VkSemaphore& GetSignalSemaphore() { return m_SignalSemaphores[m_CurrentFrame]; }
-			VkSemaphore& GetWaitSemaphore() { return m_WaitSemaphores[m_CurrentFrame]; }
-
-			VkFence& GetInFlightFence() { return m_InFlightFences[m_CurrentFrame]; }
-			VkCommandBuffer& GetCommandBuffer() { return m_CommandBuffers.Get(m_CurrentFrame); }
+			CommandBuffer* GetCurrentCommandBuffer() override;
 
 			static void PushFunction(const std::function<void()>& p_Function)
 			{
 				m_MainDeletionQueue.PushFunction(p_Function);
 			}
 
-			static void PushFunctionToSwapchainOnResizeQueue(const std::function<void(int, int)>& p_Function);
-
 			static VkInstance GetInstance() { return s_Instance; }
 
 		private:
-			void CreateInstance();
-			void CreateSyncObjs();
+			void CreateInstance(const char* p_Name);
 
 			bool CheckExtensionSupport(const char* p_Extension) const;
 			bool CheckLayerSupport(const char* p_Layer) const;
@@ -76,18 +59,6 @@ namespace YUME
 		#endif
 
 			GLFWwindow* m_Window = nullptr;
-
-			uint32_t m_CurrentImageIndex = 0;
-			uint32_t m_CurrentFrame = 0;
-			uint32_t m_ImagesCount = 0;
-
-			std::vector<VkSemaphore> m_SignalSemaphores;
-			std::vector<VkSemaphore> m_WaitSemaphores;
-			std::vector<VkFence> m_InFlightFences;
-
-			VulkanCommandBuffer m_CommandBuffers;
-
-			bool m_ViewportResized = false;
 
 			static DeletionQueue m_MainDeletionQueue;
 	};

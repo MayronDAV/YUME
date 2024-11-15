@@ -8,8 +8,10 @@
 
 namespace YUME
 {
-	class YM_API Model
+	class YM_API Model : public Asset
 	{
+		ASSET_CLASS_TYPE(Model)
+
 		public:
 			Model() = default;
 			Model(const std::string& p_Path, bool p_FlipYTexCoord = true);
@@ -21,7 +23,7 @@ namespace YUME
 
 			void SetGPUInstance(bool p_Enable) { m_GPUInstance = p_Enable; }
 
-			inline bool operator== (const Model& p_Rhs) const { return m_Path == p_Rhs.m_Path && m_GPUInstance == m_GPUInstance; }
+			inline bool operator== (const Model& p_Rhs) const { return Handle == p_Rhs.Handle && m_Path == p_Rhs.m_Path && m_GPUInstance == m_GPUInstance; }
 
 		private:
 			Ref<Texture2D> LoadMaterialTexture(const std::string& p_Path);

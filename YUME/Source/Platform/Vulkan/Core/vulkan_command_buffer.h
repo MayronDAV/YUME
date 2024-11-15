@@ -1,5 +1,8 @@
 #pragma once
 #include "YUME/Core/base.h"
+#include "YUME/Core/command_buffer.h"
+#include "vulkan_sync.h"
+#include "YUME/Renderer/pipeline.h"
 
 // Lib
 #include <vulkan/vulkan.h>
@@ -8,28 +11,45 @@
 
 namespace YUME
 {
-	class VulkanCommandBuffer
+	class VulkanCommandBuffer : public CommandBuffer
 	{
 		public:
-			VulkanCommandBuffer() = default;
-			~VulkanCommandBuffer();
+			VulkanCommandBuffer();
+			VulkanCommandBuffer(const std::string& p_DebugName);
+			~VulkanCommandBuffer() override;
 
-			void Free();
-			void Free(int p_Index);
-			void Reset() const;
-			void Reset(int p_Index);
+			bool Init(RecordingLevel p_Level) override;
+			bool Init(RecordingLevel p_Level, VkCommandPool p_CommandPool);
 
-			void Init(int p_Count = 1);
+			void Begin() override;
+			void BeginSecondary(const Ref<Pipeline>& p_Pipeline) override;
+			void End() override;
 
-			void Begin(int p_Index = 0);
-			void End(int p_Index = 0);
+			bool Execute(VkPipelineStageFlags p_Flags, VkSemaphore p_WaitSemaphore, bool p_WaitFence = false);
+			void ExecuteSecondary(CommandBuffer* p_PrimaryCMD) override;
+			void Submit() override;
 
-			VkCommandBuffer& Get(int p_Index = 0) { return m_CommandBuffers[p_Index]; }
-			std::vector<VkCommandBuffer>& GetList() { return m_CommandBuffers; }
-			int Count() const { return m_Count; }
+			bool Wait() override;
+			void Reset() override;
+			void Free() override;
+			bool Flush() override;
+
+			VkCommandBuffer& GetHandle() { return m_CommandBuffer; }
+			RecordingLevel GetRecordingLevel() const override { return m_Level; }
+			CommandBufferState GetState() const override { return m_State; }
+
+			const Ref<VulkanFence>& GetFence() const { return m_Fence; }
+			const Ref<VulkanSemaphore>& GetSemaphore() const { return m_Semaphore; }
 
 		private:
-			std::vector<VkCommandBuffer> m_CommandBuffers;
-			int m_Count = 1;
+			VkCommandPool m_CommandPool = VK_NULL_HANDLE;
+
+			RecordingLevel m_Level = RecordingLevel::PRIMARY;
+			CommandBufferState m_State = CommandBufferState::Idle;
+			VkCommandBuffer m_CommandBuffer = VK_NULL_HANDLE;
+
+			Ref<VulkanFence> m_Fence = nullptr;
+			Ref<VulkanSemaphore> m_Semaphore = nullptr;
+			std::string m_DebugName;
 	};
 }

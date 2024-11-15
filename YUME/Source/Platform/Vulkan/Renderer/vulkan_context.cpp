@@ -25,8 +25,8 @@ namespace YUME
 	#define YM_VK_DEBUG_LOG(Type)																	\
 		YM_CORE_##Type(VULKAN_PREFIX "Debug Callback:")												\
 		YM_CORE_##Type(VULKAN_PREFIX " Message: {}", p_CallbackData->pMessage)						\
-		YM_CORE_##Type(VULKAN_PREFIX " Severity: {}", Utils::GetMessageSeverityStr(p_Severity))		\
-		YM_CORE_##Type(VULKAN_PREFIX " Type: {}", Utils::GetMessageType(p_Type))					\
+		YM_CORE_##Type(VULKAN_PREFIX " Severity: {}", VKUtils::GetMessageSeverityStr(p_Severity))	\
+		YM_CORE_##Type(VULKAN_PREFIX " Type: {}", VKUtils::GetMessageType(p_Type))					\
 		YM_CORE_##Type(VULKAN_PREFIX " Objects: ")													\
 																									\
 		for (uint32_t i = 0; i < p_CallbackData->objectCount; i++) {								\
@@ -80,32 +80,15 @@ namespace YUME
 	VkInstance VulkanContext::s_Instance = VK_NULL_HANDLE;
 	DeletionQueue VulkanContext::m_MainDeletionQueue = DeletionQueue();
 
-	static std::vector<std::function<void(int, int)>> s_SwapchainOnResizeQueue;
-
 	VulkanContext::~VulkanContext()
 	{
 		YM_PROFILE_FUNCTION()
 
-		s_SwapchainOnResizeQueue.clear();
-
 		YM_CORE_TRACE(VULKAN_PREFIX "Destroying context...")
 
-		auto& device = VulkanDevice::Get().GetDevice();
-		vkDeviceWaitIdle(device);
+		VKUtils::WaitIdle();
 
 		VulkanSwapchain::Release();
-
-		VulkanSurface::Release();
-
-		YM_CORE_TRACE(VULKAN_PREFIX "Destroying sync objs...")
-		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-		{
-			vkDestroySemaphore(device, m_SignalSemaphores[i], VK_NULL_HANDLE);
-			vkDestroySemaphore(device, m_WaitSemaphores[i], VK_NULL_HANDLE);
-			vkDestroyFence(device, m_InFlightFences[i], VK_NULL_HANDLE);
-		}
-
-		m_CommandBuffers.Free();
 
 		m_MainDeletionQueue.Flush();
 	
@@ -123,7 +106,7 @@ namespace YUME
 		vkDestroyInstance(s_Instance, VK_NULL_HANDLE);
 	}
 
-	void VulkanContext::Init(void* p_Window)
+	void VulkanContext::Init(const char* p_Name, void* p_Window)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -131,7 +114,7 @@ namespace YUME
 		m_Window = (GLFWwindow*)p_Window;
 
 		YM_CORE_TRACE(VULKAN_PREFIX "Initializing context...")
-		CreateInstance();
+		CreateInstance(p_Name);
 
 	#ifdef YM_DEBUG	
 		{
@@ -145,13 +128,31 @@ namespace YUME
 			auto res = vkCreateDebugUtilsMessenger(s_Instance, &msgCreateInfo, VK_NULL_HANDLE, &m_Debugger);
 			YM_CORE_VERIFY(res == VK_SUCCESS)
 		}
-	#endif
 
-		YM_CORE_TRACE(VULKAN_PREFIX "Creating surface...")
-		VulkanSurface::Get().Init(p_Window);
+		fpSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)(vkGetInstanceProcAddr(s_Instance, "vkSetDebugUtilsObjectNameEXT"));
+		if (fpSetDebugUtilsObjectNameEXT == nullptr)
+			fpSetDebugUtilsObjectNameEXT = [](VkDevice p_Device, const VkDebugUtilsObjectNameInfoEXT* p_NameInfo)
+			{ return VK_SUCCESS; };
+
+		fpCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)(vkGetInstanceProcAddr(s_Instance, "vkCmdBeginDebugUtilsLabelEXT"));
+		if (fpCmdBeginDebugUtilsLabelEXT == nullptr)
+			fpCmdBeginDebugUtilsLabelEXT = [](VkCommandBuffer p_CommandBuffer, const VkDebugUtilsLabelEXT* p_LabelInfo) {};
+
+		fpCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)(vkGetInstanceProcAddr(s_Instance, "vkCmdEndDebugUtilsLabelEXT"));
+		if (fpCmdEndDebugUtilsLabelEXT == nullptr)
+			fpCmdEndDebugUtilsLabelEXT = [](VkCommandBuffer p_CommandBuffer) {};
+
+	#else
+		fpSetDebugUtilsObjectNameEXT = [](VkDevice device, const VkDebugUtilsObjectNameInfoEXT* pNameInfo) { return VK_SUCCESS; };
+		fpCmdBeginDebugUtilsLabelEXT = [](VkCommandBuffer p_CommandBuffer, const VkDebugUtilsLabelEXT* p_LabelInfo) {};
+		fpCmdEndDebugUtilsLabelEXT = [](VkCommandBuffer p_CommandBuffer) {};
+	#endif
 
 		YM_CORE_TRACE(VULKAN_PREFIX "Creating logical device...")
 		VulkanDevice::Get().Init();
+
+		YM_CORE_TRACE(VULKAN_PREFIX "Creating swapchain...")
+		VulkanSwapchain::Get().Init(false /* Vsync */, m_Window);
 
 	#if defined(YM_PLATFORM_WINDOWS) && defined(YM_PROFILE)
 		YM_CORE_TRACE(VULKAN_PREFIX "Initializing gpu optick...")
@@ -183,189 +184,50 @@ namespace YUME
 
 		YM_PROFILE_GPU_INIT_VULKAN(&device, &physicalDevice, &queue, &graphicIndex, 1, &vulkanFunctions)
 	#endif
-
-		m_CommandBuffers.Init(MAX_FRAMES_IN_FLIGHT);
-
-		YM_CORE_TRACE(VULKAN_PREFIX "Creating swapchain...")
-		VulkanSwapchain::Get().Init(false /* Vsync */, m_Window);
-
-		CreateSyncObjs();
 	}
 
-	void VulkanContext::SwapBuffer()
-	{	
-		YM_PROFILE_FUNCTION()
-
-		VkPresentInfoKHR presentInfo{};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		VkSemaphore waitSemaphores[] = { m_WaitSemaphores[m_CurrentFrame] };
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = waitSemaphores;
-
-		VkSwapchainKHR swapChains[] = { VulkanSwapchain::Get().GetSwapChain() };
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = swapChains;
-		presentInfo.pImageIndices = &m_CurrentImageIndex;
-		presentInfo.pResults = nullptr; // Optional
-
-		YM_PROFILE_GPU_FLIP(VulkanSwapchain::Get().GetSwapChain())
-		YM_PROFILE_SCOPE_T("Present", Optick::Category::Wait)
-
-		auto& presentQueue = VulkanDevice::Get().GetPresentQueue();
-		auto res = vkQueuePresentKHR(presentQueue, &presentInfo);
-
-		if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || m_ViewportResized)
-		{
-			RecreateSwapchain();
-		}
-		else
-		{
-			YM_CORE_VERIFY(res == VK_SUCCESS)
-		}
-
-		if (m_ViewportResized)
-		{
-			RecreateSwapchain();
-		}
-
-		m_CurrentFrame = (m_CurrentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-		YM_PROFILE_GPU_CONTEXT(m_CommandBuffers.Get(m_CurrentFrame))
-	}
-
-	void VulkanContext::RecreateSwapchain()
+	void VulkanContext::Begin()
 	{
 		YM_PROFILE_FUNCTION()
-
-		// TODO: Make this class not block the main loop if the width or height is 0
-		// instead, just don't recreate and don't call other things like vkAcquireNextImageKHR.
-
-		auto& device = VulkanDevice::Get().GetDevice();
-		auto& physdevice = VulkanDevice::Get().GetPhysicalDevice();
-
-		VkExtent2D actualExtent;
-		VkSurfaceCapabilitiesKHR capabilities;
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physdevice, VulkanSurface::Get().GetSurface(), &capabilities);
-
-		if (capabilities.currentExtent.width != UINT32_MAX)
-		{
-			actualExtent = capabilities.currentExtent;
-		}
-
-		if (capabilities.currentExtent.width == UINT32_MAX || (actualExtent.width == 0 || actualExtent.height == 0))
-		{
-			int width, height;
-			glfwGetFramebufferSize(m_Window, &width, &height);
-			while (width == 0 || height == 0) {
-				glfwGetFramebufferSize(m_Window, &width, &height);
-				glfwWaitEvents();
-			}
-
-			actualExtent = {
-				std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, (uint32_t)width)),
-				std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, (uint32_t)height)) 
-			};
-		}
-
-		vkDeviceWaitIdle(device);
-
-		VulkanSwapchain::Get().Invalidade(actualExtent.width, actualExtent.height);
-
-		Application::Get().GetImGuiLayer()->OnResize(actualExtent.width, actualExtent.height);
-
-		const auto& images = VulkanSwapchain::Get().GetImages();
-		const auto& imageViews = VulkanSwapchain::Get().GetImageViews();
-
-		for (auto it = s_SwapchainOnResizeQueue.rbegin(); it != s_SwapchainOnResizeQueue.rend(); it++) {
-			(*it)(actualExtent.width, actualExtent.height); //call functors
-		}
-		//s_SwapchainOnResizeQueue.clear();
-
-		m_ViewportResized = false;
-	}
-
-	void VulkanContext::WaitFence()
-	{
-		auto& device = VulkanDevice::Get().GetDevice();
-		vkWaitForFences(device, 1, &m_InFlightFences[m_CurrentFrame], VK_TRUE, UINT64_MAX);
-	}
-
-	void VulkanContext::ResetFence()
-	{
-		auto& device = VulkanDevice::Get().GetDevice();
-		vkResetFences(device, 1, &m_InFlightFences[m_CurrentFrame]);
-	}
-
-	void VulkanContext::BeginFrame()
-	{
-		YM_PROFILE_FUNCTION()
-
-		vkDeviceWaitIdle(VulkanDevice::Get().GetDevice());
+		VKUtils::WaitIdle();
 
 		m_MainDeletionQueue.Flush();
 
-		auto& device = VulkanDevice::Get().GetDevice();
-		vkWaitForFences(device, 1, &m_InFlightFences[m_CurrentFrame], VK_TRUE, UINT64_MAX);
-		vkResetFences(device, 1, &m_InFlightFences[m_CurrentFrame]);
-
-		// Semáforos
-		VkSemaphore& signalSemaphore = m_SignalSemaphores[m_CurrentFrame];
-
-		uint32_t imageIndex;
-	
-		if (auto res = vkAcquireNextImageKHR(device, VulkanSwapchain::Get().GetSwapChain(), UINT64_MAX, signalSemaphore, VK_NULL_HANDLE, &imageIndex);
-			res == VK_ERROR_OUT_OF_DATE_KHR) {
-			RecreateSwapchain();
-			return;
-		}
-		else if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR) {
-			YM_CORE_VERIFY(false)
-		}
-
-		m_CurrentImageIndex = imageIndex;
-
-		m_CommandBuffers.Reset(m_CurrentFrame);
-
-		m_CommandBuffers.Begin(m_CurrentFrame);
-
-		auto images = VulkanSwapchain::Get().GetImages();
-		Utils::TransitionImageLayout(images[m_CurrentFrame], VulkanSwapchain::Get().GetFormat().format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		VulkanSwapchain::Get().Begin();
 
 	}
 
-	void VulkanContext::EndFrame()
+	void VulkanContext::End()
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto images = VulkanSwapchain::Get().GetImages();
-		Utils::TransitionImageLayout(images[m_CurrentFrame], VulkanSwapchain::Get().GetFormat().format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-		m_CommandBuffers.End(m_CurrentFrame);
-
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.waitSemaphoreCount = 1;
-		VkSemaphore waitSemaphores[] = { m_SignalSemaphores[m_CurrentFrame] };
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &m_CommandBuffers.Get(m_CurrentFrame);
-
-		submitInfo.signalSemaphoreCount = 1;
-		VkSemaphore signalSemaphores[] = { m_WaitSemaphores[m_CurrentFrame] };
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		auto res = vkQueueSubmit(VulkanDevice::Get().GetGraphicQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-		YM_CORE_VERIFY(res == VK_SUCCESS)
+		VulkanSwapchain::Get().End();
 	}
 
-	void VulkanContext::PushFunctionToSwapchainOnResizeQueue(const std::function<void(int, int)>& p_Function)
+	void VulkanContext::SwapBuffer()
 	{
-		s_SwapchainOnResizeQueue.push_back(p_Function);
+		YM_PROFILE_FUNCTION()
+
+		VulkanSwapchain::Get().Present();
 	}
 
-	void VulkanContext::CreateInstance()
+	void VulkanContext::OnResize(uint32_t p_Width, uint32_t p_Height)
+	{
+		YM_PROFILE_FUNCTION()
+		if (p_Width == 0 || p_Height == 0)
+			return;
+
+		YM_CORE_INFO("VulkanContext::OnResize w: {}, h: {}", p_Width, p_Height)
+		VulkanSwapchain::Get().OnResize(p_Width, p_Height);
+	}
+
+	CommandBuffer* VulkanContext::GetCurrentCommandBuffer()
+	{
+		return VulkanSwapchain::Get().GetCurrentFrameData().MainCommandBuffer.get();
+	}
+
+
+	void VulkanContext::CreateInstance(const char* p_Name)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -374,9 +236,9 @@ namespace YUME
 		VkApplicationInfo appInfo = {
 			.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 			.pNext = VK_NULL_HANDLE,
-			.pApplicationName = "Sandbox",
+			.pApplicationName = p_Name,
 			.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
-			.pEngineName = "YUME engine",
+			.pEngineName = "YUME Engine",
 			.engineVersion = VK_MAKE_VERSION(1, 0, 0),
 			.apiVersion = VK_MAKE_VERSION(1, 283, 0)
 		};
@@ -456,35 +318,6 @@ namespace YUME
 
 		auto res = vkCreateInstance(&instInfo, VK_NULL_HANDLE, &s_Instance);
 		YM_CORE_VERIFY(res == VK_SUCCESS, VULKAN_PREFIX "Failed to create instance!")
-	}
-
-	void VulkanContext::CreateSyncObjs()
-	{
-		YM_PROFILE_FUNCTION()
-
-		auto& device = VulkanDevice::Get().GetDevice();
-
-		m_SignalSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-		m_WaitSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-		m_InFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
-		VkSemaphoreCreateInfo semaphoreCreateInfo = {};
-		semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VkFenceCreateInfo fenceInfo{};
-		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-		{
-			auto res = vkCreateSemaphore(device, &semaphoreCreateInfo, VK_NULL_HANDLE, &m_SignalSemaphores[i]);
-			YM_CORE_ASSERT(res == VK_SUCCESS)
-			res = vkCreateSemaphore(device, &semaphoreCreateInfo, VK_NULL_HANDLE, &m_WaitSemaphores[i]);
-			YM_CORE_ASSERT(res == VK_SUCCESS)
-
-			res = vkCreateFence(device, &fenceInfo, VK_NULL_HANDLE, &m_InFlightFences[i]);
-			YM_CORE_ASSERT(res == VK_SUCCESS)
-		}
 	}
 
 	bool VulkanContext::CheckExtensionSupport(const char* p_Extension) const

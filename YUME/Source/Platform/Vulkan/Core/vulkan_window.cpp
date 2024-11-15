@@ -39,7 +39,7 @@ namespace YUME
 
 	VulkanWindow::VulkanWindow(const WindowProps& p_Props)
 	{
-		m_Context = std::make_unique<VulkanContext>();
+		m_Data.Context = CreateUnique<VulkanContext>();
 		Init(p_Props);
 	}
 
@@ -52,29 +52,22 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		if (m_Data.Resized)
-		{
-			m_Context->OnResize();
-			m_Data.Resized = false;
-		}
-
 		glfwPollEvents();
-		m_Context->SwapBuffer();
 	}
 
 	void VulkanWindow::BeginFrame()
 	{
-		m_Context->BeginFrame();
+		m_Data.Context->Begin();
 	}
 
 	void VulkanWindow::EndFrame()
 	{
-		m_Context->EndFrame();
+		m_Data.Context->End();
 	}
 
 	GraphicsContext* VulkanWindow::GetContext()
 	{
-		return m_Context.get();
+		return m_Data.Context.get();
 	}
 
 	void VulkanWindow::SetCursorMode(CursorMode p_Mode)
@@ -108,7 +101,7 @@ namespace YUME
 			m_Window = glfwCreateWindow((int)p_Props.Width, (int)p_Props.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		}
 		YM_CORE_ASSERT(m_Window)
-		m_Context->Init(m_Window);
+		m_Data.Context->Init(m_Data.Title.c_str(), m_Window);
 		++s_GLFWWindowCount;
 
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
@@ -130,7 +123,7 @@ namespace YUME
 			WindowData& data = *(WindowData*)glfwGetWindowUserPointer(p_Window);
 			data.Width = p_Width;
 			data.Height = p_Height;
-			data.Resized = true;
+			data.Context->OnResize(data.Width, data.Height);
 
 			WindowResizeEvent event(p_Width, p_Height);
 			data.EventCallback(event);
@@ -233,11 +226,11 @@ namespace YUME
 	void VulkanWindow::SetVSync(bool p_Enabled)
 	{
 		YM_CORE_TRACE("Set vsync {}", p_Enabled)
-		m_Data.VSync = p_Enabled;
+		m_Data.Vsync = p_Enabled;
 	}
 
 	bool VulkanWindow::IsVSync() const
 	{
-		return m_Data.VSync;
+		return m_Data.Vsync;
 	}
 }

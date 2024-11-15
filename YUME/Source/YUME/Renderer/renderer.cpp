@@ -10,6 +10,7 @@
 #include "YUME/Core/application.h"
 #include "YUME/Utils/timer.h"
 #include "buffer.h"
+#include "YUME/Core/command_buffer.h"
 #include "YUME/Scene/Component/components_3D.h"
 
 
@@ -27,9 +28,9 @@ namespace YUME
 
 		bool CalledBegin = false;
 		glm::vec4 ClearColor{ 0.0f, 0.0f, 0.0f, 1.0f };
-		Ref<Texture2D> MainTexture  = nullptr;
-		Ref<Texture2D> DepthTexture = nullptr;
-		Ref<Texture2D> WhiteTexture = nullptr;
+		Ref<Texture2D> MainTexture	= nullptr;
+		Ref<Texture2D> DepthTexture	= nullptr;
+		Ref<Texture2D> WhiteTexture	= nullptr;
 
 		bool SwapchainTarget = true; 
 		uint32_t Width;
@@ -151,15 +152,16 @@ namespace YUME
 
 		struct Light
 		{
-			glm::vec4		  Position{ 0.0f };
-			glm::vec4		  Color{ 1.0f };
-			glm::vec4		  Direction{ 0.0f };
-			alignas(16) float Type = 0.0f;
+			glm::vec4	   Position{ 0.0f };
+			glm::vec4	   Color{ 1.0f };
+			glm::vec4	   Direction{ 0.0f };
+			glm::vec3	   AttenuationProps{ 1.0f, 0.09f, 0.032f };
+			float		   Type = 0.0f;
 		};
 		struct LightBufferData
 		{
-			Light Lights[MAX_LIGHTS];
-			int		   NumLights = 0;
+			Light		   Lights[MAX_LIGHTS];
+			int			   NumLights = 0;
 		} LightBuffer;
 		Ref<UniformBuffer> LightUBO = nullptr;
 
@@ -169,20 +171,22 @@ namespace YUME
 
 	struct OITData
 	{
-		Ref<Texture2D> OpaqueTexture = nullptr;
-		Ref<Texture2D> AccumTexture  = nullptr;
-		Ref<Texture2D> RevealTexture = nullptr;
-		Ref<Texture2D> DepthTexture  = nullptr;
+		Ref<Texture2D>	   OpaqueTexture		   = nullptr;
+		Ref<Texture2D>	   AccumTexture			   = nullptr;
+		Ref<Texture2D>	   RevealTexture		   = nullptr;
+		Ref<Texture2D>	   DepthTexture			   = nullptr;
 
-		Ref<Pipeline> CompositePipeline			  = nullptr;
-		Ref<Shader> CompositeShader				  = nullptr;
-		Ref<DescriptorSet> CompositeDescriptorSet = nullptr;
+		Ref<Pipeline>	   CompositePipeline	   = nullptr;
+		Ref<Shader>		   CompositeShader		   = nullptr;
+		Ref<DescriptorSet> CompositeDescriptorSet  = nullptr;
 
-		CircleData* OpaqueCircles	   = nullptr;
-		CircleData* TransparentCircles = nullptr;
+		CircleData*		   OpaqueCircles		   = nullptr;
+		CircleData*		   TransparentCircles	   = nullptr;
 
-		QuadData* OpaqueQuads	   = nullptr;
-		QuadData* TransparentQuads = nullptr;
+		QuadData*		   OpaqueQuads			   = nullptr;
+		QuadData*		   TransparentQuads		   = nullptr;
+
+		//	TODO: Renderer3D oit
 
 		void Init();
 		void Begin();
@@ -312,12 +316,10 @@ namespace YUME
 		texSpec.Format = TextureFormat::RGBA32_FLOAT;
 		texSpec.Usage = TextureUsage::TEXTURE_COLOR_ATTACHMENT;
 		texSpec.GenerateMips = false;
-		texSpec.RenderTarget = true;
 		texSpec.AnisotropyEnable = false;
 		texSpec.DebugName = "MainTexture";
 		s_RenderData->MainTexture = Texture2D::Get(texSpec);
 
-		texSpec.RenderTarget = false;
 		texSpec.Format = TextureFormat::D32_FLOAT;
 		texSpec.Usage = TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT;
 		texSpec.DebugName = "MainDepthTexture";
@@ -331,7 +333,7 @@ namespace YUME
 			s_OITData->Begin();
 		}
 
-		s_RenderData->CameraBuffer.ViewProjection = p_BeginInfo.MainCamera.GetViewProjection();
+		s_RenderData->CameraBuffer.ViewProjection = p_BeginInfo.MainCamera.GetProjection() * p_BeginInfo.MainCamera.GetView();
 		s_RenderData->CameraBuffer.Position = p_BeginInfo.MainCamera.GetPosition();
 		s_RenderData->CameraUniformBuffer->SetData(&s_RenderData->CameraBuffer, sizeof(RenderData::CameraData));
 
@@ -413,6 +415,7 @@ namespace YUME
 
 		auto enttManager = p_Scene->GetEntityManager();
 		auto& registry = p_Scene->GetRegistry();
+		auto commandBuffer = Application::Get().GetWindow().GetContext()->GetCurrentCommandBuffer();
 
 		Timer renderSceneTime;
 		renderSceneTime.Start();
@@ -422,6 +425,7 @@ namespace YUME
 			YM_PROFILE_SCOPE("Renderer3D")
 
 			bool pbr = s_RenderData->Settings.PBR;
+
 			Ref<Pipeline> pipeline = nullptr;
 			Ref<DescriptorSet> descriptorSet = nullptr;
 			Ref<Shader> shader = nullptr;
@@ -439,83 +443,72 @@ namespace YUME
 			}
 
 			descriptorSet->SetUniformData("u_Camera", s_RenderData->CameraUniformBuffer);
-			descriptorSet->Upload();
+			descriptorSet->Upload(commandBuffer);
 
 			if (pbr)
 			{
-				auto group = enttManager->GetEntitiesWithTypes<LightComponent>();
 				int index = 0;
-				for (auto entt : group)
+				registry.view<TransformComponent, LightComponent>().each(
+				[&](auto p_Entt, const TransformComponent& p_Transform, const LightComponent& p_Light)
 				{
 					if (index >= ForwardPBRData::MAX_LIGHTS)
-						break;
-
-					Entity entity = { entt, p_Scene };
-					auto& lc = entity.GetComponent<LightComponent>();
-					auto& tc = entity.GetComponent<TransformComponent>();
+						return;
 
 					ForwardPBRData::Light light{};
-					light.Color = glm::vec4(lc.Color, 1.0f);
-					light.Position = glm::vec4(tc.Translation, 1.0f);
-					light.Direction = glm::vec4(lc.Direction, 1.0f);
-					light.Type = float(lc.Type);
+					light.Color = glm::vec4(p_Light.Color, std::max(p_Light.Intensity, 0.0f));
+					light.Position = glm::vec4(p_Transform.Transform.GetLocalTranslation(), 1.0f);
+					light.Direction = glm::vec4(p_Light.Direction, 1.0f);
+					light.AttenuationProps = glm::vec3(1.0f, p_Light.Linear, p_Light.Quadratic);
+					light.Type = float(p_Light.Type);
 
 					s_ForwardPBR->LightBuffer.Lights[index] = light;
 					index++;
-				}
+				});
+
 				s_ForwardPBR->LightBuffer.NumLights = index;
 				s_ForwardPBR->LightUBO->SetData(&s_ForwardPBR->LightBuffer, sizeof(ForwardPBRData::LightBufferData));
 
 				descriptorSet->SetUniformData("LightBuffer", s_ForwardPBR->LightUBO);
-				descriptorSet->Upload();
-			}
+				descriptorSet->Upload(commandBuffer);
+			} // pbr
 
 
-			auto group = enttManager->GetEntitiesWithTypes<ModelComponent>();
-			for (auto entt : group)
+			pipeline->Begin(commandBuffer);
+
+			RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
+
+			RendererCommand::BindDescriptorSets(commandBuffer, &descriptorSet);
+
+			registry.view<TransformComponent, ModelComponent>().each(
+			[&] (auto p_Entt, const TransformComponent& p_Transform, const ModelComponent& p_Model)
 			{
-				Entity entity = { entt, p_Scene };
-				auto& mc = entity.GetComponent<ModelComponent>();
-				auto& tc = entity.GetComponent<TransformComponent>();
-
-				pipeline->Begin();
-
-				RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
-
-				RendererCommand::BindDescriptorSets(&descriptorSet);
-
-				for (const auto& mesh : mc.ModelRef->GetMeshes())
+				for (const auto& mesh : p_Model.ModelRef->GetMeshes())
 				{
-					auto transform = tc.GetTransform();
+					auto transform = p_Transform.Transform.GetLocalMatrix();
 					shader->SetPushValue("Transform", &transform);
 
-					mesh->BindMaterial(shader, pbr);
+					mesh->BindMaterial(commandBuffer, shader, pbr);
 
-					shader->BindPushConstants();
-					RendererCommand::DrawMesh(mesh);
+					shader->BindPushConstants(commandBuffer);
+					RendererCommand::DrawMesh(commandBuffer, mesh);
 					s_RenderData->Stats.DrawCalls++;
 				}
+			});
 
-				pipeline->End();
-			}
+			pipeline->End(commandBuffer);
 		}
 
 		if (s_RenderData->Settings.Renderer2D)
 		{
 			YM_PROFILE_SCOPE("Renderer2D")
 
-			auto group = enttManager->GetEntitiesWithTypes<SpriteComponent>();
-			for (auto entt : group)
+			registry.view<TransformComponent, SpriteComponent, ShapeComponent>().each(
+			[&](auto p_Entt, const TransformComponent& p_Transform, const SpriteComponent& p_Sprite, ShapeComponent& p_Shape)
 			{
-				Entity entity = { entt, p_Scene };
-				auto& sprite = entity.GetComponent<SpriteComponent>();
-				auto& shape = entity.GetComponent<ShapeComponent>();
-				auto& tc = entity.GetComponent<TransformComponent>();
-
 				size_t quadVertexCount = 4;
 				const glm::vec2* texcoord;
-				if (sprite.Texture != nullptr)
-					texcoord = sprite.Texture->GetTexCoords();
+				if (p_Sprite.Texture != nullptr)
+					texcoord = p_Sprite.Texture->GetTexCoords();
 				else
 				{
 					texcoord = new glm::vec2[quadVertexCount]
@@ -527,14 +520,13 @@ namespace YUME
 					};
 				}
 
-				glm::mat4 transform = glm::translate(glm::mat4(1.0f), tc.Translation);
-				transform = glm::scale(transform, { tc.Scale.x, tc.Scale.y, 1.0f });
+				auto transform = p_Transform.Transform.GetLocalMatrix();
 
 				float opacityThreshold = 0.98f;
 
-				bool isTransparent = sprite.Type == SurfaceType::Transparent || sprite.Color.a < opacityThreshold;
+				bool isTransparent = p_Sprite.Type == SurfaceType::Transparent || p_Sprite.Color.a < opacityThreshold;
 
-				if (s_RenderData->Settings.Renderer2D_Quad && shape.IsShape<Square>())
+				if (s_RenderData->Settings.Renderer2D_Quad && p_Shape.IsShape<Square>())
 				{
 					QuadData* quadData = nullptr;
 					if (s_RenderData->Settings.OIT)
@@ -560,11 +552,11 @@ namespace YUME
 
 
 					int textureIndex = 0; // White texture
-					if (sprite.Texture != nullptr)
+					if (p_Sprite.Texture != nullptr)
 					{
 						for (uint32_t i = 1; i < quadData->TextureSlotIndex; i++)
 						{
-							if (*quadData->TextureSlots[i].get() == *sprite.Texture->GetTexture().get())
+							if (*quadData->TextureSlots[i].get() == *p_Sprite.Texture->GetTexture().get())
 							{
 								textureIndex = i;
 								break;
@@ -577,7 +569,7 @@ namespace YUME
 								quadData->FlushAndReset();
 
 							textureIndex = quadData->TextureSlotIndex;
-							quadData->TextureSlots[textureIndex] = sprite.Texture->GetTexture();
+							quadData->TextureSlots[textureIndex] = p_Sprite.Texture->GetTexture();
 							quadData->TextureSlotIndex++;
 						}
 					}
@@ -586,7 +578,7 @@ namespace YUME
 					{
 						QuadData::QuadVertex vertex{};
 						vertex.Position = transform * quadData->VertexPositions[i];
-						vertex.Color = sprite.Color;
+						vertex.Color = p_Sprite.Color;
 						vertex.TexCoord = texcoord[i];
 						vertex.TexIndex = textureIndex;
 
@@ -595,9 +587,9 @@ namespace YUME
 					quadData->IndexCount += 6;
 					s_RenderData->Stats.QuadCount++;
 				}
-				else if (shape.IsShape<Circle>() && s_RenderData->Settings.Renderer2D_Circle)
+				else if (p_Shape.IsShape<Circle>() && s_RenderData->Settings.Renderer2D_Circle)
 				{
-					auto& circle = shape.Get<Circle>();
+					Circle& circle = p_Shape.Get<Circle>();
 					CircleData* circleData = nullptr;
 					if (s_RenderData->Settings.OIT)
 					{
@@ -621,11 +613,11 @@ namespace YUME
 					}
 
 					int textureIndex = 0; // White texture
-					if (sprite.Texture != nullptr)
+					if (p_Sprite.Texture != nullptr)
 					{
 						for (uint32_t i = 1; i < circleData->TextureSlotIndex; i++)
 						{
-							if (*circleData->TextureSlots[i].get() == *sprite.Texture->GetTexture().get())
+							if (*circleData->TextureSlots[i].get() == *p_Sprite.Texture->GetTexture().get())
 							{
 								textureIndex = i;
 								break;
@@ -638,7 +630,7 @@ namespace YUME
 								circleData->FlushAndReset();
 
 							textureIndex = circleData->TextureSlotIndex;
-							circleData->TextureSlots[textureIndex] = sprite.Texture->GetTexture();
+							circleData->TextureSlots[textureIndex] = p_Sprite.Texture->GetTexture();
 							circleData->TextureSlotIndex++;
 						}
 					}
@@ -648,7 +640,7 @@ namespace YUME
 						CircleData::CircleVertex vertex{};
 						vertex.WorldPosition = transform * circleData->VertexPositions[i];
 						vertex.LocalPosition = circleData->VertexPositions[i] * 2.0f;
-						vertex.Color = sprite.Color;
+						vertex.Color = p_Sprite.Color;
 						vertex.Thickness = circle.Thickness;
 						vertex.Fade = circle.Fade;
 						vertex.TexIndex = textureIndex;
@@ -658,7 +650,7 @@ namespace YUME
 					circleData->IndexCount += 6;
 					s_RenderData->Stats.CircleCount++;
 				}
-			}
+			});
 		}
 
 		renderSceneTime.Stop();
@@ -700,6 +692,8 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
+		auto commandBuffer = Application::Get().GetWindow().GetContext()->GetCurrentCommandBuffer();
+
 		PipelineCreateInfo pci{};
 		pci.Shader = s_RenderData->FinalPassShader;
 		pci.TransparencyEnabled = false;
@@ -717,20 +711,20 @@ namespace YUME
 
 		s_RenderData->FinalPassPipeline = Pipeline::Get(pci);
 
-		s_RenderData->FinalPassPipeline->Begin();
+		s_RenderData->FinalPassPipeline->Begin(commandBuffer);
 
 		RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
 
 		s_RenderData->FinalPassDescriptorSet->SetTexture2D("u_Texture", s_RenderData->MainTexture);
-		s_RenderData->FinalPassDescriptorSet->Upload();
+		s_RenderData->FinalPassDescriptorSet->Upload(commandBuffer);
 
-		RendererCommand::BindDescriptorSets(&s_RenderData->FinalPassDescriptorSet);
+		RendererCommand::BindDescriptorSets(commandBuffer, &s_RenderData->FinalPassDescriptorSet);
 
 
-		RendererCommand::Draw(nullptr, 6);
+		RendererCommand::Draw(commandBuffer, nullptr, 6);
 		s_RenderData->Stats.DrawCalls++;
 
-		s_RenderData->FinalPassPipeline->End();
+		s_RenderData->FinalPassPipeline->End(commandBuffer);
 	}
 
 	void QuadData::Init(const std::string& p_ShaderPath)
@@ -745,7 +739,7 @@ namespace YUME
 			{ DataType::Int ,   "a_TexIndex" },
 		});
 
-		VertexBuffer = VertexBuffer::Create(nullptr, MaxQuadVertices * sizeof(QuadVertex), BufferUsage::DYNAMIC);
+		VertexBuffer = VertexBuffer::Create(nullptr, MaxQuadVertices * sizeof(QuadVertex));
 
 		uint32_t* quadIndices = new uint32_t[MaxQuadIndices];
 		uint32_t offset = 0;
@@ -787,23 +781,24 @@ namespace YUME
 
 		if (IndexCount)
 		{	
-			Pipeline->Begin();
+			auto commandBuffer = Application::Get().GetWindow().GetContext()->GetCurrentCommandBuffer();
+			Pipeline->Begin(commandBuffer);
 
 			RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
 
 			DescriptorSets[0]->SetUniformData("u_Camera", s_RenderData->CameraUniformBuffer);
-			DescriptorSets[0]->Upload();
+			DescriptorSets[0]->Upload(commandBuffer);
 			DescriptorSets[1]->SetTexture2D("u_Textures", TextureSlots.data(), (uint32_t)TextureSlots.size());
-			DescriptorSets[1]->Upload();
+			DescriptorSets[1]->Upload(commandBuffer);
 
 
 			VertexBuffer->SetData(VertexBufferBase.data(), VertexBufferBase.size() * sizeof(QuadVertex));
 
-			RendererCommand::BindDescriptorSets(DescriptorSets.data(), (uint32_t)DescriptorSets.size());
-			RendererCommand::DrawIndexed(VertexBuffer, IndexBuffer);
+			RendererCommand::BindDescriptorSets(commandBuffer, DescriptorSets.data(), (uint32_t)DescriptorSets.size());
+			RendererCommand::DrawIndexed(commandBuffer, VertexBuffer, IndexBuffer);
 			s_RenderData->Stats.DrawCalls++;
 
-			Pipeline->End();
+			Pipeline->End(commandBuffer);
 		}
 	}
 
@@ -866,7 +861,7 @@ namespace YUME
 			{ DataType::Int,    "a_TexIndex"	  }
 		});
 
-		VertexBuffer = VertexBuffer::Create(nullptr, MaxCircleVertices * sizeof(CircleVertex), BufferUsage::DYNAMIC);
+		VertexBuffer = VertexBuffer::Create(nullptr, MaxCircleVertices * sizeof(CircleVertex));
 
 		uint32_t* circleIndices = new uint32_t[MaxCircleIndices];
 		uint32_t offset = 0;
@@ -909,23 +904,24 @@ namespace YUME
 
 		if (IndexCount)
 		{
-			Pipeline->Begin();
+			auto commandBuffer = Application::Get().GetWindow().GetContext()->GetCurrentCommandBuffer();
+			Pipeline->Begin(commandBuffer);
 
 			RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
 
 			DescriptorSets[0]->SetUniformData("u_Camera", s_RenderData->CameraUniformBuffer);
-			DescriptorSets[0]->Upload();
+			DescriptorSets[0]->Upload(commandBuffer);
 
 			DescriptorSets[1]->SetTexture2D("u_Textures", TextureSlots.data(), (uint32_t)TextureSlots.size());
-			DescriptorSets[1]->Upload();
+			DescriptorSets[1]->Upload(commandBuffer);
 
 			VertexBuffer->SetData(VertexBufferBase.data(), VertexBufferBase.size() * sizeof(CircleVertex));
 
-			RendererCommand::BindDescriptorSets(DescriptorSets.data(), (uint32_t)DescriptorSets.size());
-			RendererCommand::DrawIndexed(VertexBuffer, IndexBuffer);
+			RendererCommand::BindDescriptorSets(commandBuffer, DescriptorSets.data(), (uint32_t)DescriptorSets.size());
+			RendererCommand::DrawIndexed(commandBuffer, VertexBuffer, IndexBuffer);
 			s_RenderData->Stats.DrawCalls++;
 
-			Pipeline->End();
+			Pipeline->End(commandBuffer);
 		}
 	}
 
@@ -1012,7 +1008,6 @@ namespace YUME
 		texSpec.Format = TextureFormat::RGBA16_FLOAT;
 		texSpec.Usage = TextureUsage::TEXTURE_COLOR_ATTACHMENT;
 		texSpec.GenerateMips = false;
-		texSpec.RenderTarget = true;
 		texSpec.DebugName = "OpaqueTexture";
 		OpaqueTexture = Texture2D::Get(texSpec);
 
@@ -1027,7 +1022,6 @@ namespace YUME
 
 		texSpec.Format = TextureFormat::D32_FLOAT;
 		texSpec.Usage = TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT;
-		texSpec.RenderTarget = false;
 		texSpec.DebugName = "DepthTexture";
 		DepthTexture = Texture2D::Get(texSpec);
 
@@ -1108,20 +1102,21 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		CompositePipeline->Begin();
+		auto commandBuffer = Application::Get().GetWindow().GetContext()->GetCurrentCommandBuffer();
+		CompositePipeline->Begin(commandBuffer);
 
 		RendererCommand::SetViewport(0, 0, s_RenderData->Width, s_RenderData->Height);
 
 		CompositeDescriptorSet->SetTexture2D("u_AccumTexture", AccumTexture);
 		CompositeDescriptorSet->SetTexture2D("u_RevealTexture", RevealTexture);
 		CompositeDescriptorSet->SetTexture2D("u_OpaqueTexture", OpaqueTexture);
-		CompositeDescriptorSet->Upload();
+		CompositeDescriptorSet->Upload(commandBuffer);
 
-		RendererCommand::BindDescriptorSets(&CompositeDescriptorSet);
-		RendererCommand::Draw(nullptr, 6);
+		RendererCommand::BindDescriptorSets(commandBuffer, &CompositeDescriptorSet);
+		RendererCommand::Draw(commandBuffer, nullptr, 6);
 		s_RenderData->Stats.DrawCalls++;
 
-		CompositePipeline->End();
+		CompositePipeline->End(commandBuffer);
 	}
 
 	void ModelData::Init(const std::string& p_ShaderPath)
@@ -1172,7 +1167,7 @@ namespace YUME
 			{ DataType::Float3, "a_Normal"   },
 			{ DataType::Float2, "a_TexCoord" },
 			{ DataType::Float4, "a_Color"	 },
-			});
+		});
 
 		DescriptorSet = DescriptorSet::Create({ /* Set */ 0, Shader });
 
@@ -1197,7 +1192,7 @@ namespace YUME
 			pci.DepthTarget = s_RenderData->DepthTexture;
 			pci.DepthTest = true;
 			pci.DepthWrite = true;
-			pci.DebugName = "ModelPBRPipeline";
+			pci.DebugName = "ForwardPBRPipeline";
 		}
 
 		pci.Shader = Shader;
@@ -1210,6 +1205,7 @@ namespace YUME
 			LightBuffer.Lights[i].Position = glm::vec4(0.0f);
 			LightBuffer.Lights[i].Color = glm::vec4(1.0f);
 			LightBuffer.Lights[i].Direction = glm::vec4(0.0f);
+			LightBuffer.Lights[i].AttenuationProps = glm::vec3(1.0f, 0.09f, 0.032f);
 			LightBuffer.Lights[i].Type = 0.0f;
 		}
 	}

@@ -14,10 +14,10 @@ namespace YUME
 	{
 		public:
 			VulkanVertexBuffer() = default;
-			VulkanVertexBuffer(const void* p_Data, uint64_t p_SizeBytes, BufferUsage p_Usage = BufferUsage::STATIC);
+			VulkanVertexBuffer(const void* p_Data, uint64_t p_SizeBytes);
 			~VulkanVertexBuffer() override = default;
 
-			void Bind() const override;
+			void Bind(CommandBuffer* p_CommandBuffer) const override;
 			void Unbind() const override;
 
 			void SetData(const void* p_Data, uint64_t p_SizeBytes) override;
@@ -25,7 +25,7 @@ namespace YUME
 			void Flush() override;
 
 		private:
-			Scope<VulkanMemoryBuffer> m_Buffer;
+			Unique<VulkanMemoryBuffer> m_Buffer;
 	};
 
 
@@ -36,13 +36,13 @@ namespace YUME
 			explicit VulkanIndexBuffer(const uint32_t* p_Indices, uint32_t p_Count);
 			~VulkanIndexBuffer() override = default;
 
-			void Bind() const override;
+			void Bind(CommandBuffer* p_CommandBuffer) const override;
 			void Unbind() const override;
 
 			uint32_t GetCount() const override { return m_Count; }
 
 		private:
-			Scope<VulkanMemoryBuffer> m_Buffer;
+			Unique<VulkanMemoryBuffer> m_Buffer;
 			uint32_t m_Count = 0;
 	};
 }

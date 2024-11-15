@@ -1,8 +1,7 @@
 #pragma once
 
 #include "YUME/Core/uuid.h"
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/quaternion.hpp>
+#include "YUME/Math/transform.h"
 
 
 
@@ -30,21 +29,16 @@ namespace YUME
 
 	struct YM_API TransformComponent
 	{
-		glm::vec3 Translation{ 0.0f };
-		glm::vec3 Rotation{ 0.0f };
-		glm::vec3 Scale{ 1.0f };
+		Math::Transform Transform;
 
 		TransformComponent() = default;
 		TransformComponent(const TransformComponent&) = default;
-		TransformComponent(const glm::vec3& p_Translation, const glm::vec3& p_Scale = { 1.0f, 1.0f, 1.0f }, const glm::vec3& p_Rotation = { 0.0f, 0.0f, 0.0f })
-			: Translation(p_Translation), Scale(p_Scale), Rotation(p_Rotation) {}
-
-		glm::mat4 GetTransform() const
+		TransformComponent(const Math::Transform& p_Transform) : Transform(p_Transform) {}
+		TransformComponent(const glm::vec3& p_Translate, const glm::vec3& p_Scale = { 1.0f, 1.0f, 1.0f }, const glm::vec3& p_Rotation = { 0.0f, 0.0f, 0.0f })
 		{
-			glm::mat4 rotation = glm::toMat4(glm::quat(Rotation));
-
-			return glm::translate(glm::mat4(1.0f), Translation) *
-				rotation * glm::scale(glm::mat4(1.0f), Scale);
+			Transform.SetLocalTranslation(p_Translate);
+			Transform.SetLocalScale(p_Scale);
+			Transform.SetLocalRotation(p_Rotation);
 		}
 	};
 

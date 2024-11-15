@@ -2,11 +2,13 @@
 #include "vulkan_commandpool.h"
 
 #include "vulkan_device.h"
+#include "Platform/Vulkan/Utils/vulkan_utils.h"
+
 
 
 namespace YUME
 {
-	VulkanCommandPool::VulkanCommandPool(uint32_t p_QueueIndex, VkCommandPoolCreateFlags p_Flags)
+	VulkanCommandPool::VulkanCommandPool(uint32_t p_QueueIndex, VkCommandPoolCreateFlags p_Flags, const std::string& p_DebugName)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -17,6 +19,9 @@ namespace YUME
 		cmdPoolCI.flags = p_Flags;
 
 		vkCreateCommandPool(VulkanDevice::Get().GetDevice(), &cmdPoolCI, nullptr, &m_Handle);
+
+		if (!p_DebugName.empty())
+			VKUtils::SetDebugUtilsObjectName(VulkanDevice::Get().GetDevice(), VK_OBJECT_TYPE_COMMAND_POOL, p_DebugName.c_str(), m_Handle);
 	}
 
 	VulkanCommandPool::~VulkanCommandPool()

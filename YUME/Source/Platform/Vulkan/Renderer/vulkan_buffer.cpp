@@ -10,15 +10,15 @@
 namespace YUME
 {
 
-	VulkanVertexBuffer::VulkanVertexBuffer(const void* p_Data, uint64_t p_SizeBytes, BufferUsage p_Usage)
+	VulkanVertexBuffer::VulkanVertexBuffer(const void* p_Data, uint64_t p_SizeBytes)
 	{
 		YM_PROFILE_FUNCTION()
 
-		if (p_Usage == BufferUsage::STATIC)
+		if (p_Data != nullptr)
 		{
 			YM_CORE_VERIFY(p_Data != nullptr)
 
-			m_Buffer = CreateScope<VulkanMemoryBuffer>(
+			m_Buffer = CreateUnique<VulkanMemoryBuffer>(
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				p_SizeBytes
@@ -26,26 +26,21 @@ namespace YUME
 
 			m_Buffer->SetData(p_SizeBytes, p_Data);
 		}
-		else if (p_Usage == BufferUsage::DYNAMIC)
+		else
 		{
-			m_Buffer = CreateScope<VulkanMemoryBuffer>(
+			m_Buffer = CreateUnique<VulkanMemoryBuffer>(
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 				p_SizeBytes
 			);
 		}
-		else
-		{
-			YM_CORE_ERROR(VULKAN_PREFIX "Unknwon buffer usage!")
-		}
 	}
 
-	void VulkanVertexBuffer::Bind() const
+	void VulkanVertexBuffer::Bind(CommandBuffer* p_CommandBuffer) const
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
+		auto commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
 
 		VkDeviceSize offset = 0;
 		auto buffer = m_Buffer->GetBuffer();
@@ -74,7 +69,7 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		uint64_t sizeBytes = p_Count * sizeof(uint32_t);
-		m_Buffer = CreateScope<VulkanMemoryBuffer>(
+		m_Buffer = CreateUnique<VulkanMemoryBuffer>(
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			sizeBytes
@@ -84,12 +79,11 @@ namespace YUME
 	}
 
 
-	void VulkanIndexBuffer::Bind() const
+	void VulkanIndexBuffer::Bind(CommandBuffer* p_CommandBuffer) const
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
+		auto commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
 
 		VkDeviceSize offset = 0;
 		auto buffer = m_Buffer->GetBuffer();

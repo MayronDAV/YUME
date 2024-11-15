@@ -29,9 +29,8 @@ namespace YUME
 
 		bool AnisotropyEnable = true;
 		bool GenerateMips = true;
-		bool RenderTarget = false;
 
-		const char* DebugName = "Texture";
+		std::string DebugName = "Texture";
 	};
 
 	class YM_API Texture : public Asset

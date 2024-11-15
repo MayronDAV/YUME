@@ -14,7 +14,7 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		m_SizeBytes = p_SizeBytes;
-		m_Buffer = CreateScope<VulkanMemoryBuffer>(
+		m_Buffer = CreateUnique<VulkanMemoryBuffer>(
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			p_SizeBytes
@@ -25,7 +25,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		m_Buffer = CreateScope<VulkanMemoryBuffer>(
+		m_Buffer = CreateUnique<VulkanMemoryBuffer>(
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			p_SizeBytes

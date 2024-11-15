@@ -32,7 +32,7 @@ namespace YUME
 				return;
 		}
 
-		VkCommandBuffer commandBuffer = Utils::BeginSingleTimeCommand();
+		VkCommandBuffer commandBuffer = VKUtils::BeginSingleTimeCommand();
 
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -109,7 +109,7 @@ namespace YUME
 			0, nullptr,
 			1, &barrier);
 
-		Utils::EndSingleTimeCommand(commandBuffer);
+		VKUtils::EndSingleTimeCommand(commandBuffer);
 	}
 
 #ifndef USE_VMA_ALLOCATOR
@@ -147,7 +147,7 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		VkImageCreateInfo imageInfo{};
+			VkImageCreateInfo imageInfo{};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_2D;
 		imageInfo.extent.width = p_Width;
@@ -278,7 +278,7 @@ namespace YUME
 		stagingBuffer->SetData(p_Size, p_Data);
 
 		TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		Utils::CopyBufferToImage(stagingBuffer->GetBuffer(), m_TextureImage, p_Spec.Width, p_Spec.Height);
+		VKUtils::CopyBufferToImage(stagingBuffer->GetBuffer(), m_TextureImage, p_Spec.Width, p_Spec.Height);
 
 		stagingBuffer->SetDeleteWithoutQueue(true);
 		delete stagingBuffer;
@@ -314,21 +314,31 @@ namespace YUME
 		auto image = m_TextureImage;
 		auto imageView = m_TextureImageView;
 		auto sampler = m_TextureSampler;
+
+		VulkanContext::PushFunction([imageView, sampler]()
+		{
+			auto device = VulkanDevice::Get().GetDevice();
+
+			if (sampler != VK_NULL_HANDLE)
+			{
+				vkDestroySampler(device, sampler, VK_NULL_HANDLE);
+			}
+
+			if (imageView != VK_NULL_HANDLE)
+			{
+				vkDestroyImageView(device, imageView, VK_NULL_HANDLE);
+			}
+		});
+
 #ifdef USE_VMA_ALLOCATOR
 		auto alloc = m_Allocation;
-		VulkanContext::PushFunction([image, imageView, sampler, alloc]()
+		VulkanContext::PushFunction([image, alloc]()
 #else
 		auto memory = m_TextureImageMemory;
-		VulkanContext::PushFunction([image, imageView, sampler, memory]()
+		VulkanContext::PushFunction([image, memory]()
 #endif
 		{
 			YM_CORE_TRACE(VULKAN_PREFIX "Destroying texture image...")
-
-			auto device = VulkanDevice::Get().GetDevice();
-
-			vkDestroySampler(device, sampler, VK_NULL_HANDLE);
-
-			vkDestroyImageView(device, imageView, VK_NULL_HANDLE);
 
 #ifdef USE_VMA_ALLOCATOR		
 			vmaDestroyImage(VulkanDevice::Get().GetAllocator(), image, alloc);
@@ -337,6 +347,8 @@ namespace YUME
 			vkFreeMemory(device, memory, VK_NULL_HANDLE);
 #endif
 		});
+
+		m_TextureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	}
 
 	void VulkanTexture2D::Resize(uint32_t p_Width, uint32_t p_Height)
@@ -354,22 +366,22 @@ namespace YUME
 		auto memory = m_TextureImageMemory;
 		VulkanContext::PushFunction([image, imageView, sampler, memory]()
 #endif
-		{
-			YM_CORE_TRACE(VULKAN_PREFIX "Destroying texture image...")
+			{
+				YM_CORE_TRACE(VULKAN_PREFIX "Destroying texture image...")
 
-			auto device = VulkanDevice::Get().GetDevice();
+					auto device = VulkanDevice::Get().GetDevice();
 
-			vkDestroySampler(device, sampler, VK_NULL_HANDLE);
+				vkDestroySampler(device, sampler, VK_NULL_HANDLE);
 
-			vkDestroyImageView(device, imageView, VK_NULL_HANDLE);
+				vkDestroyImageView(device, imageView, VK_NULL_HANDLE);
 
 #ifdef USE_VMA_ALLOCATOR		
-			vmaDestroyImage(VulkanDevice::Get().GetAllocator(), image, alloc);
+				vmaDestroyImage(VulkanDevice::Get().GetAllocator(), image, alloc);
 #else
-			vkDestroyImage(device, image, VK_NULL_HANDLE);
-			vkFreeMemory(device, memory, VK_NULL_HANDLE);
+				vkDestroyImage(device, image, VK_NULL_HANDLE);
+				vkFreeMemory(device, memory, VK_NULL_HANDLE);
 #endif
-		});
+			});
 
 		m_Specification.Width = p_Width;
 		m_Specification.Height = p_Height;
@@ -385,7 +397,7 @@ namespace YUME
 		stagingBuffer->SetData(p_Size, p_Data);
 
 		TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		Utils::CopyBufferToImage(stagingBuffer->GetBuffer(), m_TextureImage, m_Specification.Width, m_Specification.Height);
+		VKUtils::CopyBufferToImage(stagingBuffer->GetBuffer(), m_TextureImage, m_Specification.Width, m_Specification.Height);
 
 		stagingBuffer->SetDeleteWithoutQueue(true);
 		delete stagingBuffer;
@@ -432,13 +444,13 @@ namespace YUME
 		return range;
 	}
 
-	void VulkanTexture2D::TransitionImage(VkImageLayout p_NewLayout, bool p_UseSingleTime)
+	void VulkanTexture2D::TransitionImage(VkImageLayout p_NewLayout, CommandBuffer* p_CommandBuffer)
 	{
 		YM_PROFILE_FUNCTION()
 
 		if (p_NewLayout != m_TextureImageLayout)
 		{
-			Utils::TransitionImageLayout(m_TextureImage, m_VkFormat, m_TextureImageLayout, p_NewLayout, p_UseSingleTime, m_MipLevels);
+			VKUtils::TransitionImageLayout(m_TextureImage, m_VkFormat, m_TextureImageLayout, p_NewLayout, p_CommandBuffer, m_MipLevels);
 			m_TextureImageLayout = p_NewLayout;
 		}
 	}
@@ -460,10 +472,10 @@ namespace YUME
 		YM_PROFILE_FUNCTION()
 
 		m_Specification = p_Spec;
-		m_Channels = Utils::TextureFormatChannels(p_Spec.Format);
-		m_VkFormat = Utils::TextureFormatToVk(p_Spec.Format);
-		m_BytesPerChannel = Utils::TextureFormatBytesPerChannel(p_Spec.Format);
-		VkImageUsageFlags usageFlagBits = Utils::TextureUsageToVk(p_Spec.Usage);
+		m_Channels = VKUtils::TextureFormatChannels(p_Spec.Format);
+		m_VkFormat = VKUtils::TextureFormatToVk(p_Spec.Format);
+		m_BytesPerChannel = VKUtils::TextureFormatBytesPerChannel(p_Spec.Format);
+		VkImageUsageFlags usageFlagBits = VKUtils::TextureUsageToVk(p_Spec.Usage);
 		if (p_Spec.Usage != TextureUsage::TEXTURE_STORAGE)
 		{
 			usageFlagBits |= VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -472,7 +484,7 @@ namespace YUME
 		usageFlagBits |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		if (p_Spec.GenerateMips && p_Spec.Width > 1 && p_Spec.Height > 1 && p_Spec.Usage == TextureUsage::TEXTURE_SAMPLED)
-		{ 
+		{
 			m_MipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(p_Spec.Width, p_Spec.Height)))) + 1;
 		}
 
@@ -486,18 +498,30 @@ namespace YUME
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_TextureImage, m_MipLevels, m_TextureImageMemory);
 #endif
 
+		if (!p_Spec.DebugName.empty())
+		{
+			std::string debugName = p_Spec.DebugName + " - VkImage";
+			VKUtils::SetDebugUtilsObjectName(VulkanDevice::Get().GetDevice(), VK_OBJECT_TYPE_IMAGE, debugName.c_str(), m_TextureImage);
+		}
+
 		m_TextureImageView = CreateImageView(m_TextureImage, m_VkFormat, m_MipLevels);
+
+		if (!p_Spec.DebugName.empty())
+		{
+			std::string debugName = p_Spec.DebugName + " - VkImageView";
+			VKUtils::SetDebugUtilsObjectName(VulkanDevice::Get().GetDevice(), VK_OBJECT_TYPE_IMAGE_VIEW, debugName.c_str(), m_TextureImageView);
+		}
 
 		if (p_Spec.Usage != TextureUsage::TEXTURE_STORAGE)
 		{
 			VkSamplerCreateInfo samplerInfo{};
-			samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-			samplerInfo.pNext = VK_NULL_HANDLE;
-			samplerInfo.magFilter = Utils::TextureFilterToVk(p_Spec.MagFilter);
-			samplerInfo.minFilter = Utils::TextureFilterToVk(p_Spec.MinFilter);
-			samplerInfo.addressModeU = Utils::TextureWrapToVk(p_Spec.WrapU);
-			samplerInfo.addressModeV = Utils::TextureWrapToVk(p_Spec.WrapV);
-			samplerInfo.addressModeW = Utils::TextureWrapToVk(p_Spec.WrapW);
+			samplerInfo.sType		 = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			samplerInfo.pNext		 = VK_NULL_HANDLE;
+			samplerInfo.magFilter	 = VKUtils::TextureFilterToVk(p_Spec.MagFilter);
+			samplerInfo.minFilter	 = VKUtils::TextureFilterToVk(p_Spec.MinFilter);
+			samplerInfo.addressModeU = VKUtils::TextureWrapToVk(p_Spec.WrapU);
+			samplerInfo.addressModeV = VKUtils::TextureWrapToVk(p_Spec.WrapV);
+			samplerInfo.addressModeW = VKUtils::TextureWrapToVk(p_Spec.WrapW);
 
 			if (p_Spec.AnisotropyEnable && RendererCommand::GetCapabilities().SamplerAnisotropy)
 			{
@@ -520,7 +544,7 @@ namespace YUME
 				samplerInfo.maxLod = 0.0f;
 			}
 
-			auto borderColor = Utils::TextureBorderColorToVk(p_Spec.BorderColorFlag);
+			auto borderColor = VKUtils::TextureBorderColorToVk(p_Spec.BorderColorFlag);
 			VkSamplerCustomBorderColorCreateInfoEXT borderColorCI{};
 			if (p_Spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || p_Spec.Usage == TextureUsage::TEXTURE_SAMPLED)
 			{
@@ -564,7 +588,13 @@ namespace YUME
 			if (vkCreateSampler(VulkanDevice::Get().GetDevice(), &samplerInfo, VK_NULL_HANDLE, &m_TextureSampler) != VK_SUCCESS)
 			{
 				YM_CORE_ERROR(VULKAN_PREFIX "Failed to create texture sampler!")
-					return;
+				return;
+			}
+
+			if (!p_Spec.DebugName.empty())
+			{
+				std::string debugName = p_Spec.DebugName + " - VkImageSampler";
+				VKUtils::SetDebugUtilsObjectName(VulkanDevice::Get().GetDevice(), VK_OBJECT_TYPE_SAMPLER, debugName.c_str(), m_TextureSampler);
 			}
 		}
 	}

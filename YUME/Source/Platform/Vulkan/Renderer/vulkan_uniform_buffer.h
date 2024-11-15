@@ -25,6 +25,6 @@ namespace YUME
 			uint32_t m_Offset = 0;
 			uint32_t m_SizeBytes = 0;
 
-			Scope<VulkanMemoryBuffer> m_Buffer;
+			Unique<VulkanMemoryBuffer> m_Buffer;
 	};
 }

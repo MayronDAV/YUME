@@ -5,11 +5,8 @@
 #include "Platform/Vulkan/Renderer/vulkan_context.h"
 #include "YUME/Core/application.h"
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
-#include "YUME/Renderer/texture.h"
 #include "Platform/Vulkan/Renderer/vulkan_texture.h"
-
-#include "YUME/Renderer/renderpass_framebuffer.h"
-#include "Platform/Vulkan/Renderer/vulkan_renderpass_framebuffer.h"
+#include "Platform/Vulkan/Renderer/vulkan_framebuffer.h"
 
 
 
@@ -22,44 +19,37 @@ namespace YUME
 			YM_PROFILE_FUNCTION()
 
 			VkAttachmentDescription attachmentDesc{};
-			const auto& spec = p_Texture->GetSpecification();
-			attachmentDesc.format = Utils::TextureFormatToVk(spec.Format);
+			const auto& spec			 = p_Texture->GetSpecification();
+			attachmentDesc.format		 = VKUtils::TextureFormatToVk(spec.Format);
 			attachmentDesc.initialLayout = p_Texture.As<VulkanTexture2D>()->GetLayout();
-			attachmentDesc.finalLayout = attachmentDesc.initialLayout;
+			attachmentDesc.finalLayout   = attachmentDesc.initialLayout;
 
 			if (p_SwapchainTarget)
 			{
 				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+				attachmentDesc.finalLayout	 = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 			}
 
 			if (p_Clear)
 			{
-				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				attachmentDesc.loadOp		 = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			}
 			else
 			{
 				if (p_SwapchainTarget)
-				{
 					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-				}
 				
-				if (spec.RenderTarget)
-				{
-					attachmentDesc.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					attachmentDesc.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				}
-				attachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				attachmentDesc.loadOp		 = VK_ATTACHMENT_LOAD_OP_LOAD;
 				attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			}
 
-			attachmentDesc.samples = p_Samples > 1 ? (VkSampleCountFlagBits)p_Samples : VK_SAMPLE_COUNT_1_BIT;
-			//attachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			attachmentDesc.samples		  = p_Samples > 1 ? (VkSampleCountFlagBits)p_Samples : VK_SAMPLE_COUNT_1_BIT;
+			attachmentDesc.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachmentDesc.storeOp		  = VK_ATTACHMENT_STORE_OP_STORE;
 			attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachmentDesc.flags = 0;
+			attachmentDesc.flags		  = 0;
 
 			return attachmentDesc;
 		}
@@ -67,7 +57,7 @@ namespace YUME
 	} // Utils
 
 	VulkanRenderPass::VulkanRenderPass(const RenderPassSpecification& p_Spec)
-		: m_ClearEnable(p_Spec.ClearEnable)
+		: m_ClearEnable(p_Spec.ClearEnable), m_DebugName(p_Spec.DebugName)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -198,6 +188,9 @@ namespace YUME
 		auto res = vkCreateRenderPass(VulkanDevice::Get().GetDevice(), &renderPassCreateInfo, VK_NULL_HANDLE, &m_RenderPass);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
 
+		if (!m_DebugName.empty())
+			VKUtils::SetDebugUtilsObjectName(VulkanDevice::Get().GetDevice(), VK_OBJECT_TYPE_RENDER_PASS, m_DebugName.c_str(), m_RenderPass);
+
 		m_ClearValue = new VkClearValue[int(attachments.size())];
 		m_ClearCount = int(attachments.size());
 	}
@@ -233,12 +226,12 @@ namespace YUME
 		}
 	}
 
-	void VulkanRenderPass::Begin(const Ref<RenderPassFramebuffer>& p_Frame, uint32_t p_Width, uint32_t p_Height, const glm::vec4& p_Color)
+	void VulkanRenderPass::Begin(CommandBuffer* p_CommandBuffer, const Ref<Framebuffer>& p_Frame, uint32_t p_Width, uint32_t p_Height, const glm::vec4& p_Color, SubpassContents p_Contents)
 	{
 		YM_PROFILE_FUNCTION()
 
 		YM_CORE_ASSERT(p_Frame != nullptr)
-		auto framebuffer = p_Frame.As<VulkanRenderPassFramebuffer>()->Get();
+		auto framebuffer = p_Frame.As<VulkanFramebuffer>()->Get();
 		YM_CORE_ASSERT(framebuffer != VK_NULL_HANDLE)
 		YM_CORE_ASSERT(m_ClearValue != nullptr)
 
@@ -270,16 +263,22 @@ namespace YUME
 		rpBegin.clearValueCount = (m_ClearEnable) ? m_ClearCount : 0;
 		rpBegin.pClearValues = m_ClearValue;
 
-		auto& commandBuffer = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext())->GetCommandBuffer();
-		vkCmdBeginRenderPass(commandBuffer, &rpBegin, VK_SUBPASS_CONTENTS_INLINE);
+		auto& commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
+		if (!m_DebugName.empty())
+			VKUtils::BeginDebugUtils(commandBuffer, m_DebugName.c_str());
+
+		vkCmdBeginRenderPass(commandBuffer, &rpBegin, VKUtils::SubpassContentsToVk(p_Contents));
 	}
 
-	void VulkanRenderPass::End()
+	void VulkanRenderPass::End(CommandBuffer* p_CommandBuffer)
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto& commandBuffer = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext())->GetCommandBuffer();
+		auto& commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
 		vkCmdEndRenderPass(commandBuffer);
+
+		if (!m_DebugName.empty())
+			VKUtils::EndDebugUtils(commandBuffer);
 	}
 
 } // YUME

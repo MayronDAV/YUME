@@ -1,12 +1,16 @@
 #include "editor_camera.h"
+#include "YUME/Core/engine.h"
+
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
 
 
 
 namespace YUME
 {
-	EditorCamera::EditorCamera(float p_Fov, float p_AspectRatio, float p_NearClip, float p_FarClip, bool p_FlipY)
-		: Camera(glm::perspective(glm::radians(p_Fov), p_AspectRatio, p_NearClip, p_FarClip)), m_FOV(p_Fov),
-		m_AspectRatio(p_AspectRatio), m_NearClip(p_NearClip), m_FarClip(p_FarClip), m_FlipY(p_FlipY)
+	EditorCamera::EditorCamera(float p_Fov, float p_AspectRatio, float p_NearClip, float p_FarClip)
+		: Camera(glm::perspective(glm::radians(p_Fov), p_AspectRatio, p_NearClip, p_FarClip), glm::lookAt(m_Position, m_Position + m_Front, m_Up)), m_FOV(p_Fov),
+		m_AspectRatio(p_AspectRatio), m_NearClip(p_NearClip), m_FarClip(p_FarClip)
 	{
 		m_Position = CalculatePosition();
 		UpdateView();
@@ -15,17 +19,16 @@ namespace YUME
 	void EditorCamera::UpdateProjection()
 	{
 		m_AspectRatio = m_ViewportWidth / m_ViewportHeight;
-		m_ViewProjection = glm::perspective(glm::radians(m_FOV * m_Zoom), m_AspectRatio, m_NearClip, m_FarClip);
-		if (m_FlipY)
+		m_Projection = glm::perspective(glm::radians(m_FOV * m_Zoom), m_AspectRatio, m_NearClip, m_FarClip);
+		if (Engine::GetAPI() == RenderAPI::Vulkan)
 		{
-			m_ViewProjection[1][1] *= -1;
+			m_Projection[1][1] *= -1;
 		}
-		m_ViewProjection *= m_ViewMatrix;
 	}
 
 	void EditorCamera::UpdateView()
 	{
-		m_ViewMatrix = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
+		m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
 
 		if (m_NewZoom != m_Zoom)
 		{
@@ -66,13 +69,6 @@ namespace YUME
 		m_InitialMousePosition = mouse;
 
 
-		if (!Input::IsKeyPressed(Key::C) && m_Zoom != 1.0f)
-		{
-			m_Zoom = 1.0f;
-			m_NewZoom = m_Zoom;
-		}
-
-
 		if (Input::IsMouseButtonPressed(Mouse::Button_2))
 		{
 			Application::Get().GetWindow().SetCursorMode(CursorMode::DISABLED);
@@ -85,6 +81,11 @@ namespace YUME
 		else
 		{
 			Application::Get().GetWindow().SetCursorMode(CursorMode::NORMAL);
+
+			if (m_Zoom != 1.0f)
+			{
+				m_NewZoom = 1.0f;
+			}
 		}
 
 		UpdateView();
@@ -98,12 +99,9 @@ namespace YUME
 
 	bool EditorCamera::OnMouseScroll(MouseScrolledEvent& e)
 	{
-		if (Input::IsKeyPressed(Key::C))
-		{
-			float delta = e.GetYOffset() * 0.1f;
-			MouseZoom(delta);
-			UpdateView();
-		}
+		float delta = e.GetYOffset() * 0.1f;
+		MouseZoom(delta);
+		UpdateView();
 
 		return true;
 	}
@@ -116,7 +114,6 @@ namespace YUME
 			m_FocalPoint += m_Front;
 			m_NewZoom = 0.1f;
 		}
-		//m_NewZoom = std::max(m_NewZoom, 0.1f);
 		m_NewZoom = std::min(m_NewZoom, 1.0f);
 	}
 
@@ -146,9 +143,9 @@ namespace YUME
 
 
 		if (Input::IsKeyPressed(Key::Space))
-			m_Position += m_Up * speed;
+			m_Position += m_WorldUp * speed;
 		if (Input::IsKeyPressed(Key::LeftControl))
-			m_Position -= m_Up * speed;
+			m_Position -= m_WorldUp * speed;
 	}
 
 	void EditorCamera::ProcessMouseMovement(const glm::vec2& p_Delta, bool p_ConstrainPitch)

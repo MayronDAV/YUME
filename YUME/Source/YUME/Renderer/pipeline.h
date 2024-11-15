@@ -3,6 +3,9 @@
 #include "YUME/Core/reference.h"
 #include "YUME/Core/definitions.h"
 #include "YUME/Renderer/texture.h"
+#include "YUME/Core/command_buffer.h"
+#include "renderpass.h"
+#include "framebuffer.h"
 
 #include <glm/glm.hpp>
 
@@ -34,7 +37,7 @@ namespace YUME
 		std::array<Ref<Texture2D>, MAX_RENDER_TARGETS> ColorTargets;
 		Ref<Texture2D> DepthTarget = nullptr;
 
-		const char* DebugName = "Pipeline";
+		std::string DebugName = "Pipeline";
 	};
 
 	class YM_API Pipeline
@@ -49,11 +52,14 @@ namespace YUME
 
 			virtual void SetPolygonMode(PolygonMode p_Mode) = 0;
 
-			virtual void Begin() = 0;
-			virtual void End() = 0;
+			virtual void Begin(CommandBuffer* p_CommandBuffer, SubpassContents p_Contents = SubpassContents::INLINE) = 0;
+			virtual void End(CommandBuffer* p_CommandBuffer) = 0;
 
 			uint32_t GetWidth();
 			uint32_t GetHeight();
+
+			virtual const Ref<RenderPass>& GetRenderPass() const = 0;
+			virtual const Ref<Framebuffer>& GetFramebuffer() const = 0;
 
 			static Ref<Pipeline> Create(const PipelineCreateInfo& p_CreateInfo);
 

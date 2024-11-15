@@ -9,7 +9,7 @@ namespace YUME
 {
 	Scene::Scene()
 	{
-		m_EntityManager = CreateScope<EntityManager>(this);
+		m_EntityManager = CreateUnique<EntityManager>(this);
 
 		m_EntityManager->AddDependency<SpriteComponent, ShapeComponent>();
 		m_EntityManager->AddDependency<SpriteComponent, TransformComponent>();

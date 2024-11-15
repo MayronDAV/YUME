@@ -14,17 +14,24 @@ namespace YUME
 
 	struct YM_API RendererBeginInfo
 	{
-		glm::vec4 ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-		bool SwapchainTarget = true;
-		uint32_t Width = 0;
-		uint32_t Height = 0;
-		Camera MainCamera;
-		glm::mat4 CameraTransform{ 1.0f };
+		bool	  SwapchainTarget = false;
+		glm::vec4 ClearColor	  = { 0.0f, 0.0f, 0.0f, 1.0f };
+		uint32_t  Width			  = 0;
+		uint32_t  Height		  = 0;
+		Camera    MainCamera;
 	};
 
-	// Maybe move to application or project settings?
+	// TODO: Move to another place
+	enum class Quality
+	{
+		Low = 0,
+		Medium,
+		High
+	};
+
 	struct RenderSettings
 	{
+		Quality ShadowMap = Quality::Low;
 		bool PBR = true;
 		bool OIT = false;
 		bool Renderer3D = true;

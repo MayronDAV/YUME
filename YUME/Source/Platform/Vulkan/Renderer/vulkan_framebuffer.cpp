@@ -1,28 +1,29 @@
 #include "YUME/yumepch.h"
-#include "vulkan_renderpass_framebuffer.h"
+#include "vulkan_framebuffer.h"
 #include "Platform/Vulkan/Core/vulkan_device.h"
 #include "vulkan_swapchain.h"
 #include "vulkan_renderpass.h"
 #include "YUME/Renderer/texture.h"
 #include "vulkan_texture.h"
 #include "vulkan_context.h"
+#include "Platform/Vulkan/Utils/vulkan_utils.h"
 
 
 
 namespace YUME
 {
-	VulkanRenderPassFramebuffer::VulkanRenderPassFramebuffer(const RenderPassFramebufferSpec& p_Spec)
+	VulkanFramebuffer::VulkanFramebuffer(const FramebufferSpecification& p_Spec)
 		: m_Spec(p_Spec)
 	{
 		Init(p_Spec);
 	}
 
-	VulkanRenderPassFramebuffer::~VulkanRenderPassFramebuffer()
+	VulkanFramebuffer::~VulkanFramebuffer()
 	{
 		CleanUp(true);
 	}
 
-	void VulkanRenderPassFramebuffer::CleanUp(bool p_DeletionQueue)
+	void VulkanFramebuffer::CleanUp(bool p_DeletionQueue)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -48,20 +49,31 @@ namespace YUME
 		}
 	}
 
-	void VulkanRenderPassFramebuffer::OnResize(uint32_t p_Width, uint32_t p_Height, const std::vector<Ref<Texture2D>>& p_Attachments)
+	void VulkanFramebuffer::OnResize(uint32_t p_Width, uint32_t p_Height, const std::vector<Ref<Texture2D>>& p_Attachments)
 	{
 		YM_PROFILE_FUNCTION()
 
 		m_Spec.Width = p_Width;
 		m_Spec.Height = p_Height;
-		m_Spec.Attachments = p_Attachments;
+
+		if (p_Attachments.empty())
+		{
+			for (auto& attachment : m_Spec.Attachments)
+			{
+				attachment->Resize(p_Width, p_Height);
+			}
+		}
+		else
+		{
+			m_Spec.Attachments = p_Attachments;
+		}
 
 		CleanUp();
 
 		Init(m_Spec);
 	}
 
-	void VulkanRenderPassFramebuffer::Init(const RenderPassFramebufferSpec& p_Spec)
+	void VulkanFramebuffer::Init(const FramebufferSpecification& p_Spec)
 	{
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -91,5 +103,8 @@ namespace YUME
 
 		auto res = vkCreateFramebuffer(VulkanDevice::Get().GetDevice(), &framebufferInfo, nullptr, &m_Framebuffer);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
+
+		if (!m_Spec.DebugName.empty())
+			VKUtils::SetDebugUtilsObjectName(VulkanDevice::Get().GetDevice(), VK_OBJECT_TYPE_FRAMEBUFFER, m_Spec.DebugName.c_str(), m_Framebuffer);
 	}
 }

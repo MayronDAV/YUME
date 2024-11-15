@@ -257,7 +257,7 @@ namespace YUME
 
 						attDesc.location = m_VertexBufferLocation;
 						attDesc.binding = m_VertexBufferBinding;
-						attDesc.format = Utils::DataTypeToVkFormat(element.Type);
+						attDesc.format = VKUtils::DataTypeToVkFormat(element.Type);
 						attDesc.offset = element.Size * i;
 
 						m_VertexBufferLocation++;
@@ -273,7 +273,7 @@ namespace YUME
 
 						attDesc.location = m_VertexBufferLocation;
 						attDesc.binding = m_VertexBufferBinding;
-						attDesc.format = Utils::DataTypeToVkFormat(element.Type);
+						attDesc.format = VKUtils::DataTypeToVkFormat(element.Type);
 						attDesc.offset = element.Size * i;
 
 						m_VertexBufferLocation++;
@@ -287,7 +287,7 @@ namespace YUME
 
 					attDesc.location = m_VertexBufferLocation;
 					attDesc.binding = m_VertexBufferBinding;
-					attDesc.format = Utils::DataTypeToVkFormat(element.Type);
+					attDesc.format = VKUtils::DataTypeToVkFormat(element.Type);
 					attDesc.offset = element.Offset;
 
 					m_VertexBufferLocation++;
@@ -309,10 +309,9 @@ namespace YUME
 	}
 
 
-	void VulkanShader::BindPushConstants() const
+	void VulkanShader::BindPushConstants(CommandBuffer* p_CommandBuffer) const
 	{
-		auto context = static_cast<VulkanContext*>(Application::Get().GetWindow().GetContext());
-		auto commandBuffer = context->GetCommandBuffer();
+		auto commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
 
 		int index = 0;
 		auto& push = m_PushConstants[index];
@@ -587,7 +586,7 @@ namespace YUME
 			bindingInfo.binding = binding;
 			bindingInfo.descriptorCount = descriptorCount;
 			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
+			bindingInfo.stageFlags = VKUtils::ShaderTypeToVK(p_Stage);
 			bindingInfo.pImmutableSamplers = nullptr;
 
 			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
@@ -638,7 +637,7 @@ namespace YUME
 			bindingInfo.binding = binding;
 			bindingInfo.descriptorCount = descriptorCount;
 			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
+			bindingInfo.stageFlags = VKUtils::ShaderTypeToVK(p_Stage);
 			bindingInfo.pImmutableSamplers = nullptr;
 
 			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
@@ -672,7 +671,7 @@ namespace YUME
 			bindingInfo.binding = binding;
 			bindingInfo.descriptorCount = descriptorCount;
 			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
+			bindingInfo.stageFlags = VKUtils::ShaderTypeToVK(p_Stage);
 			bindingInfo.pImmutableSamplers = nullptr;
 
 			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
@@ -706,7 +705,7 @@ namespace YUME
 			bindingInfo.binding = binding;
 			bindingInfo.descriptorCount = descriptorCount;
 			bindingInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-			bindingInfo.stageFlags = Utils::ShaderTypeToVK(p_Stage);
+			bindingInfo.stageFlags = VKUtils::ShaderTypeToVK(p_Stage);
 			bindingInfo.pImmutableSamplers = nullptr;
 
 			m_DescriptorSetLayoutBindings[set].push_back(bindingInfo);
@@ -728,7 +727,7 @@ namespace YUME
 			auto& push_constant = m_PushConstants.emplace_back();
 			push_constant.Name = name;
 			push_constant.Offset = 0;
-			push_constant.Size = size;
+			push_constant.Size = (uint32_t)size;
 			push_constant.ShaderStage = p_Stage;
 
 			for (uint32_t i = 0; i < memberCount; i++)
@@ -766,12 +765,12 @@ namespace YUME
 
 			VkPipelineShaderStageCreateInfo ShaderStageInfo{};
 			ShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			ShaderStageInfo.stage = Utils::ShaderTypeToVK(stage);
+			ShaderStageInfo.stage = VKUtils::ShaderTypeToVK(stage);
 			ShaderStageInfo.module = m_ShaderModules[stage];
 			ShaderStageInfo.pName = "main";
 			m_ShaderStages.push_back(ShaderStageInfo);
 
-			m_Stages |= Utils::ShaderTypeToVK(stage);
+			m_Stages |= VKUtils::ShaderTypeToVK(stage);
 		}
 
 	}
@@ -803,7 +802,7 @@ namespace YUME
 			VkPushConstantRange range{};
 			range.offset = push.Offset;
 			range.size = push.Size;
-			range.stageFlags = Utils::ShaderTypeToVK(push.ShaderStage);
+			range.stageFlags = VKUtils::ShaderTypeToVK(push.ShaderStage);
 
 			pushConstantRangeArray.push_back(range);
 		}

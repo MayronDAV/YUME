@@ -40,7 +40,7 @@ namespace YUME
 			
 			void SetProperties(const MaterialProperties& p_Properties) { m_Properties = p_Properties; }
 			
-			void Bind(const Ref<Shader>& p_Shader, bool p_PBR = false);
+			void Bind(CommandBuffer* p_CommandBuffer, const Ref<Shader>& p_Shader, bool p_PBR = false);
 
 			static void CreateDefaultTextures();
 			static void DestroyDefaultTextures();

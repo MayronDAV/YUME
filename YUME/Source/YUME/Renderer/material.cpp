@@ -42,7 +42,7 @@ namespace YUME
 			s_DefaultTexture.reset();
 	}
 
-	void Material::Bind(const Ref<Shader>& p_Shader, bool p_PBR)
+	void Material::Bind(CommandBuffer* p_CommandBuffer, const Ref<Shader>& p_Shader, bool p_PBR)
 	{
 		if (!m_TexturesUpdated)
 		{
@@ -50,7 +50,7 @@ namespace YUME
 			m_TexturesUpdated = true;
 		}
 
-		RendererCommand::BindDescriptorSets(&m_DescriptorSet);
+		RendererCommand::BindDescriptorSets(p_CommandBuffer, &m_DescriptorSet);
 	}
 
 	void Material::UploadMaterialProperties()

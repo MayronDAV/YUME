@@ -36,7 +36,7 @@ namespace YUME
 			void OnRender();
 
 		private:
-			Scope<EntityManager> m_EntityManager;
+			Unique<EntityManager> m_EntityManager;
 	};
 
 

@@ -50,15 +50,13 @@ namespace YUME
 				std::string Title;
 				uint32_t Width;
 				uint32_t Height;
-				bool VSync;
-				bool Resized = false;
+				bool Vsync;
+				Unique<VulkanContext> Context;
 
 				EventCallbackFn EventCallback;
 			};
-
 			WindowData m_Data;
 
-			Scope<VulkanContext> m_Context;
 			std::vector<Resolution> m_Resolutions;
 	};
 }

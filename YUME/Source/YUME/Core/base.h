@@ -23,6 +23,13 @@
 	#endif
 #endif
 
+#ifdef YM_PLATFORM_WINDOWS
+	#define MEM_ALIGNMENT 16
+	#define MEM_ALIGN __declspec(align(MEM_ALIGNMENT))
+#elif YM_PLATFORM_LINUX
+	#define MEM_ALIGNMENT 16
+	#define MEM_ALIGN __attribute__((aligned(MEM_ALIGNMENT)))
+#endif
 
 #define YM_NO_DLLINTERFACE_WARN 1
 

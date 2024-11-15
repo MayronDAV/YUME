@@ -22,3 +22,6 @@
 [submodule "Thirdparty/VulkanMemoryAllocator"]
 	path = YUME/Thirdparty/VulkanMemoryAllocator
 	url = https://github.com/MayronDAV/VulkanMemoryAllocator.git
+[submodule "YUME/Thirdparty/optick"]
+	path = YUME/Thirdparty/optick
+	url = https://github.com/MayronDAV/optick.git

@@ -52,7 +52,6 @@ namespace YUME
 		YM_CORE_TRACE(VULKAN_PREFIX "Getting gpus...")
 
 		auto instance = VulkanContext::GetInstance();
-		auto surface = VulkanSurface::Get().GetSurface();
 
 		auto res = vkEnumeratePhysicalDevices(instance, &m_GPUCount, nullptr);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
@@ -82,35 +81,8 @@ namespace YUME
 			m_PhysicalDevices[i].FamilyProperties.resize(familyPropsCount);
 			vkGetPhysicalDeviceQueueFamilyProperties(device, &familyPropsCount, m_PhysicalDevices[i].FamilyProperties.data());
 
-			m_PhysicalDevices[i].QueueSupportsPresent.resize(familyPropsCount);
-			for (uint32_t q = 0; q < familyPropsCount; q++)
-			{
-				res = vkGetPhysicalDeviceSurfaceSupportKHR(device, q, surface, m_PhysicalDevices[i].QueueSupportsPresent.data());
-				YM_CORE_VERIFY(res == VK_SUCCESS)
-			}
-
-			uint32_t surfaceFormatsCount = 0;
-			res = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &surfaceFormatsCount, nullptr);
-			YM_CORE_VERIFY(res == VK_SUCCESS)
-			YM_CORE_VERIFY(surfaceFormatsCount > 0)
-
-			m_PhysicalDevices[i].SurfaceFormats.resize(surfaceFormatsCount);
-			res = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &surfaceFormatsCount, m_PhysicalDevices[i].SurfaceFormats.data());
-			YM_CORE_VERIFY(res == VK_SUCCESS)
-
-			res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &m_PhysicalDevices[i].SurfaceCapabilities);
-			YM_CORE_VERIFY(res == VK_SUCCESS)
 
 			vkGetPhysicalDeviceMemoryProperties(device, &m_PhysicalDevices[i].MemoryProperties);
-
-			uint32_t presentModesCount = 0;
-			res = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModesCount, nullptr);
-			YM_CORE_VERIFY(res == VK_SUCCESS)
-			YM_CORE_VERIFY(presentModesCount > 0)
-
-			m_PhysicalDevices[i].PresentModes.resize(presentModesCount);
-			res = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModesCount, m_PhysicalDevices[i].PresentModes.data());
-			YM_CORE_VERIFY(res == VK_SUCCESS)
 
 			uint32_t extensionCount = 0;
 			auto& physDevice = m_PhysicalDevices[i];
@@ -126,7 +98,6 @@ namespace YUME
 			{
 				static const float defaultQueuePriority(0.0f);
 				auto familyProps = m_PhysicalDevices[i].FamilyProperties[j];
-				bool supportsPresent = m_PhysicalDevices[i].QueueSupportsPresent[j];
 
 				if (familyProps.queueFlags & VK_QUEUE_COMPUTE_BIT)
 				{
@@ -165,18 +136,6 @@ namespace YUME
 					queueInfo.pQueuePriorities = &defaultQueuePriority;
 					m_PhysicalDevices[i].QueueCreateInfos.push_back(queueInfo);
 				}
-
-				if (supportsPresent)
-				{
-					m_PhysicalDevices[i].Indices.Present = j;
-
-					VkDeviceQueueCreateInfo queueInfo = {};
-					queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-					queueInfo.queueFamilyIndex = j;
-					queueInfo.queueCount = 1;
-					queueInfo.pQueuePriorities = &defaultQueuePriority;
-					m_PhysicalDevices[i].QueueCreateInfos.push_back(queueInfo);
-				}
 			}
 
 			m_PhysicalDevices[i].Info = GetInfo(physDevice.Handle);
@@ -199,17 +158,6 @@ namespace YUME
 		for (const auto& extension : m_PhysicalDevices[m_SelectedIndex].SupportedExtensions)
 		{
 			if (strcmp(p_Extension, extension.extensionName))
-				return true;
-		}
-
-		return false;
-	}
-
-	bool VulkanPhysicalDevice::IsPresentModeSupported(const VkPresentModeKHR& p_Mode)
-	{
-		for (const auto& mode : m_PhysicalDevices[m_SelectedIndex].PresentModes)
-		{
-			if (p_Mode == mode)
 				return true;
 		}
 
@@ -246,8 +194,8 @@ namespace YUME
 		info.VendorID = properties.vendorID;
 		info.Vendor = info.GetVendorName();
 		info.Memory = memoryMB;
-		info.Driver = info.DecodeDriverVersion(uint32_t(properties.driverVersion));
-		info.APIVersion = info.DecodeDriverVersion(uint32_t(properties.apiVersion));
+		info.Driver = info.DecodeVersion(uint32_t(properties.driverVersion));
+		info.APIVersion = info.DecodeVersion(uint32_t(properties.apiVersion));
 		info.Type = properties.deviceType;
 
 		return info;
@@ -286,7 +234,7 @@ namespace YUME
 		return name;
 	}
 
-	std::string PhysicalDeviceInfo::DecodeDriverVersion(const uint32_t p_Version) const
+	std::string PhysicalDeviceInfo::DecodeVersion(const uint32_t p_Version) const
 	{
 		std::vector<char> buffer;
 		buffer.resize(256);
@@ -372,7 +320,7 @@ namespace YUME
 
 		YM_CORE_TRACE(VULKAN_PREFIX "Creating device...")
 
-		m_PhysicalDevice = CreateScope<VulkanPhysicalDevice>();
+		m_PhysicalDevice = CreateUnique<VulkanPhysicalDevice>();
 
 		std::vector<const char*> devExts = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -399,7 +347,7 @@ namespace YUME
 
 		auto physDevice = m_PhysicalDevice->Selected();
 
-		// TEMPORARY VERIFY
+		// TEMPORARY ?
 		YM_CORE_VERIFY(physDevice.Features.independentBlend == VK_TRUE, "The feature independentBlend isn't supported :c")
 		YM_CORE_VERIFY(physDevice.Features.fragmentStoresAndAtomics == VK_TRUE, "The feature fragmentStoresAndAtomics isn't supported :c")
 
@@ -435,7 +383,6 @@ namespace YUME
 		YM_CORE_VERIFY(res == VK_SUCCESS)
 
 		vkGetDeviceQueue(m_Device, physDevice.Indices.Graphics, 0, &m_GraphicQueue);
-		vkGetDeviceQueue(m_Device, physDevice.Indices.Present, 0, &m_PresentQueue);
 		vkGetDeviceQueue(m_Device, physDevice.Indices.Compute, 0, &m_ComputeQueue);
 		vkGetDeviceQueue(m_Device, physDevice.Indices.Transfer, 0, &m_TransferQueue);
 

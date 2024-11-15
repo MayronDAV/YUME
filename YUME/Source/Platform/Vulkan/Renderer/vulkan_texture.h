@@ -1,6 +1,7 @@
 #pragma once
 #include "YUME/Renderer/texture.h"
 #include "Platform/Vulkan/Core/vulkan_base.h"
+#include "YUME/Core/command_buffer.h"
 
 // Lib
 #include <vulkan/vulkan.h>
@@ -30,14 +31,14 @@ namespace YUME
 			uint64_t GetEstimatedSize() const override { return m_Specification.Width * m_Specification.Height * m_Channels * m_BytesPerChannel; }
 			const TextureSpecification& GetSpecification() const override { return m_Specification; }
 			std::vector<unsigned char>& GetData() override { return m_Data; }
-			VkImageView GetImageView() const { return m_TextureImageView; }
-			VkSampler GetImageSampler() const { return m_TextureSampler; }
+			VkImage GetImage() { return m_TextureImage; }
+			VkImageView GetImageView() { return m_TextureImageView; }
+			VkSampler GetImageSampler() { return m_TextureSampler; }
 			VkImageLayout GetLayout() const { return m_TextureImageLayout; }
-			VkImage GetImage() const { return m_TextureImage; }
 
 			VkImageSubresourceRange GetSubresourceRange() const;
 
-			void TransitionImage(VkImageLayout p_NewLayout, bool p_UseSingleTime = true);
+			void TransitionImage(VkImageLayout p_NewLayout, CommandBuffer* p_CommandBuffer = nullptr);
 
 			bool operator== (const Texture& p_Other) const override;
 

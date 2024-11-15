@@ -9,7 +9,7 @@ namespace YUME
 	{
 		public:
 			EditorCamera() = default;
-			EditorCamera(float p_Fov, float p_AspectRatio, float p_NearClip, float p_FarClip, bool p_FlipY = true);
+			EditorCamera(float p_Fov, float p_AspectRatio, float p_NearClip, float p_FarClip);
 
 			void OnUpdate(const Timestep& p_Ts);
 			void OnEvent(Event& p_Event);
@@ -45,7 +45,7 @@ namespace YUME
 
 		private:
 			bool m_IsFocused = true;
-			bool m_FlipY = true;
+			//bool m_FlipY = true;
 
 			glm::vec3 m_Front = { 0.0f, 0.0f, -1.0f };
 			glm::vec3 m_Right = { 1.0f, 0.0f, 0.0f };
@@ -62,7 +62,6 @@ namespace YUME
 			float m_Yaw = 0.0f;
 
 			glm::vec2 m_InitialMousePosition = { 0.0f, 0.0f };
-			glm::mat4 m_ViewMatrix{ 1.0f };
 			glm::vec3 m_FocalPoint = { 0.0f, 0.0f, 0.0f };
 
 			float m_ViewportWidth = 1280;

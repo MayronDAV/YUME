@@ -11,7 +11,7 @@ namespace YUME
 	enum class AssetType
 	{
 		Unknown = 0,
-		Scene, Texture2D
+		Scene, Texture2D, Model
 	};
 
 	#define ASSET_CLASS_TYPE(type)													\

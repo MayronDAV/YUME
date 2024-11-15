@@ -18,8 +18,8 @@ namespace YUME
 
 			void CleanUp(bool p_DeletionQueue = false) noexcept;
 
-			void Begin(const Ref<RenderPassFramebuffer>& p_Frame, uint32_t p_Width, uint32_t p_Height, const glm::vec4& p_Color = { 1, 1, 1, 1 }) override;
-			void End() override;
+			void Begin(CommandBuffer* p_CommandBuffer, const Ref<Framebuffer>& p_Frame, uint32_t p_Width, uint32_t p_Height, const glm::vec4& p_Color = { 1, 1, 1, 1 }, SubpassContents p_Contents = SubpassContents::INLINE) override;
+			void End(CommandBuffer* p_CommandBuffer) override;
 
 			int GetColorAttachmentCount() const { return m_ColorAttachmentCount; }
 
@@ -32,6 +32,7 @@ namespace YUME
 			int m_ClearCount = 0;
 			int m_ColorAttachmentCount = 0;
 			bool m_DepthOnly = true;
+			std::string m_DebugName;
 
 			VkRenderPass m_RenderPass = nullptr;
 	};

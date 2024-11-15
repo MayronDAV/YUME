@@ -4,7 +4,7 @@
 #include "Platform/Vulkan/Utils/vulkan_utils.h"
 
 #include "YUME/Renderer/renderpass.h"
-#include "YUME/Renderer/renderpass_framebuffer.h"
+#include "YUME/Renderer/framebuffer.h"
 
 #include <vulkan/vulkan.h>
 
@@ -29,8 +29,8 @@ namespace YUME
 			void Invalidade();
 			void Invalidade(const PipelineCreateInfo& p_Desc);
 
-			void Begin() override;
-			void End() override;
+			void Begin(CommandBuffer* p_CommandBuffer, SubpassContents p_Contents = SubpassContents::INLINE) override;
+			void End(CommandBuffer* p_CommandBuffer) override;
 
 			void SetPolygonMode(PolygonMode p_Mode) override
 			{
@@ -45,9 +45,13 @@ namespace YUME
 			const VkPipelineLayout& GetLayout() const { return m_Layout; }
 			const VkPipeline& GetPipeline() const { return m_Pipeline; }
 
+			const Ref<RenderPass>& GetRenderPass() const override { return m_RenderPass; }
+			const Ref<Framebuffer>& GetFramebuffer() const override;
+
 		private:
 			void TransitionAttachments();
 			void CreateFramebuffers();
+			void ResizeFramebuffer();
 
 		private:
 			Ref<Shader> m_Shader;
@@ -55,7 +59,7 @@ namespace YUME
 			VulkanContext* m_Context = nullptr;
 
 			Ref<RenderPass> m_RenderPass = nullptr;
-			std::vector<Ref<RenderPassFramebuffer>> m_Framebuffers;
+			std::vector<Ref<Framebuffer>> m_Framebuffers;
 
 			VkPipeline m_Pipeline = VK_NULL_HANDLE;
 			VkPipelineLayout m_Layout = VK_NULL_HANDLE;

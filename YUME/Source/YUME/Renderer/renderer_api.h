@@ -29,22 +29,22 @@ namespace YUME
 
 			virtual void Init(GraphicsContext* p_Context) = 0;
 
-			virtual void SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height) = 0;
+			virtual void SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height, CommandBuffer* p_CommandBuffer = nullptr) = 0;
 
 			virtual void ClearColor(const glm::vec4& p_Color) = 0;
 			virtual void ClearRenderTarget(const Ref<Texture2D>& p_Texture, uint32_t p_Value) = 0;
 			virtual void ClearRenderTarget(const Ref<Texture2D>& p_Texture, const glm::vec4& p_Value) = 0;
 
-			virtual void Draw(const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount = 1) = 0;
-			virtual void DrawIndexed(const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount = 1) = 0;
+			virtual void Draw(CommandBuffer* p_CommandBuffer, const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount = 1) = 0;
+			virtual void DrawIndexed(CommandBuffer* p_CommandBuffer, const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount = 1) = 0;
 
 			virtual const Capabilities& GetCapabilities() const = 0;
 
-			void BindDescriptorSets(const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count)
+			void BindDescriptorSets(CommandBuffer* p_CommandBuffer, const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count)
 			{
 				for (uint32_t i = 0; i < p_Count; i++)
 				{
-					p_DescriptorSets[i]->Bind();
+					p_DescriptorSets[i]->Bind(p_CommandBuffer);
 				}
 			}
 

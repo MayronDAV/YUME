@@ -1,4 +1,5 @@
 #pragma once
+#include "YUME/Core/base.h"
 #include "definitions.h"
 
 
@@ -7,7 +8,7 @@ namespace YUME
 	// In the future, this class will handle all engine configurations
 	// including config files.
 
-	class Engine
+	class YM_API Engine
 	{
 		public:
 			static void Init();

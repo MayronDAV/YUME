@@ -172,7 +172,7 @@ namespace YUME
 				vmaUnmapMemory(allocator, stagingAlloc);
 			}
 
-			VkCommandBuffer commandBuffer = Utils::BeginSingleTimeCommand();
+			VkCommandBuffer commandBuffer = VKUtils::BeginSingleTimeCommand();
 
 			VkBufferCopy copyRegion = {};
 			copyRegion.size = p_SizeBytes;
@@ -183,7 +183,7 @@ namespace YUME
 				1,
 				&copyRegion);
 
-			Utils::EndSingleTimeCommand(commandBuffer);
+			VKUtils::EndSingleTimeCommand(commandBuffer);
 			vmaDestroyBuffer(allocator, stagingBuffer, stagingAlloc);
 
 #else
@@ -248,11 +248,11 @@ namespace YUME
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto commandBuffer = Utils::BeginSingleTimeCommand();
+		auto commandBuffer = VKUtils::BeginSingleTimeCommand();
 
 		vkCmdFillBuffer(commandBuffer, m_Buffer, 0, p_SizeBytes, p_Data);
 
-		Utils::EndSingleTimeCommand(commandBuffer);
+		VKUtils::EndSingleTimeCommand(commandBuffer);
 	}
 
 

@@ -42,7 +42,7 @@ namespace YUME
 			const std::vector<VkVertexInputBindingDescription>& GetBindingDescription() const { return m_BindingDescs; }
 
 			void SetPushValue(const std::string& p_Name, void* p_Value) override;
-			void BindPushConstants() const override;
+			void BindPushConstants(CommandBuffer* p_CommandBuffer) const override;
 
 		private:
 			std::string ReadFile(const std::string_view& p_Filepath) const;

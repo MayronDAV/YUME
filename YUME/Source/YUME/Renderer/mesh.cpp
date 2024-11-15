@@ -15,9 +15,9 @@ namespace YUME
 		m_IndexBuffer = IndexBuffer::Create(p_Indices.data(), (uint32_t)p_Indices.size());
 	}
 
-	void Mesh::BindMaterial(const Ref<Shader>& p_Shader, bool p_PBR)
+	void Mesh::BindMaterial(CommandBuffer* p_CommandBuffer, const Ref<Shader>& p_Shader, bool p_PBR)
 	{
-		m_Material->Bind(p_Shader, p_PBR);
+		m_Material->Bind(p_CommandBuffer, p_Shader, p_PBR);
 	}
 
 	void Mesh::GenerateNormals(MeshVertex* p_Vertices, uint32_t p_VertexCount, uint32_t* p_Indices, uint32_t p_IndexCount)

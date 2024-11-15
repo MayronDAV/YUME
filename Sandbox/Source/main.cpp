@@ -23,7 +23,7 @@ namespace YUME
 			m_Scene = new Scene();
 
 			auto sphere = CreateRef<Model>("Resources/Meshes/sphere.obj");
-			auto backpack = CreateRef<Model>("Resources/Meshes/backpack/backpack.obj", /* FlipYTexCoord */ false);
+			//auto backpack = CreateRef<Model>("Resources/Meshes/backpack/backpack.obj", /* FlipYTexCoord */ false);
 			auto artisansHub = CreateRef<Model>("Resources/Meshes/Spyro/ArtisansHub.obj");
 
 			m_PointLight = m_Scene->CreateEntity("PointLight");
@@ -31,17 +31,17 @@ namespace YUME
 			m_PointLight.AddComponent<ModelComponent>(sphere);
 			{
 				auto& tc = m_PointLight.GetComponent<TransformComponent>();
-				tc.Scale = glm::vec3(0.5f);
+				tc.Transform.SetLocalScale(glm::vec3(0.5f));
 			}
 
 			m_DirectionalLight = m_Scene->CreateEntity("DirectionalLight");
 			m_DirectionalLight.AddComponent<LightComponent>(LightType::Directional, m_DirectionalLightColor);
 
-			{
-				auto entt = m_Scene->CreateEntity("Backpack");
-				entt.AddComponent<ModelComponent>(backpack);
-				auto& tc = entt.AddOrReplaceComponent<TransformComponent>(glm::vec3{ 5.0f, 3.0f, -4.0f });
-			}
+			//{
+			//	auto entt = m_Scene->CreateEntity("Backpack");
+			//	entt.AddComponent<ModelComponent>(backpack);
+			//	auto& tc = entt.AddOrReplaceComponent<TransformComponent>(glm::vec3{ 5.0f, 3.0f, -4.0f });
+			//}
 
 			{
 				auto entt = m_Scene->CreateEntity("ArtisansHub");
@@ -59,9 +59,12 @@ namespace YUME
 
 			{
 				auto& tc = m_PointLight.GetComponent<TransformComponent>();
-				tc.Translation = m_PointLightPosition;
+				tc.Transform.SetLocalTranslation(m_PointLightPosition);
 				auto& lc = m_PointLight.GetComponent<LightComponent>();
 				lc.Color = m_PointLightColor;
+				lc.Intensity = m_PointLightIntensity;
+				lc.Linear = m_PointLightLinear;
+				lc.Quadratic = m_PointLightQuadratic;
 			}
 
 			{
@@ -73,7 +76,6 @@ namespace YUME
 			RendererBeginInfo rbi{};
 			rbi.MainCamera = m_Camera;
 			rbi.ClearColor = m_Color;
-			rbi.SwapchainTarget = false;
 			rbi.Width = m_Width;
 			rbi.Height = m_Height;
 
@@ -166,6 +168,9 @@ namespace YUME
 			ImGui::Spacing();
 			ImGui::DragFloat3("PointLight.Position", glm::value_ptr(m_PointLightPosition), 0.1f);
 			ImGui::ColorEdit3("PointLight.Color", glm::value_ptr(m_PointLightColor));
+			ImGui::DragFloat("PointLight.Intensity", &m_PointLightIntensity, 0.1f, 0.01f);
+			ImGui::DragFloat("PointLight.Linear", &m_PointLightLinear, 0.001f);
+			ImGui::DragFloat("PointLight.Quadratic", &m_PointLightQuadratic, 0.001f);
 			ImGui::Spacing();
 			ImGui::Spacing();
 			ImGui::DragFloat3("DirectionalLight.Direction", glm::value_ptr(m_Direction), 0.1f, -1.0f, 1.0f);
@@ -202,6 +207,9 @@ namespace YUME
 
 		glm::vec3 m_PointLightPosition{ 0.0f };
 		glm::vec3 m_PointLightColor{ 1.0f };
+		float m_PointLightIntensity = 1.0f;
+		float m_PointLightLinear = 0.09f;
+		float m_PointLightQuadratic = 0.032f;
 		Entity m_PointLight;
 
 		glm::vec3 m_DirectionalLightColor{ 1.0f };

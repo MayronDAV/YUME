@@ -23,13 +23,13 @@ namespace YUME
 			
 			void SetStorageImage(const std::string& p_Name, const Ref<Texture2D>& p_Texture) override;
 
-			void Upload() override;
+			void Upload(CommandBuffer* p_CommandBuffer = nullptr) override;
 
 		protected:
-			void Bind() override;
+			void Bind(CommandBuffer* p_CommandBuffer) override;
 
 		private:
-			void TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture);
+			void TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture, CommandBuffer* p_CommandBuffer);
 
 		private:
 			VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;

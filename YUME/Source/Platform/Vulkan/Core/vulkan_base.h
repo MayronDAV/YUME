@@ -2,6 +2,10 @@
 #include "YUME/Core/base.h"
 #include <vulkan/vulkan.h>
 
+inline PFN_vkCmdBeginDebugUtilsLabelEXT fpCmdBeginDebugUtilsLabelEXT;
+inline PFN_vkCmdEndDebugUtilsLabelEXT fpCmdEndDebugUtilsLabelEXT;
+inline PFN_vkSetDebugUtilsObjectNameEXT fpSetDebugUtilsObjectNameEXT;
+
 #define USE_VMA_ALLOCATOR
 //#define USE_SMALL_VMA_POOL
 #ifdef USE_VMA_ALLOCATOR

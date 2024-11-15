@@ -13,51 +13,6 @@
 
 namespace YUME
 {
-
-	void ImGuiLayer::OnAttach()
-	{
-		Init();
-		m_IsAttached = true;
-	}
-
-	void ImGuiLayer::OnDetach()
-	{
-		Clear();
-		m_IsAttached = false;
-	}
-
-	void ImGuiLayer::OnEvent(Event& p_Event)
-	{
-		if (m_BlockEvents && m_IsAttached)
-		{
-			const ImGuiIO& io = ImGui::GetIO();
-			p_Event.Handled |= p_Event.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
-			p_Event.Handled |= p_Event.IsInCategory(EventCategoryKeyboard) & io.WantCaptureKeyboard;
-		}
-
-		if (p_Event.GetEventType() == WindowResizeEvent::GetStaticType())
-		{
-			auto event = (WindowResizeEvent*)&p_Event;
-			YM_CORE_INFO("ImGui resize handled!")
-			OnResize_Impl(event->GetWidth(), event->GetHeight());
-		}
-	}
-
-	void ImGuiLayer::OnResize(uint32_t p_Width, uint32_t p_Height)
-	{
-		OnResize_Impl(p_Width, p_Height);
-	}
-
-	void ImGuiLayer::Begin()
-	{
-		NewFrame();
-	}
-
-	void ImGuiLayer::End()
-	{
-		Render();
-	}
-
 	ImGuiContext* ImGuiLayer::GetCurrentContext()
 	{
 		return ImGui::GetCurrentContext();
@@ -65,7 +20,7 @@ namespace YUME
 
 	uint32_t ImGuiLayer::GetActiveWidgetID() const
 	{
-		YM_CORE_ASSERT(m_IsAttached)
+		YM_CORE_ASSERT(GImGui)
 
 		return GImGui->ActiveId;
 	}

@@ -33,7 +33,6 @@ namespace YUME
 		return nullptr;
 	}
 
-	// TODO: Change this when add UUID
 	Ref<Pipeline> Pipeline::Get(const PipelineCreateInfo& p_CreateInfo)
 	{
 		YM_PROFILE_FUNCTION()

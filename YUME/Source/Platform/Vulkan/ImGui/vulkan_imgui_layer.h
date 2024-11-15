@@ -1,7 +1,7 @@
 #pragma once
 #include "YUME/ImGui/imgui_layer.h"
 #include "Platform/Vulkan/Renderer/vulkan_renderpass.h"
-#include "Platform/Vulkan/Renderer/vulkan_renderpass_framebuffer.h"
+#include "Platform/Vulkan/Renderer/vulkan_framebuffer.h"
 
 
 
@@ -13,17 +13,17 @@ namespace YUME
 			VulkanImGuiLayer() = default;
 			~VulkanImGuiLayer() override;
 
-			ImTextureID AddTexture(const Ref<Texture2D>& p_Texture) const override;
+			void OnAttach() override;
+			void OnDetach() override;
+			void OnEvent(Event& p_Event) override;
 
-		protected:
-			void Init() override;
-			void NewFrame() override;
-			void Render() override;
-			void OnResize_Impl(uint32_t p_Width, uint32_t p_Height) override;
-			void Clear() override;
+			void Begin() override;
+			void End() override;
+
+			ImTextureID AddTexture(const Ref<Texture2D>& p_Texture) const override;
 
 		private:
 			Ref<VulkanRenderPass> m_RenderPass = nullptr;
-			std::vector<Ref<VulkanRenderPassFramebuffer>> m_Framebuffers;
+			std::vector<Ref<VulkanFramebuffer>> m_Framebuffers;
 	};
 }

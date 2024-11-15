@@ -2,6 +2,7 @@
 #include "YUME/Core/base.h"
 #include "YUME/Core/reference.h"
 #include "YUME/Core/definitions.h"
+#include "YUME/Core/command_buffer.h"
 
 
 namespace YUME
@@ -11,14 +12,14 @@ namespace YUME
 		public:
 			virtual ~VertexBuffer() = default;
 
-			virtual void Bind() const = 0;
+			virtual void Bind(CommandBuffer* p_CommandBuffer) const = 0;
 			virtual void Unbind() const = 0;
 
 			virtual void SetData(const void* p_Data, uint64_t p_SizeBytes) = 0;
 
 			virtual void Flush() {};
 
-			static Ref<VertexBuffer> Create(const void* p_Data, uint64_t p_SizeBytes, BufferUsage p_Usage = BufferUsage::STATIC);
+			static Ref<VertexBuffer> Create(const void* p_Data, uint64_t p_SizeBytes);
 	};
 
 
@@ -29,7 +30,7 @@ namespace YUME
 
 			virtual uint32_t GetCount() const = 0;
 
-			virtual void Bind() const = 0;
+			virtual void Bind(CommandBuffer* p_CommandBuffer) const = 0;
 			virtual void Unbind() const = 0;
 
 			static Ref<IndexBuffer> Create(const uint32_t* p_Indices, uint32_t p_Count);

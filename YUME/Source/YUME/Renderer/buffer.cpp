@@ -9,12 +9,12 @@
 namespace YUME
 {
 
-	Ref<VertexBuffer> VertexBuffer::Create(const void* p_Data, uint64_t p_SizeBytes, BufferUsage p_Usage)
+	Ref<VertexBuffer> VertexBuffer::Create(const void* p_Data, uint64_t p_SizeBytes)
 	{
 		YM_PROFILE_FUNCTION()
 
 		if (Engine::GetAPI() == RenderAPI::Vulkan)
-			return CreateRef<VulkanVertexBuffer>(p_Data, p_SizeBytes, p_Usage);
+			return CreateRef<VulkanVertexBuffer>(p_Data, p_SizeBytes);
 
 		YM_CORE_ASSERT(false, "Unknown RendererAPI!")
 		return nullptr;

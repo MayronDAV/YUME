@@ -32,11 +32,11 @@ namespace YUME
 		m_Capabilities.SupportCompute = VulkanDevice::Get().SupportCompute();
 	}
 
-	void VulkanRendererAPI::SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height)
+	void VulkanRendererAPI::SetViewport(float p_X, float p_Y, uint32_t p_Width, uint32_t p_Height, CommandBuffer* p_CommandBuffer)
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto& commandBuffer = m_Context->GetCommandBuffer();
+		auto& commandBuffer = p_CommandBuffer ? static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle() : VulkanSwapchain::Get().GetCurrentFrameData().MainCommandBuffer->GetHandle();
 
 		VkViewport viewport{};
 		viewport.x = p_X;
@@ -58,19 +58,20 @@ namespace YUME
 
 	void VulkanRendererAPI::ClearRenderTarget(const Ref<Texture2D>& p_Texture, uint32_t p_Value)
 	{
-		VkImageSubresourceRange subresourceRange = p_Texture.As<VulkanTexture2D>()->GetSubresourceRange();
-		const auto& spec = p_Texture->GetSpecification();
-		const auto& commandBuffer = m_Context->GetCommandBuffer();
+		auto subresourceRange = p_Texture.As<VulkanTexture2D>()->GetSubresourceRange();
+		const auto& spec	  = p_Texture->GetSpecification();
+		auto& frame			  = VulkanSwapchain::Get().GetCurrentFrameData();
+		auto& commandBuffer	  = frame.MainCommandBuffer->GetHandle();
 
 		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED || spec.Usage == TextureUsage::TEXTURE_STORAGE)
 		{
 			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, false);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, frame.MainCommandBuffer.get());
 
 			VkClearColorValue clearColorValue;
 			clearColorValue.uint32[0] = p_Value;
 			vkCmdClearColorImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, 1, &subresourceRange);
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_GENERAL, false);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_GENERAL, frame.MainCommandBuffer.get());
 		}
 		else
 		{
@@ -80,27 +81,28 @@ namespace YUME
 
 	void VulkanRendererAPI::ClearRenderTarget(const Ref<Texture2D>& p_Texture, const glm::vec4& p_Value)
 	{
-		VkImageSubresourceRange subresourceRange = p_Texture.As<VulkanTexture2D>()->GetSubresourceRange();
-		const auto& spec = p_Texture->GetSpecification();
-		const auto& commandBuffer = m_Context->GetCommandBuffer();
+		auto subresourceRange = p_Texture.As<VulkanTexture2D>()->GetSubresourceRange();
+		const auto& spec	  = p_Texture->GetSpecification();
+		auto& frame			  = VulkanSwapchain::Get().GetCurrentFrameData();
+		auto& commandBuffer   = frame.MainCommandBuffer->GetHandle();
 
 		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT)
 		{
 			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, false);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, frame.MainCommandBuffer.get());
 
 			VkClearColorValue clearColorValue = VkClearColorValue({ { p_Value.x, p_Value.y, p_Value.z, p_Value.w } });
 			vkCmdClearColorImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColorValue, 1, &subresourceRange);
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout, false);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout, frame.MainCommandBuffer.get());
 		}
 		else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
 		{
 			VkImageLayout layout = p_Texture.As<VulkanTexture2D>()->GetLayout();
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, false);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, frame.MainCommandBuffer.get());
 
 			VkClearDepthStencilValue clear_depth_stencil = { 1.0f, 1 };
 			vkCmdClearDepthStencilImage(commandBuffer, p_Texture.As<VulkanTexture2D>()->GetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth_stencil, 1, &subresourceRange);
-			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout, false);
+			p_Texture.As<VulkanTexture2D>()->TransitionImage(layout, frame.MainCommandBuffer.get());
 		}
 		else
 		{
@@ -108,29 +110,29 @@ namespace YUME
 		}
 	}
 
-	void VulkanRendererAPI::Draw(const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount)
+	void VulkanRendererAPI::Draw(CommandBuffer* p_CommandBuffer, const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount)
 	{
 		YM_PROFILE_FUNCTION()
 
-		auto& commandBuffer = m_Context->GetCommandBuffer();
+		auto& commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
 
 		if (p_VertexBuffer != nullptr)
-			p_VertexBuffer->Bind();
+			p_VertexBuffer->Bind(p_CommandBuffer);
 
 		vkCmdDraw(commandBuffer, p_VertexCount, p_InstanceCount, 0, 0);
 	}
 
-	void VulkanRendererAPI::DrawIndexed(const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount)
+	void VulkanRendererAPI::DrawIndexed(CommandBuffer* p_CommandBuffer, const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount)
 	{
 		YM_PROFILE_FUNCTION()
 		YM_CORE_ASSERT(p_IndexBuffer)
 
-		auto& commandBuffer = m_Context->GetCommandBuffer();
+		auto& commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
 
 		if (p_VertexBuffer != nullptr)
-			p_VertexBuffer->Bind();
+			p_VertexBuffer->Bind(p_CommandBuffer);
 		
-		p_IndexBuffer->Bind();
+		p_IndexBuffer->Bind(p_CommandBuffer);
 
 		vkCmdDrawIndexed(commandBuffer, p_IndexBuffer->GetCount(), p_InstanceCount, 0, 0, 0);
 	}

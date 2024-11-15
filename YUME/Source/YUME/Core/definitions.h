@@ -8,22 +8,46 @@
 namespace YUME
 {
 	// Var definitions
-	static constexpr uint8_t MAX_FRAMES_IN_FLIGHT = 2;
+	static constexpr uint8_t  MAX_FRAMES_IN_FLIGHT					  = 3;
+	static constexpr uint8_t  MAX_SWAPCHAIN_BUFFERS					  = 3;
+	static constexpr uint8_t  MAX_RENDER_TARGETS					  = 4;
 
 	// Descriptor set limits
-	static constexpr uint16_t DESCRIPTOR_MAX_STORAGE_TEXTURES = 1024;
-	static constexpr uint16_t DESCRIPTOR_MAX_STORAGE_BUFFERS = 1024;
-	static constexpr uint16_t DESCRIPTOR_MAX_CONSTANT_BUFFERS = 1024;
+	static constexpr uint16_t DESCRIPTOR_MAX_SETS					  = 1024;
+	static constexpr uint16_t DESCRIPTOR_MAX_INPUT_ATTACHMENT		  = 1024;
+	static constexpr uint16_t DESCRIPTOR_MAX_STORAGE_TEXTURES		  = 1024;
+	static constexpr uint16_t DESCRIPTOR_MAX_STORAGE_BUFFERS		  = 1024;
+	static constexpr uint16_t DESCRIPTOR_MAX_CONSTANT_BUFFERS		  = 1024;
 	static constexpr uint16_t DESCRIPTOR_MAX_CONSTANT_BUFFERS_DYNAMIC = 1024;
-	static constexpr uint16_t DESCRIPTOR_MAX_SAMPLERS = 1024;
-	static constexpr uint16_t DESCRIPTOR_MAX_TEXTURES = 1024;
+	static constexpr uint16_t DESCRIPTOR_MAX_SAMPLERS				  = 1024;
+	static constexpr uint16_t DESCRIPTOR_MAX_TEXTURES				  = 1024;
 
 
-	static constexpr uint8_t MAX_RENDER_TARGETS = 4;
 
 	enum class RenderAPI : uint8_t
 	{
 		Vulkan = 0, OpenGL, None
+	};
+
+	enum class RecordingLevel : uint8_t
+	{
+		PRIMARY = 0,
+		SECONDARY
+	};
+
+	enum class SubpassContents : uint8_t
+	{
+		INLINE = 0,
+		SECONDARY, // SECONDARY_COMMAND_BUFFERS
+		INLINE_AND_SECONDARY
+	};
+
+	enum class CommandBufferState : uint8_t
+	{
+		Idle = 0,
+		Recording,
+		Ended,
+		Submitted
 	};
 
 	enum class CullMode : uint8_t
@@ -68,12 +92,6 @@ namespace YUME
 	enum class ShaderType : uint8_t
 	{
 		VERTEX = 0, FRAGMENT
-	};
-
-	enum class BufferUsage : uint8_t
-	{
-		STATIC = 0,
-		DYNAMIC
 	};
 
 	enum class TextureUsage : uint8_t
@@ -150,7 +168,7 @@ namespace YUME
 		D32_FLOAT_S8_UINT,
 	};
 
-	enum class DataType
+	enum class DataType : uint8_t
 	{
 		None = 0, Float, Float2, Float3, Float4,
 		Mat3, Mat4,
@@ -229,7 +247,7 @@ namespace YUME
 	};
 	
 	// Maybe move to another file?
-	enum class SurfaceType
+	enum class SurfaceType : uint8_t
 	{
 		Opaque = 0,
 		Transparent
