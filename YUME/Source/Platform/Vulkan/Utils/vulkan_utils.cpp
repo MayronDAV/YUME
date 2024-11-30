@@ -842,5 +842,37 @@ namespace YUME::VKUtils
 		fpCmdEndDebugUtilsLabelEXT(p_CommandBuffer);
 	}
 
+	void InsertImageBarrier(
+		VkCommandBuffer p_Cmdbuffer,
+		VkImage p_Image,
+		VkAccessFlags p_SrcAccessMask,
+		VkAccessFlags p_DstAccessMask,
+		VkImageLayout p_OldImageLayout,
+		VkImageLayout p_NewImageLayout,
+		VkPipelineStageFlags p_SrcStageMask,
+		VkPipelineStageFlags p_DstStageMask,
+		VkImageSubresourceRange p_SubresourceRange)
+	{
+		VkImageMemoryBarrier imageMemoryBarrier = {};
+		imageMemoryBarrier.sType				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		imageMemoryBarrier.srcQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED;
+		imageMemoryBarrier.dstQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED;
+		imageMemoryBarrier.srcAccessMask		= p_SrcAccessMask;
+		imageMemoryBarrier.dstAccessMask		= p_DstAccessMask;
+		imageMemoryBarrier.oldLayout			= p_OldImageLayout;
+		imageMemoryBarrier.newLayout			= p_NewImageLayout;
+		imageMemoryBarrier.image				= p_Image;
+		imageMemoryBarrier.subresourceRange		= p_SubresourceRange;
+
+		vkCmdPipelineBarrier(
+			p_Cmdbuffer,
+			p_SrcStageMask,
+			p_DstStageMask,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &imageMemoryBarrier);
+	}
+
 }
 

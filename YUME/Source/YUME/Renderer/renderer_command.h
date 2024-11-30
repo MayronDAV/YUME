@@ -31,6 +31,8 @@ namespace YUME
 			static void DrawIndexed(CommandBuffer* p_CommandBuffer, const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount = 1);
 			static void DrawMesh(CommandBuffer* p_CommandBuffer, const Ref<Mesh>& p_Mesh);
 
+			static void SaveScreenshot(const std::string& p_OutPath, const Ref<Texture>& p_Texture, bool p_Async = true);
+
 			static const Capabilities& GetCapabilities();
 
 			static void BindDescriptorSets(CommandBuffer* p_CommandBuffer, const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count = 1);

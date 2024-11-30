@@ -13,6 +13,7 @@
 #include "YUME/Core/command_buffer.h"
 #include "YUME/Scene/Component/components_3D.h"
 #include "YUME/Utils/clock.h"
+//#include "Platform/Vulkan/Renderer/vulkan_swapchain.h"
 
 
 #include <glm/gtc/type_ptr.hpp>
@@ -884,6 +885,17 @@ namespace YUME
 	{
 		ImGui::Begin("Renderer Settings");
 		{
+			static std::string outPath = "Resources/Screenshot/screenshot.png";
+			ImGui::Text("OutPath: ");
+			ImGui::SameLine();
+			ImGui::InputText("##OutPathInput", outPath.data(), outPath.size());
+
+			if (ImGui::Button("Screenshot"))
+			{
+				RendererCommand::SaveScreenshot(outPath, s_RenderData->MainTexture);
+				//RendererCommand::SaveScreenshot(outPath, VulkanSwapchain::Get().GetBuffers()[VulkanSwapchain::Get().GetCurrentBuffer()]);
+			}
+
 			std::string quality[] = {
 				"Low",
 				"Medium",

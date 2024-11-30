@@ -40,6 +40,8 @@ namespace YUME
 
 			virtual const Capabilities& GetCapabilities() const = 0;
 
+			virtual void SaveScreenshot(const std::string& p_OutPath, const Ref<Texture>& p_Texture, bool p_Async = true) {};
+
 			void BindDescriptorSets(CommandBuffer* p_CommandBuffer, const Ref<DescriptorSet>* p_DescriptorSets, uint32_t p_Count)
 			{
 				for (uint32_t i = 0; i < p_Count; i++)

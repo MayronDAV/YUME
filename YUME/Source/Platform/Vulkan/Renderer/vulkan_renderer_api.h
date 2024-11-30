@@ -24,8 +24,11 @@ namespace YUME
 
 			const Capabilities& GetCapabilities() const override { return m_Capabilities; }
 
+			void SaveScreenshot(const std::string& p_OutPath, const Ref<Texture>& p_Texture, bool p_Async = true) override;
+
 			void Draw(CommandBuffer* p_CommandBuffer, const Ref<VertexBuffer>& p_VertexBuffer, uint32_t p_VertexCount, uint32_t p_InstanceCount = 1) override;
 			void DrawIndexed(CommandBuffer* p_CommandBuffer, const Ref<VertexBuffer>& p_VertexBuffer, const Ref<IndexBuffer>& p_IndexBuffer, uint32_t p_InstanceCount = 1) override;
+
 		private:
 			VulkanContext* m_Context = nullptr;
 			Capabilities m_Capabilities;

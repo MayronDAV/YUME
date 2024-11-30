@@ -23,24 +23,28 @@ namespace YUME
 			m_Scene = new Scene();
 
 			{
-				auto entt = m_Scene->CreateEntity("Skybox");
-				//entt.AddComponent<SkyboxComponent>(
-				//	"Resources/skybox/right.jpg",
-				//	"Resources/skybox/left.jpg",
-				//	"Resources/skybox/top.jpg",
-				//	"Resources/skybox/bottom.jpg",
-				//	"Resources/skybox/front.jpg",
-				//	"Resources/skybox/back.jpg"
-				//);
+				auto entt = m_Scene->CreateEntity("Skybox1");
 				entt.AddComponent<SkyboxComponent>(
-					"Resources/yokohama/right.jpg",
-					"Resources/yokohama/left.jpg",
-					"Resources/yokohama/top.jpg",
-					"Resources/yokohama/bottom.jpg",
-					"Resources/yokohama/front.jpg",
-					"Resources/yokohama/back.jpg"
+					"Resources/skybox/right.jpg",
+					"Resources/skybox/left.jpg",
+					"Resources/skybox/top.jpg",
+					"Resources/skybox/bottom.jpg",
+					"Resources/skybox/front.jpg",
+					"Resources/skybox/back.jpg"
 				);
 			}
+
+			//{
+			//	auto entt = m_Scene->CreateEntity("Skybox2");
+			//	entt.AddComponent<SkyboxComponent>(
+			//		"Resources/yokohama/right.jpg",
+			//		"Resources/yokohama/left.jpg",
+			//		"Resources/yokohama/top.jpg",
+			//		"Resources/yokohama/bottom.jpg",
+			//		"Resources/yokohama/front.jpg",
+			//		"Resources/yokohama/back.jpg"
+			//	);
+			//}
 
 			auto sphere		   = CreateRef<Model>("Resources/Meshes/sphere.obj", true);
 			auto artisansHub   = CreateRef<Model>("Resources/Meshes/Spyro/ArtisansHub.obj", true);

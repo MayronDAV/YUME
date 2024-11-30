@@ -49,4 +49,15 @@ namespace YUME::VKUtils
 	void SetDebugUtilsObjectName(const VkDevice& p_Device, const VkObjectType& p_ObjectType, const char* p_Name, const void* p_Handle);
 	void BeginDebugUtils(VkCommandBuffer p_CommandBuffer, const char* p_Name);
 	void EndDebugUtils(VkCommandBuffer p_CommandBuffer);
+
+	void InsertImageBarrier(
+			VkCommandBuffer p_Cmdbuffer,
+			VkImage p_Image,
+			VkAccessFlags p_SrcAccessMask,
+			VkAccessFlags p_DstAccessMask,
+			VkImageLayout p_OldImageLayout,
+			VkImageLayout p_NewImageLayout,
+			VkPipelineStageFlags p_SrcStageMask,
+			VkPipelineStageFlags p_DstStageMask,
+			VkImageSubresourceRange p_SubresourceRange);
 }

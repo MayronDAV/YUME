@@ -72,6 +72,13 @@ namespace YUME
 		DrawIndexed(p_CommandBuffer, p_Mesh->GetVertexBuffer(), p_Mesh->GetIndexBuffer());
 	}
 
+	void RendererCommand::SaveScreenshot(const std::string& p_OutPath, const Ref<Texture>& p_Texture, bool p_Async)
+	{
+		YM_PROFILE_FUNCTION()
+
+		s_RendererAPI->SaveScreenshot(p_OutPath, p_Texture, p_Async);
+	}
+
 	const Capabilities& RendererCommand::GetCapabilities()
 	{
 		YM_PROFILE_FUNCTION()

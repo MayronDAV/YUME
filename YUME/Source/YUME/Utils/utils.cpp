@@ -3,13 +3,11 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #ifdef YM_PLATFORM_LINUX
 	#define STBI_NO_SIMD
 #endif
 #include <stb_image.h>
 #include <stb_image_resize2.h>
-#include <stb_image_write.h>
 
 
 
