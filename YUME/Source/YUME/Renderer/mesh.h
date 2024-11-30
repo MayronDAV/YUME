@@ -37,6 +37,8 @@ namespace YUME
 		
 			void BindMaterial(CommandBuffer* p_CommandBuffer, const Ref<Shader>& p_Shader, bool p_PBR = true);
 
+			void SetName(const std::string& p_Name) { m_Name = p_Name; }
+
 			void SetMaterial(const Ref<Material>& p_Material) { m_Material = p_Material; }
 			const Ref<Material>& GetMaterial() { return m_Material; }
 
@@ -46,6 +48,8 @@ namespace YUME
 			Ref<Material> m_Material;
 			Ref<VertexBuffer> m_VertexBuffer;
 			Ref<IndexBuffer> m_IndexBuffer;
+
+			std::string m_Name = "Mesh";
 	};
 
 

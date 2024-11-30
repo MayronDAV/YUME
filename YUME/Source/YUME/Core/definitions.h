@@ -126,6 +126,13 @@ namespace YUME
 		CUSTOM_SRGB
 	};
 
+	enum class TextureArrayType : uint8_t
+	{
+		Array2D = 0,
+		CubeMap,
+		DepthArray
+	};
+
 	enum class TextureFilter : uint8_t
 	{
 		NONE = 0,
@@ -226,13 +233,13 @@ namespace YUME
 		}
 	};
 
-	class Texture2D;
+	class Texture;
 	class UniformBuffer;
 	class StorageBuffer;
 
 	struct DescriptorInfo
 	{
-		std::vector<Ref<Texture2D>> Textures;
+		std::vector<Ref<Texture>> Textures;
 		Ref<UniformBuffer> UBuffer = nullptr;
 		Ref<StorageBuffer> SBuffer = nullptr;
 

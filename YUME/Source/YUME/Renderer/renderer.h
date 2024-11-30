@@ -12,16 +12,6 @@ namespace YUME
 {
 	class YM_API Scene;
 
-	struct YM_API RendererBeginInfo
-	{
-		bool	  SwapchainTarget = false;
-		glm::vec4 ClearColor	  = { 0.0f, 0.0f, 0.0f, 1.0f };
-		uint32_t  Width			  = 0;
-		uint32_t  Height		  = 0;
-		Camera    MainCamera;
-	};
-
-	// TODO: Move to another place
 	enum class Quality
 	{
 		Low = 0,
@@ -29,16 +19,28 @@ namespace YUME
 		High
 	};
 
+	// TODO: Move to project settings when we have projects
 	struct RenderSettings
 	{
-		Quality ShadowMap = Quality::Low;
-		bool PBR = true;
-		bool OIT = false;
-		bool Renderer3D = true;
-		bool Renderer2D = false;
-		bool Renderer2D_Quad = true;
-		bool Renderer2D_Circle = true;
+		Quality ShadowMap		= Quality::Medium;
+		bool PBR				= true;
+		bool OIT				= false;
+		bool Skybox				= true;
+		bool Renderer3D			= true;
+		bool Renderer2D			= false;
+		bool Renderer2D_Quad	= true;
+		bool Renderer2D_Circle  = true;
 	};
+
+	struct YM_API RendererBeginInfo
+	{
+		bool	  SwapchainTarget = false;
+		glm::vec4 ClearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+		uint32_t  Width = 0;
+		uint32_t  Height = 0;
+		Camera    MainCamera;
+	};
+
 
 	class YM_API Renderer
 	{
@@ -56,6 +58,8 @@ namespace YUME
 			static void Shutdown();
 
 			static Ref<Texture2D> GetRenderTexture();
+
+			static void OnImgui();
 
 			static void SetPolygonMode(PolygonMode p_Mode);
 

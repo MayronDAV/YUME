@@ -26,19 +26,19 @@ namespace YUME::VKUtils
 	VkFilter TextureFilterToVk(TextureFilter p_Filter);
 	VkSamplerAddressMode TextureWrapToVk(TextureWrap p_Wrap);
 	VkBorderColor TextureBorderColorToVk(TextureBorderColor p_BorderColor);
-	VkImageUsageFlagBits TextureUsageToVk(TextureUsage p_Usage);
+	VkImageUsageFlags TextureUsageToVk(TextureUsage p_Usage);
 	VkShaderStageFlagBits ShaderTypeToVK(ShaderType p_Type);
 	VkDescriptorType DescriptorTypeToVk(DescriptorType p_Type);
 	VkFormat DataTypeToVkFormat(DataType p_Type);
 	VkSubpassContents SubpassContentsToVk(SubpassContents p_Contents);
 
-	void TransitionImageLayout(const VkImage& p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout, CommandBuffer* p_CommandBuffer = nullptr, uint32_t p_MipLevels = 1, uint32_t p_LayerCount = 1);
+	void TransitionImageLayout(const VkImage& p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout, VkCommandBuffer p_CommandBuffer = nullptr, uint32_t p_BaseMipLevel = 0, uint32_t p_MipLevels = 1, uint32_t p_Layer = 0, uint32_t p_LayerCount = 1);
 
 	VkCommandBuffer BeginSingleTimeCommand();
 	void EndSingleTimeCommand(VkCommandBuffer p_CommandBuffer);
 
 
-	void CopyBufferToImage(VkBuffer p_Buffer, VkImage p_Image, uint32_t p_Width, uint32_t p_Height);
+	void CopyBufferToImage(VkBuffer p_Buffer, VkImage p_Image, uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, uint32_t p_LayerCount = 1);
 
 	void CopyImage(uint32_t p_Width, uint32_t p_Height, const VkImage& p_SrcImage, const VkImage& p_DestImage);
 		

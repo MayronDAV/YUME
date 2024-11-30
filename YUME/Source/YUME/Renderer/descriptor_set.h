@@ -31,10 +31,8 @@ namespace YUME
 
 			virtual void SetStorageData(const std::string& p_Name, const Ref<StorageBuffer>& p_StorageBuffer) = 0;
 
-			virtual void SetTexture2D(const std::string& p_Name, const Ref<Texture2D>& p_Texture) = 0;
-			virtual void SetTexture2D(const std::string& p_Name, const Ref<Texture2D>* p_TextureData, uint32_t p_Count) = 0;
-
-			virtual void SetStorageImage(const std::string& p_Name, const Ref<Texture2D>& p_Texture) = 0;
+			virtual void SetTexture(const std::string& p_Name, const Ref<Texture>& p_Texture) = 0;
+			virtual void SetTexture(const std::string& p_Name, const Ref<Texture>* p_TextureData, uint32_t p_Count) = 0;
 
 			virtual void Upload(CommandBuffer* p_CommandBuffer = nullptr) = 0;
 

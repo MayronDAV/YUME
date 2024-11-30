@@ -53,7 +53,7 @@ namespace YUME
 		Pipeline::ClearCache();
 		Framebuffer::ClearCache();
 		RenderPass::ClearCache();
-		Texture2D::ClearCache();
+		Texture::ClearCache();
 
 		YUME::RendererCommand::Shutdown();
 		Renderer::Shutdown();
@@ -124,7 +124,7 @@ namespace YUME
 			Pipeline::DeleteUnusedCache();
 			Framebuffer::DeleteUnusedCache();
 			RenderPass::DeleteUnusedCache();
-			Texture2D::DeleteUnusedCache();
+			Texture::DeleteUnusedCache();
 		}
 	}
 

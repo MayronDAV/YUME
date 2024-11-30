@@ -75,6 +75,8 @@ namespace YUME
 			YM_CORE_ERROR(VULKAN_PREFIX "Failed to allocate buffer memory!")
 			return;
 		}
+
+		vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
 #endif
 	}
 
@@ -230,13 +232,13 @@ namespace YUME
 
 			//vkBindBufferMemory(device, m_Buffer, m_Memory, 0);
 
-			auto commandBuffer = Utils::BeginSingleTimeCommand();
+			auto commandBuffer = VKUtils::BeginSingleTimeCommand();
 
 			VkBufferCopy copyRegion = {};
 			copyRegion.size = p_SizeBytes;
 			vkCmdCopyBuffer(commandBuffer, stagingBuffer, m_Buffer, 1, &copyRegion);
 
-			Utils::EndSingleTimeCommand(commandBuffer);
+			VKUtils::EndSingleTimeCommand(commandBuffer);
 
 			vkDestroyBuffer(device, stagingBuffer, VK_NULL_HANDLE);
 			vkFreeMemory(device, stagingBufferMemory, VK_NULL_HANDLE);

@@ -11,6 +11,8 @@ IncludeDir["optick"] = "%{wks.location}/YUME/Thirdparty/optick/src"
 IncludeDir["vma"] = "%{wks.location}/YUME/Thirdparty/VulkanMemoryAllocator/include"
 IncludeDir["entt"] = "%{wks.location}/Thirdparty/entt/include"
 IncludeDir["tinyobjloader"] = "%{wks.location}/YUME/Thirdparty/tinyobjloader"
+IncludeDir["tinygltf"] = "%{wks.location}/YUME/Thirdparty/tinygltf"
+IncludeDir["json"] = "%{wks.location}/YUME/Thirdparty/json"
 IncludeDir["Vulkan"] = "%{VULKAN_SDK}/Include"
 
 LibraryDir = {}

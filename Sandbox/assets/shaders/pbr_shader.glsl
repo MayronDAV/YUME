@@ -17,6 +17,7 @@ struct VertexOutput
 	vec2  TexCoord;
 	vec4  Color;
 	vec3  CameraPosition;
+	vec4  WorldPosLightSpace;
 };
 layout(location = 0) out VertexOutput Output;
 
@@ -26,6 +27,11 @@ layout(set = 0, binding = 0) uniform u_Camera
 	mat4 ViewProjection;
 	vec3 Position;
 } u_camera;
+
+layout(set = 0, binding = 1) uniform u_ShadowBuffer
+{
+	mat4 LightSpaceMatrix;
+} u_shadowBuffer;
 
 
 layout(push_constant) uniform model
@@ -42,6 +48,7 @@ void main()
 	Output.WorldPos = vec3(Model.Transform * vec4(a_Position, 1.0));
 	Output.Normal = a_Normal;
 	Output.CameraPosition = u_camera.Position;
+	Output.WorldPosLightSpace = (u_shadowBuffer.LightSpaceMatrix * Model.Transform) * vec4(a_Position, 1.0);
 
 	gl_Position = u_camera.ViewProjection * vec4(Output.WorldPos, 1.0);
 }
@@ -59,6 +66,7 @@ struct VertexOutput
 	vec2  TexCoord;
 	vec4  Color;
 	vec3  CameraPosition;
+	vec4  WorldPosLightSpace;
 };
 layout(location = 0) in VertexOutput Input;
 
@@ -79,12 +87,13 @@ struct Light
 	vec3  AttenuationProps; // x: const, y: linear, z: quadratic
 	float Type;
 };
-layout(set = 0, binding = 1) uniform LightBuffer
+layout(set = 0, binding = 2) uniform LightBuffer
 {
 	Light Lights[MAX_LIGHTS];
 	int NumLights;
 };
 
+layout(set = 0, binding = 3) uniform sampler2D u_ShadowMap;
 
 
 layout(set = 1, binding = 0) uniform sampler2D u_AlbedoTexture;
@@ -95,6 +104,7 @@ layout(set = 1, binding = 4) uniform sampler2D u_MetallicTexture;
 layout(set = 1, binding = 5) uniform sampler2D u_AoTexture;
 layout(set = 1, binding = 6) uniform u_MaterialProperties
 {
+	vec4   AlbedoColor;
 	int    SpecularMap;
 	int    NormalMap;
 	float  AlphaCutOff;
@@ -112,12 +122,21 @@ float GeometrySmith(vec3 p_N, vec3 p_V, vec3 p_L, float p_Roughness);
 vec3  FresnelSchlick(float p_CosTheta, vec3 p_F0);
 vec3  GetNormalFromMap();
 vec3  DeGamma(vec3 p_Color, float p_Gamma);
+float ShadowCalculation(vec4 p_FragPos, vec3 p_Normal, vec3 p_Direction);
+
 
 
 
 void main()
 {
-	vec3  albedo    = Input.Color.rgb * pow(texture(u_AlbedoTexture, Input.TexCoord).rgb, vec3(2.2));
+	vec4 albedoTex 	= texture(u_AlbedoTexture, Input.TexCoord);
+	if (u_Material.AlbedoColor.a < u_Material.AlphaCutOff ||
+		albedoTex.a < u_Material.AlphaCutOff)
+	{
+		discard;
+	}
+
+	vec3  albedo    = u_Material.AlbedoColor.rgb * pow(albedoTex.rgb, vec3(2.2));
 	float metallic  = texture(u_MetallicTexture, Input.TexCoord).r;
 	float roughness = texture(u_RoughnessTexture, Input.TexCoord).r;
 	float ao        = texture(u_AoTexture, Input.TexCoord).r;
@@ -140,6 +159,7 @@ void main()
 
 	// Reflectance
 	vec3 Lo = vec3(0.0);
+	vec3 light_direction = vec3(0.0);
 	for (int i = 0; i < NumLights; ++i)
 	{
 		Light curLight = Lights[i];
@@ -167,6 +187,7 @@ void main()
 			// Directional light calculations
 
 			L 		  		    = normalize(-vec3(curLight.Direction));
+			light_direction 	= normalize(vec3(curLight.Direction));
 			radiance  		    = vec3(curLight.Color);
 		}
 		
@@ -193,9 +214,13 @@ void main()
         Lo 				     += (kD * albedo / PI + specular) * radiance * NdotL;
 	}
 
+	// Shadow
+	float shadow = ShadowCalculation(Input.WorldPosLightSpace, N, light_direction);
+
 	// Ambient lighting
     vec3 ambient = vec3(0.03) * albedo * ao;
-	vec3 color = ambient + Lo;
+	//vec3 color = ambient + Lo;
+	vec3 color 	 = ambient + (1.0 - shadow) * Lo;
 
     // HDR tonemapping
     color = color / (color + vec3(1.0));
@@ -267,4 +292,38 @@ vec3 GetNormalFromMap()
 vec3 DeGamma(vec3 p_Color, float p_Gamma)
 {
 	return pow(p_Color, vec3(1.0 / p_Gamma));
+}
+
+float ShadowCalculation(vec4 p_FragPos, vec3 p_Normal, vec3 p_Direction)
+{
+    vec3 projCoords    = p_FragPos.xyz / p_FragPos.w;
+	projCoords		   = projCoords * 0.5 + 0.5; 
+
+	// Outside
+	if (projCoords.z > 1.0)
+        return 0.0;
+
+    float currentDepth = projCoords.z;
+
+    float shadow 	   = 0.0;
+    vec2 texelSize 	   = 1.0 / textureSize(u_ShadowMap, 0);
+	float cosTheta 	   = dot(p_Normal, p_Direction);
+	float bias 		   = 0.005 * tan(acos(cosTheta));
+	bias 			   = clamp(bias, 0, 0.01);
+
+	int count 		   = 0;
+	int range 		   = 1;
+    for(int x = -range; x <= range; ++x)
+    {
+        for(int y = -range; y <= range; ++y)
+        {
+            float pcfDepth = texture(u_ShadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
+	
+            shadow 		  += currentDepth - bias > pcfDepth  ? 0.9 : 0.0;
+			count++;
+        }
+    }
+    shadow 			/= count;
+
+	return shadow;
 }

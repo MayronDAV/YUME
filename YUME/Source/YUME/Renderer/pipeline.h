@@ -17,27 +17,30 @@ namespace YUME
 
 	struct YM_API PipelineCreateInfo
 	{
-		Ref<Shader> Shader = nullptr; // Obrigatory
+		Ref<Shader> Shader;
 
-		CullMode CullMode = CullMode::NONE;
-		FrontFace FrontFace = FrontFace::CLOCKWISE;
-		PolygonMode PolygonMode = PolygonMode::FILL;
-		DrawType DrawType = DrawType::TRIANGLE;
+		CullMode	CullMode	   = CullMode::NONE;
+		FrontFace	FrontFace	   = FrontFace::CLOCKWISE;
+		PolygonMode PolygonMode	   = PolygonMode::FILL;
+		DrawType	DrawType	   = DrawType::TRIANGLE;
 		std::array<BlendMode, MAX_RENDER_TARGETS> BlendModes;
 
-		bool TransparencyEnabled = false;
-		bool ClearTargets = true;
-		bool DepthTest = true;
-		bool DepthWrite = true;
-		bool SwapchainTarget = true;
+		bool TransparencyEnabled   = false;
+		bool ClearTargets		   = true;
+		bool DepthTest			   = true;
+		bool DepthWrite			   = true;
+		bool SwapchainTarget	   = true;
+		bool DepthBiasEnabled	   = false;
 
-		float LineWidth = 1.0f;
+		float LineWidth			   = 1.0f;
+		float ConstantFactor	   = 0.0f;
+		float SlopeFactor		   = 0.0f;
 
-		float ClearColor[4] = {1, 1, 1, 1};
+		float ClearColor[4]		   = {1, 1, 1, 1};
 		std::array<Ref<Texture2D>, MAX_RENDER_TARGETS> ColorTargets;
 		Ref<Texture2D> DepthTarget = nullptr;
 
-		std::string DebugName = "Pipeline";
+		std::string DebugName	   = "Pipeline";
 	};
 
 	class YM_API Pipeline

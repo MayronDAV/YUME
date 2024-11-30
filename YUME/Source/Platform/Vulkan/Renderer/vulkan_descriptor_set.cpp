@@ -162,14 +162,16 @@ namespace YUME
 		YM_CORE_ERROR(VULKAN_PREFIX "Unkown name {}", p_Name)
 	}
 
-	void VulkanDescriptorSet::SetTexture2D(const std::string& p_Name, const Ref<Texture2D>& p_Texture)
+	void VulkanDescriptorSet::SetTexture(const std::string& p_Name, const Ref<Texture>& p_Texture)
 	{
 		YM_PROFILE_FUNCTION()
 
 		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
 		{
 			auto& descriptor = m_DescriptorsInfo[i];
-			if (descriptor.Name == p_Name && descriptor.Type == DescriptorType::IMAGE_SAMPLER)
+			if ( descriptor.Name == p_Name && 
+				(descriptor.Type == DescriptorType::IMAGE_SAMPLER || 
+				 descriptor.Type == DescriptorType::STORAGE_IMAGE))
 			{
 				descriptor.Textures.clear();
 				descriptor.Textures.push_back(p_Texture);
@@ -183,14 +185,16 @@ namespace YUME
 	}
 
 
-	void VulkanDescriptorSet::SetTexture2D(const std::string& p_Name, const Ref<Texture2D>* p_TextureData, uint32_t p_Count)
+	void VulkanDescriptorSet::SetTexture(const std::string& p_Name, const Ref<Texture>* p_TextureData, uint32_t p_Count)
 	{
 		YM_PROFILE_FUNCTION()
 
 		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
 		{
 			auto& descriptor = m_DescriptorsInfo[i];
-			if (descriptor.Name == p_Name && descriptor.Type == DescriptorType::IMAGE_SAMPLER)
+			if ( descriptor.Name == p_Name &&
+				(descriptor.Type == DescriptorType::IMAGE_SAMPLER ||
+				 descriptor.Type == DescriptorType::STORAGE_IMAGE))
 			{
 				descriptor.Textures.clear();
 				descriptor.Textures.resize(p_Count);
@@ -198,26 +202,6 @@ namespace YUME
 				{
 					descriptor.Textures[j] = p_TextureData[j];
 				}
-				m_Queue.push_back((int)i);
-				m_MustToBeUploaded = true;
-				return;
-			}
-		}
-
-		YM_CORE_ERROR(VULKAN_PREFIX "Unkown name {}", p_Name)
-	}
-
-	void VulkanDescriptorSet::SetStorageImage(const std::string& p_Name, const Ref<Texture2D>& p_Texture)
-	{
-		YM_PROFILE_FUNCTION()
-
-		for (size_t i = 0; i < m_DescriptorsInfo.size(); i++)
-		{
-			auto& descriptor = m_DescriptorsInfo[i];
-			if (descriptor.Name == p_Name && descriptor.Type == DescriptorType::STORAGE_IMAGE)
-			{
-				descriptor.Textures.clear();
-				descriptor.Textures.push_back(p_Texture);
 				m_Queue.push_back((int)i);
 				m_MustToBeUploaded = true;
 				return;
@@ -258,13 +242,42 @@ namespace YUME
 			{
 				for (const auto& texture : data.Textures)
 				{
-					auto vkTexture = texture.As<VulkanTexture2D>();
-					TransitionImageToCorrectLayout(vkTexture, p_CommandBuffer);
+					if (!texture)
+					{
+						YM_CORE_ERROR(VULKAN_PREFIX "Texture is nullptr")
+						continue;
+					}
 
-					auto& info		 = imagesInfo.emplace_back();
-					info.imageLayout = vkTexture->GetLayout();
-					info.imageView	 = vkTexture->GetImageView();
-					info.sampler	 = vkTexture->GetImageSampler();
+					TransitionImageToCorrectLayout(texture, p_CommandBuffer);
+
+					VkImageLayout layout	  = VK_IMAGE_LAYOUT_UNDEFINED;
+					VkImageView	  view		  = VK_NULL_HANDLE;
+					VkSampler	  sampler	  = VK_NULL_HANDLE;
+
+					if (texture->GetType() == AssetType::Texture2D)
+					{
+						const auto& vkTexture = texture.As<VulkanTexture2D>();
+						layout				  = vkTexture->GetLayout();
+						view				  = vkTexture->GetImageView();
+						sampler				  = vkTexture->GetImageSampler();
+					}
+					else if (texture->GetType() == AssetType::TextureArray)
+					{
+						const auto& vkTexture = texture.As<VulkanTextureArray>();
+						layout				  = vkTexture->GetLayout();
+						view				  = vkTexture->GetImageView();
+						sampler				  = vkTexture->GetImageSampler();
+					}
+					else
+					{
+						YM_CORE_ERROR(VULKAN_PREFIX "Unknown texture type - Texture: {}!", texture->GetSpecification().DebugName)
+						continue;
+					}
+
+					auto& info				  = imagesInfo.emplace_back();
+					info.imageLayout		  = layout;
+					info.imageView			  = view;
+					info.sampler			  = sampler;
 				}
 
 				descriptorWrite.descriptorCount = (uint32_t)data.Size;
@@ -280,7 +293,6 @@ namespace YUME
 					auto& info		 = imagesInfo.emplace_back();
 					info.imageLayout = vkTexture->GetLayout();
 					info.imageView	 = vkTexture->GetImageView();
-					info.sampler	 = vkTexture->GetImageSampler();
 				}
 
 				descriptorWrite.descriptorCount = (uint32_t)data.Size;
@@ -311,6 +323,14 @@ namespace YUME
 			descWrites.push_back(descriptorWrite);
 		}
 
+		if (descWrites.empty())
+		{
+			YM_CORE_ERROR(VULKAN_PREFIX "You called upload before sending data")
+			m_Queue.clear();
+			m_MustToBeUploaded = false;
+			return;
+		}
+
 		vkUpdateDescriptorSets(VulkanDevice::Get().GetDevice(), (uint32_t)descWrites.size(), descWrites.data(), 0, nullptr);
 
 		m_Queue.clear();
@@ -336,7 +356,7 @@ namespace YUME
 		);
 	}
 
-	void VulkanDescriptorSet::TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture, CommandBuffer* p_CommandBuffer)
+	void VulkanDescriptorSet::TransitionImageToCorrectLayout(const Ref<Texture>& p_Texture, CommandBuffer* p_CommandBuffer)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -344,20 +364,39 @@ namespace YUME
 			return;
 
 		const auto& spec = p_Texture->GetSpecification();
-		const auto& vkTexture = p_Texture.As<VulkanTexture2D>();
 		auto cmd = p_CommandBuffer ? p_CommandBuffer : VulkanSwapchain::Get().GetCurrentFrameData().MainCommandBuffer.get();
 
-		if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+		if (p_Texture->GetType() == AssetType::Texture2D)
 		{
-			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmd);
+			const auto& vkTexture = p_Texture.As<VulkanTexture2D>();
+			if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+			{
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmd);
+			}
+			else if (spec.Usage == TextureUsage::TEXTURE_STORAGE)
+			{
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_GENERAL, cmd);
+			}
+			else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
+			{
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, cmd);
+			}
 		}
-		else if (spec.Usage == TextureUsage::TEXTURE_STORAGE)
+		else if (p_Texture->GetType() == AssetType::TextureArray)
 		{
-			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_GENERAL, cmd);
-		}
-		else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
-		{
-			vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, cmd);
+			const auto& vkTexture = p_Texture.As<VulkanTextureArray>();
+			if (spec.Usage == TextureUsage::TEXTURE_COLOR_ATTACHMENT || spec.Usage == TextureUsage::TEXTURE_SAMPLED)
+			{
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmd);
+			}
+			else if (spec.Usage == TextureUsage::TEXTURE_STORAGE)
+			{
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_GENERAL, cmd);
+			}
+			else if (spec.Usage == TextureUsage::TEXTURE_DEPTH_STENCIL_ATTACHMENT)
+			{
+				vkTexture->TransitionImage(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, cmd);
+			}
 		}
 	}
 

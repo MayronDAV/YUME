@@ -18,10 +18,8 @@ namespace YUME
 
 			void SetStorageData(const std::string& p_Name, const Ref<StorageBuffer>& p_StorageBuffer) override;
 
-			void SetTexture2D(const std::string& p_Name, const Ref<Texture2D>& p_Texture) override;
-			void SetTexture2D(const std::string& p_Name, const Ref<Texture2D>* p_TextureData, uint32_t p_Count) override;
-			
-			void SetStorageImage(const std::string& p_Name, const Ref<Texture2D>& p_Texture) override;
+			void SetTexture(const std::string& p_Name, const Ref<Texture>& p_Texture) override;
+			void SetTexture(const std::string& p_Name, const Ref<Texture>* p_TextureData, uint32_t p_Count) override;
 
 			void Upload(CommandBuffer* p_CommandBuffer = nullptr) override;
 
@@ -29,7 +27,7 @@ namespace YUME
 			void Bind(CommandBuffer* p_CommandBuffer) override;
 
 		private:
-			void TransitionImageToCorrectLayout(const Ref<Texture2D>& p_Texture, CommandBuffer* p_CommandBuffer);
+			void TransitionImageToCorrectLayout(const Ref<Texture>& p_Texture, CommandBuffer* p_CommandBuffer);
 
 		private:
 			VkPipelineLayout m_PipelineLayout = VK_NULL_HANDLE;

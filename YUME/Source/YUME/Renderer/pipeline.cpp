@@ -58,6 +58,8 @@ namespace YUME
 		HashCombine(hash, p_CreateInfo.ClearTargets);
 		HashCombine(hash, p_CreateInfo.SwapchainTarget);
 
+		HashCombine(hash, (int)p_CreateInfo.DepthBiasEnabled, p_CreateInfo.ConstantFactor, p_CreateInfo.SlopeFactor);
+
 		HashCombine(hash, p_CreateInfo.DebugName);
 
 		auto found = s_PipelineCache.find(hash);

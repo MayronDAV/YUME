@@ -26,6 +26,7 @@ namespace YUME
 		std::string	   Name			 = "None";
 
 		SurfaceType	   Surface		 = SurfaceType::Opaque;
+		glm::vec4	   AlbedoColor	 = { 1.0f, 1.0f, 1.0f, 1.0f };
 		bool		   SpecularMap	 = false;
 		bool		   NormalMap	 = false;
 		float		   AlphaCutOff	 = 0.1f;

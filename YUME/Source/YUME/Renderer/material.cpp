@@ -57,11 +57,12 @@ namespace YUME
 	{
 		struct
 		{
-			int   SpecularMap;
-			int	  NormalMap;
-			float AlphaCutOff;
+			glm::vec4 AlbedoColor;
+			int		  SpecularMap;
+			int		  NormalMap;
+			float	  AlphaCutOff;
 
-		} buffer{ (m_Properties.SpecularMap) ? 1 : 0, (m_Properties.NormalMap) ? 1 : 0, m_Properties.AlphaCutOff};
+		} buffer{ m_Properties.AlbedoColor, (m_Properties.SpecularMap) ? 1 : 0, (m_Properties.NormalMap) ? 1 : 0, m_Properties.AlphaCutOff};
 
 		m_DescriptorSet->SetUniformData("u_MaterialProperties", UniformBuffer::Create(&buffer, sizeof(buffer)));
 
@@ -81,11 +82,11 @@ namespace YUME
 
 		if (m_Properties.Textures.AlbedoMap)
 		{
-			m_DescriptorSet->SetTexture2D(texName, m_Properties.Textures.AlbedoMap);
+			m_DescriptorSet->SetTexture(texName, m_Properties.Textures.AlbedoMap);
 		}
 		else
 		{
-			m_DescriptorSet->SetTexture2D(texName, s_DefaultAlbedoTexture);
+			m_DescriptorSet->SetTexture(texName, s_DefaultAlbedoTexture);
 		}
 
 		m_DescriptorSet->Upload();
@@ -94,47 +95,47 @@ namespace YUME
 		{
 			if (m_Properties.Textures.NormalMap)
 			{
-				m_DescriptorSet->SetTexture2D("u_NormalTexture", m_Properties.Textures.NormalMap);
+				m_DescriptorSet->SetTexture("u_NormalTexture", m_Properties.Textures.NormalMap);
 			}
 			else
 			{
-				m_DescriptorSet->SetTexture2D("u_NormalTexture", s_DefaultNormalTexture);
+				m_DescriptorSet->SetTexture("u_NormalTexture", s_DefaultNormalTexture);
 			}
 
 			if (m_Properties.Textures.SpecularMap)
 			{
-				m_DescriptorSet->SetTexture2D("u_SpecularTexture", m_Properties.Textures.SpecularMap);
+				m_DescriptorSet->SetTexture("u_SpecularTexture", m_Properties.Textures.SpecularMap);
 			}
 			else
 			{
-				m_DescriptorSet->SetTexture2D("u_SpecularTexture", s_DefaultSpecularTexture);
+				m_DescriptorSet->SetTexture("u_SpecularTexture", s_DefaultSpecularTexture);
 			}
 
 			if (m_Properties.Textures.RoughnessMap)
 			{
-				m_DescriptorSet->SetTexture2D("u_RoughnessTexture", m_Properties.Textures.RoughnessMap);
+				m_DescriptorSet->SetTexture("u_RoughnessTexture", m_Properties.Textures.RoughnessMap);
 			}
 			else
 			{
-				m_DescriptorSet->SetTexture2D("u_RoughnessTexture", s_DefaultTexture);
+				m_DescriptorSet->SetTexture("u_RoughnessTexture", s_DefaultTexture);
 			}
 
 			if (m_Properties.Textures.MetallicMap)
 			{
-				m_DescriptorSet->SetTexture2D("u_MetallicTexture", m_Properties.Textures.MetallicMap);
+				m_DescriptorSet->SetTexture("u_MetallicTexture", m_Properties.Textures.MetallicMap);
 			}
 			else
 			{
-				m_DescriptorSet->SetTexture2D("u_MetallicTexture", s_DefaultTexture);
+				m_DescriptorSet->SetTexture("u_MetallicTexture", s_DefaultTexture);
 			}
 
 			if (m_Properties.Textures.AoMap)
 			{
-				m_DescriptorSet->SetTexture2D("u_AoTexture", m_Properties.Textures.AoMap);
+				m_DescriptorSet->SetTexture("u_AoTexture", m_Properties.Textures.AoMap);
 			}
 			else
 			{
-				m_DescriptorSet->SetTexture2D("u_AoTexture", s_DefaultTexture);
+				m_DescriptorSet->SetTexture("u_AoTexture", s_DefaultTexture);
 			}
 
 			m_DescriptorSet->Upload();

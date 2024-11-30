@@ -328,7 +328,7 @@ namespace YUME::VKUtils
 	}
 
 
-	void TransitionImageLayout(const VkImage& p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout, CommandBuffer* p_CommandBuffer, uint32_t p_MipLevels, uint32_t p_LayerCount)
+	void TransitionImageLayout(const VkImage& p_Image, VkFormat p_Format, VkImageLayout p_CurrentLayout, VkImageLayout p_NewLayout, VkCommandBuffer p_CommandBuffer, uint32_t p_BaseMipLevel, uint32_t p_MipLevels, uint32_t p_Layer, uint32_t p_LayerCount)
 	{
 		YM_PROFILE_FUNCTION()
 
@@ -341,7 +341,7 @@ namespace YUME::VKUtils
 		}
 		else
 		{
-			commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
+			commandBuffer = p_CommandBuffer;
 		}
 
 		VkImageSubresourceRange subresourceRange{};
@@ -350,9 +350,9 @@ namespace YUME::VKUtils
 		if (HasStencilComponent(p_Format))
 			subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
-		subresourceRange.baseMipLevel	 = 0;
+		subresourceRange.baseMipLevel	 = p_BaseMipLevel;
 		subresourceRange.levelCount		 = p_MipLevels;
-		subresourceRange.baseArrayLayer  = 0;
+		subresourceRange.baseArrayLayer  = p_Layer;
 		subresourceRange.layerCount		 = p_LayerCount;
 
 		VkImageMemoryBarrier barrier	 = {};
@@ -430,6 +430,8 @@ namespace YUME::VKUtils
 
 		VkCommandBuffer commandBuffer;
 		vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+		SetDebugUtilsObjectName(device, VK_OBJECT_TYPE_COMMAND_BUFFER, "SingleTimeCommandBuffer", commandBuffer);
 
 		VkCommandBufferBeginInfo beginInfo = {};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -622,38 +624,41 @@ namespace YUME::VKUtils
 		}
 	}
 
-	VkImageUsageFlagBits TextureUsageToVk(TextureUsage p_Usage)
+	VkImageUsageFlags TextureUsageToVk(TextureUsage p_Usage)
 	{
 		switch (p_Usage)
 		{
 			using enum YUME::TextureUsage;
 
-			case TEXTURE_SAMPLED:					return (VkImageUsageFlagBits)0;
+			case TEXTURE_SAMPLED:					return 0;
 			case TEXTURE_COLOR_ATTACHMENT:			return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			case TEXTURE_DEPTH_STENCIL_ATTACHMENT:  return VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			case TEXTURE_STORAGE:					return VK_IMAGE_USAGE_STORAGE_BIT;
 
 			default:
 				YM_CORE_ERROR(VULKAN_PREFIX "Unknown texture format!")
-				return (VkImageUsageFlagBits)0;
+				return 0;
 		}
 	}
 
-	void CopyBufferToImage(VkBuffer p_Buffer, VkImage p_Image, uint32_t p_Width, uint32_t p_Height)
+	void CopyBufferToImage(VkBuffer p_Buffer, VkImage p_Image, uint32_t p_Width, uint32_t p_Height, VkFormat p_Format, uint32_t p_LayerCount)
 	{
 		YM_PROFILE_FUNCTION()
 
 		auto commandBuffer = BeginSingleTimeCommand();
 
 		VkBufferImageCopy region{};
-		region.bufferOffset = 0;
-		region.bufferRowLength = 0;
+		region.bufferOffset		 = 0;
+		region.bufferRowLength   = 0;
 		region.bufferImageHeight = 0;
 
-		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.aspectMask = HasDepthComponent(p_Format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+		if (HasStencilComponent(p_Format))
+			region.imageSubresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		region.imageSubresource.mipLevel	   = 0;
 		region.imageSubresource.baseArrayLayer = 0;
-		region.imageSubresource.layerCount = 1;
+		region.imageSubresource.layerCount	   = p_LayerCount;
 
 		region.imageOffset = { 0, 0, 0 };
 		region.imageExtent = {
@@ -670,6 +675,7 @@ namespace YUME::VKUtils
 			1,
 			&region
 		);
+
 
 		EndSingleTimeCommand(commandBuffer);
 	}

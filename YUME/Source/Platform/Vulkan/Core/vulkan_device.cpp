@@ -349,37 +349,35 @@ namespace YUME
 
 		// TEMPORARY ?
 		YM_CORE_VERIFY(physDevice.Features.independentBlend == VK_TRUE, "The feature independentBlend isn't supported :c")
-		YM_CORE_VERIFY(physDevice.Features.fragmentStoresAndAtomics == VK_TRUE, "The feature fragmentStoresAndAtomics isn't supported :c")
 
 		VkPhysicalDeviceFeatures physFeatures{ 0 };
-		physFeatures.geometryShader = physDevice.Features.geometryShader;
+		physFeatures.geometryShader		= physDevice.Features.geometryShader;
 		physFeatures.tessellationShader = physDevice.Features.tessellationShader;
-		physFeatures.samplerAnisotropy = physDevice.Features.samplerAnisotropy;
-		physFeatures.wideLines = physDevice.Features.wideLines;
-		physFeatures.fillModeNonSolid = physDevice.Features.fillModeNonSolid;
-		physFeatures.independentBlend = VK_TRUE;
-		physFeatures.fragmentStoresAndAtomics = VK_TRUE;
-		physFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
-		physFeatures.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
+		physFeatures.samplerAnisotropy  = physDevice.Features.samplerAnisotropy;
+		physFeatures.wideLines			= physDevice.Features.wideLines;
+		physFeatures.fillModeNonSolid	= physDevice.Features.fillModeNonSolid;
+		physFeatures.independentBlend	= VK_TRUE;
+		physFeatures.depthBiasClamp		= VK_TRUE;
+		physFeatures.depthClamp			= VK_TRUE;
 
 		auto queueCreateInfos = ConsolidateQueueCreateInfos(physDevice.QueueCreateInfos);
 
 
 		VkPhysicalDeviceCustomBorderColorFeaturesEXT customBorderColorFeatures{};
-		customBorderColorFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT;
+		customBorderColorFeatures.sType				 = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT;
 		customBorderColorFeatures.customBorderColors = VK_TRUE;
 
-		VkDeviceCreateInfo deviceCreateInfo = {};
-		deviceCreateInfo.pNext = &customBorderColorFeatures;
-		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
-		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-		deviceCreateInfo.enabledExtensionCount = (uint32_t)requiredExts.size();
-		deviceCreateInfo.ppEnabledExtensionNames = requiredExts.data();
-		deviceCreateInfo.pEnabledFeatures = &physFeatures;
-		deviceCreateInfo.enabledLayerCount = 0;
+		VkDeviceCreateInfo deviceCreateInfo			 = {};
+		deviceCreateInfo.pNext						 = &customBorderColorFeatures;
+		deviceCreateInfo.sType						 = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		deviceCreateInfo.queueCreateInfoCount		 = (uint32_t)queueCreateInfos.size();
+		deviceCreateInfo.pQueueCreateInfos			 = queueCreateInfos.data();
+		deviceCreateInfo.enabledExtensionCount		 = (uint32_t)requiredExts.size();
+		deviceCreateInfo.ppEnabledExtensionNames	 = requiredExts.data();
+		deviceCreateInfo.pEnabledFeatures			 = &physFeatures;
+		deviceCreateInfo.enabledLayerCount			 = 0;
 
-		auto res = vkCreateDevice(physDevice.Handle, &deviceCreateInfo, VK_NULL_HANDLE, &m_Device);
+		auto res									 = vkCreateDevice(physDevice.Handle, &deviceCreateInfo, VK_NULL_HANDLE, &m_Device);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
 
 		vkGetDeviceQueue(m_Device, physDevice.Indices.Graphics, 0, &m_GraphicQueue);
@@ -389,48 +387,48 @@ namespace YUME
 #ifdef USE_VMA_ALLOCATOR
 		YM_CORE_TRACE(VULKAN_PREFIX "Creating vma...")
 
-		VmaAllocatorCreateInfo allocatorInfo = {};
-		allocatorInfo.physicalDevice = GetPhysicalDevice();
-		allocatorInfo.device = m_Device;
-		allocatorInfo.instance = VulkanContext::GetInstance();
-		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+		VmaAllocatorCreateInfo allocatorInfo		= {};
+		allocatorInfo.physicalDevice				= GetPhysicalDevice();
+		allocatorInfo.device						= m_Device;
+		allocatorInfo.instance						= VulkanContext::GetInstance();
+		allocatorInfo.vulkanApiVersion				= VK_API_VERSION_1_3;
 
-		VmaVulkanFunctions fn;
-		fn.vkAllocateMemory = (PFN_vkAllocateMemory)vkAllocateMemory;
-		fn.vkBindBufferMemory = (PFN_vkBindBufferMemory)vkBindBufferMemory;
-		fn.vkBindImageMemory = (PFN_vkBindImageMemory)vkBindImageMemory;
-		fn.vkCmdCopyBuffer = (PFN_vkCmdCopyBuffer)vkCmdCopyBuffer;
-		fn.vkCreateBuffer = (PFN_vkCreateBuffer)vkCreateBuffer;
-		fn.vkCreateImage = (PFN_vkCreateImage)vkCreateImage;
-		fn.vkDestroyBuffer = (PFN_vkDestroyBuffer)vkDestroyBuffer;
-		fn.vkDestroyImage = (PFN_vkDestroyImage)vkDestroyImage;
-		fn.vkFlushMappedMemoryRanges = (PFN_vkFlushMappedMemoryRanges)vkFlushMappedMemoryRanges;
-		fn.vkFreeMemory = (PFN_vkFreeMemory)vkFreeMemory;
-		fn.vkGetBufferMemoryRequirements = (PFN_vkGetBufferMemoryRequirements)vkGetBufferMemoryRequirements;
-		fn.vkGetImageMemoryRequirements = (PFN_vkGetImageMemoryRequirements)vkGetImageMemoryRequirements;
-		fn.vkGetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties)vkGetPhysicalDeviceMemoryProperties;
-		fn.vkGetPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties)vkGetPhysicalDeviceProperties;
-		fn.vkInvalidateMappedMemoryRanges = (PFN_vkInvalidateMappedMemoryRanges)vkInvalidateMappedMemoryRanges;
-		fn.vkMapMemory = (PFN_vkMapMemory)vkMapMemory;
-		fn.vkUnmapMemory = (PFN_vkUnmapMemory)vkUnmapMemory;
-		fn.vkGetDeviceImageMemoryRequirements = (PFN_vkGetDeviceImageMemoryRequirements)vkGetDeviceImageMemoryRequirements;
-		fn.vkGetDeviceBufferMemoryRequirements = (PFN_vkGetDeviceBufferMemoryRequirements)vkGetDeviceBufferMemoryRequirements;
-		fn.vkBindImageMemory2KHR = nullptr;
-		fn.vkBindBufferMemory2KHR = nullptr;
-		fn.vkGetPhysicalDeviceMemoryProperties2KHR = nullptr;
-		fn.vkGetImageMemoryRequirements2KHR = nullptr;
-		fn.vkGetBufferMemoryRequirements2KHR = nullptr;
-		fn.vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)vkGetInstanceProcAddr;
-		fn.vkGetDeviceProcAddr = (PFN_vkGetDeviceProcAddr)vkGetDeviceProcAddr;
-		allocatorInfo.pVulkanFunctions = &fn;
-		allocatorInfo.preferredLargeHeapBlockSize = 64 * 1024 * 1024;
+		VmaVulkanFunctions fn						= {};
+		fn.vkAllocateMemory							= (PFN_vkAllocateMemory)vkAllocateMemory;
+		fn.vkBindBufferMemory						= (PFN_vkBindBufferMemory)vkBindBufferMemory;
+		fn.vkBindImageMemory						= (PFN_vkBindImageMemory)vkBindImageMemory;
+		fn.vkCmdCopyBuffer							= (PFN_vkCmdCopyBuffer)vkCmdCopyBuffer;
+		fn.vkCreateBuffer							= (PFN_vkCreateBuffer)vkCreateBuffer;
+		fn.vkCreateImage							= (PFN_vkCreateImage)vkCreateImage;
+		fn.vkDestroyBuffer							= (PFN_vkDestroyBuffer)vkDestroyBuffer;
+		fn.vkDestroyImage							= (PFN_vkDestroyImage)vkDestroyImage;
+		fn.vkFlushMappedMemoryRanges				= (PFN_vkFlushMappedMemoryRanges)vkFlushMappedMemoryRanges;
+		fn.vkFreeMemory								= (PFN_vkFreeMemory)vkFreeMemory;
+		fn.vkGetBufferMemoryRequirements			= (PFN_vkGetBufferMemoryRequirements)vkGetBufferMemoryRequirements;
+		fn.vkGetImageMemoryRequirements				= (PFN_vkGetImageMemoryRequirements)vkGetImageMemoryRequirements;
+		fn.vkGetPhysicalDeviceMemoryProperties		= (PFN_vkGetPhysicalDeviceMemoryProperties)vkGetPhysicalDeviceMemoryProperties;
+		fn.vkGetPhysicalDeviceProperties			= (PFN_vkGetPhysicalDeviceProperties)vkGetPhysicalDeviceProperties;
+		fn.vkInvalidateMappedMemoryRanges			= (PFN_vkInvalidateMappedMemoryRanges)vkInvalidateMappedMemoryRanges;
+		fn.vkMapMemory								= (PFN_vkMapMemory)vkMapMemory;
+		fn.vkUnmapMemory							= (PFN_vkUnmapMemory)vkUnmapMemory;
+		fn.vkGetDeviceImageMemoryRequirements		= (PFN_vkGetDeviceImageMemoryRequirements)vkGetDeviceImageMemoryRequirements;
+		fn.vkGetDeviceBufferMemoryRequirements		= (PFN_vkGetDeviceBufferMemoryRequirements)vkGetDeviceBufferMemoryRequirements;
+		fn.vkBindImageMemory2KHR					= nullptr;
+		fn.vkBindBufferMemory2KHR					= nullptr;
+		fn.vkGetPhysicalDeviceMemoryProperties2KHR  = nullptr;
+		fn.vkGetImageMemoryRequirements2KHR			= nullptr;
+		fn.vkGetBufferMemoryRequirements2KHR		= nullptr;
+		fn.vkGetInstanceProcAddr					= (PFN_vkGetInstanceProcAddr)vkGetInstanceProcAddr;
+		fn.vkGetDeviceProcAddr						= (PFN_vkGetDeviceProcAddr)vkGetDeviceProcAddr;
+		allocatorInfo.pVulkanFunctions				= &fn;
+		allocatorInfo.preferredLargeHeapBlockSize   = 64 * 1024 * 1024;
 
-		auto result = vmaCreateAllocator(&allocatorInfo, &m_Allocator);
+		auto result									= vmaCreateAllocator(&allocatorInfo, &m_Allocator);
 		YM_CORE_VERIFY(result == VK_SUCCESS)
 #endif
 
-		m_CommandPool = CreateRef<VulkanCommandPool>(physDevice.Indices.Graphics, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
-		m_DescriptorPool = CreateRef<VulkanDescriptorPool>();
+		m_CommandPool								 = CreateRef<VulkanCommandPool>(physDevice.Indices.Graphics, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+		m_DescriptorPool							 = CreateRef<VulkanDescriptorPool>();
 		m_DescriptorPool->Init(100, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
 
 		Utils::CreateDirectoryIfNeeded(m_PipelineCacheDir);
@@ -457,7 +455,7 @@ namespace YUME
 		else
 		{
 			VkPipelineCacheCreateInfo pipelineCacheCI = {};
-			pipelineCacheCI.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+			pipelineCacheCI.sType					  = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 			vkCreatePipelineCache(m_Device, &pipelineCacheCI, VK_NULL_HANDLE, &m_PipelineCache);
 		}
 
@@ -471,18 +469,18 @@ namespace YUME
 
 		YM_CORE_INFO(VULKAN_PREFIX "Creating VMA small objects pool for memory type index {0}", p_MemTypeIndex)
 
-		VmaPoolCreateInfo pci;
-		pci.memoryTypeIndex = p_MemTypeIndex;
-		pci.flags = VMA_POOL_CREATE_IGNORE_BUFFER_IMAGE_GRANULARITY_BIT;
-		pci.blockSize = 0;
-		pci.minBlockCount = 0;
-		pci.maxBlockCount = SIZE_MAX;
-		pci.priority = 0.5f;
-		pci.minAllocationAlignment = 0;
-		pci.pMemoryAllocateNext = nullptr;
-		VmaPool pool = VK_NULL_HANDLE;
+		VmaPoolCreateInfo pci		= {};
+		pci.memoryTypeIndex			= p_MemTypeIndex;
+		pci.flags					= VMA_POOL_CREATE_IGNORE_BUFFER_IMAGE_GRANULARITY_BIT;
+		pci.blockSize				= 0;
+		pci.minBlockCount			= 0;
+		pci.maxBlockCount			= SIZE_MAX;
+		pci.priority				= 0.5f;
+		pci.minAllocationAlignment  = 0;
+		pci.pMemoryAllocateNext		= nullptr;
+		VmaPool pool				= VK_NULL_HANDLE;
 
-		auto res = vmaCreatePool(m_Allocator, &pci, &pool);
+		auto res					= vmaCreatePool(m_Allocator, &pci, &pool);
 		YM_CORE_VERIFY(res == VK_SUCCESS)
 
 		m_SmallAllocPools[p_MemTypeIndex] = pool;

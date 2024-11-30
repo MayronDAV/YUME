@@ -72,14 +72,19 @@ namespace YUME
 		vertexInputInfo.pVertexAttributeDescriptions	= attributeDescriptions.data();
 		
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-		inputAssembly.sType					 = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		inputAssembly.topology				 = VKUtils::DrawTypeToVk(p_CreateInfo.DrawType);
-		inputAssembly.primitiveRestartEnable = VK_FALSE;
+		inputAssembly.sType								= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssembly.topology							= VKUtils::DrawTypeToVk(p_CreateInfo.DrawType);
+		inputAssembly.primitiveRestartEnable			= VK_FALSE;
 
 		std::vector<VkDynamicState> dynamicStateDescriptors = {
 			VK_DYNAMIC_STATE_VIEWPORT,
 			VK_DYNAMIC_STATE_SCISSOR
 		};
+
+		if (p_CreateInfo.DepthBiasEnabled)
+		{
+			dynamicStateDescriptors.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+		}
 
 
 		VkPipelineDynamicStateCreateInfo dynamicState{};
@@ -97,8 +102,6 @@ namespace YUME
 
 		VkPipelineRasterizationStateCreateInfo rasterizer{};
 		rasterizer.sType					= VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable			= VK_FALSE;
-		rasterizer.rasterizerDiscardEnable  = VK_FALSE;
 		if (p_CreateInfo.PolygonMode == PolygonMode::LINE || p_CreateInfo.PolygonMode == PolygonMode::POINT)
 		{
 			rasterizer.polygonMode = VKUtils::PolygonModeToVk((RendererCommand::GetCapabilities().FillModeNonSolid) ? p_CreateInfo.PolygonMode : PolygonMode::FILL);
@@ -107,10 +110,15 @@ namespace YUME
 		{
 			rasterizer.polygonMode = VKUtils::PolygonModeToVk(p_CreateInfo.PolygonMode);
 		}
-		rasterizer.lineWidth		= p_CreateInfo.LineWidth;
-		rasterizer.cullMode			= VKUtils::CullModeToVk(p_CreateInfo.CullMode);
-		rasterizer.frontFace		= VKUtils::FrontFaceToVk(p_CreateInfo.FrontFace);
-		rasterizer.depthBiasEnable  = VK_FALSE;
+		rasterizer.lineWidth			   = p_CreateInfo.LineWidth;
+		rasterizer.cullMode				   = VKUtils::CullModeToVk(p_CreateInfo.CullMode);
+		rasterizer.frontFace			   = VKUtils::FrontFaceToVk(p_CreateInfo.FrontFace);
+		rasterizer.depthClampEnable		   = VK_TRUE;
+		rasterizer.rasterizerDiscardEnable = VK_FALSE;
+		rasterizer.depthBiasEnable		   = (p_CreateInfo.DepthBiasEnabled) ? VK_TRUE : VK_FALSE;
+		rasterizer.depthBiasClamp		   = 0.0f;
+		rasterizer.depthBiasConstantFactor = p_CreateInfo.ConstantFactor;
+		rasterizer.depthBiasSlopeFactor	   = p_CreateInfo.SlopeFactor;
 		if (RendererCommand::GetCapabilities().WideLines)
 			rasterizer.lineWidth	= p_CreateInfo.LineWidth;
 		else
@@ -273,6 +281,15 @@ namespace YUME
 		TransitionAttachments();
 
 		auto commandBuffer = static_cast<VulkanCommandBuffer*>(p_CommandBuffer)->GetHandle();
+
+		if (m_CreateInfo.DepthBiasEnabled)
+		{
+			vkCmdSetDepthBias(commandBuffer,
+				m_CreateInfo.ConstantFactor,
+				0.0f,
+				m_CreateInfo.SlopeFactor);
+		}
+
 
 		m_RenderPass->Begin(p_CommandBuffer, GetFramebuffer(), GetWidth(), GetHeight(), glm::make_vec4(m_CreateInfo.ClearColor), p_Contents);
 

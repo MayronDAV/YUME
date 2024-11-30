@@ -22,9 +22,30 @@ namespace YUME
 		{
 			m_Scene = new Scene();
 
-			auto sphere = CreateRef<Model>("Resources/Meshes/sphere.obj");
-			//auto backpack = CreateRef<Model>("Resources/Meshes/backpack/backpack.obj", /* FlipYTexCoord */ false);
-			auto artisansHub = CreateRef<Model>("Resources/Meshes/Spyro/ArtisansHub.obj");
+			{
+				auto entt = m_Scene->CreateEntity("Skybox");
+				//entt.AddComponent<SkyboxComponent>(
+				//	"Resources/skybox/right.jpg",
+				//	"Resources/skybox/left.jpg",
+				//	"Resources/skybox/top.jpg",
+				//	"Resources/skybox/bottom.jpg",
+				//	"Resources/skybox/front.jpg",
+				//	"Resources/skybox/back.jpg"
+				//);
+				entt.AddComponent<SkyboxComponent>(
+					"Resources/yokohama/right.jpg",
+					"Resources/yokohama/left.jpg",
+					"Resources/yokohama/top.jpg",
+					"Resources/yokohama/bottom.jpg",
+					"Resources/yokohama/front.jpg",
+					"Resources/yokohama/back.jpg"
+				);
+			}
+
+			auto sphere		   = CreateRef<Model>("Resources/Meshes/sphere.obj", true);
+			auto artisansHub   = CreateRef<Model>("Resources/Meshes/Spyro/ArtisansHub.obj", true);
+			auto damagedHelmet = CreateRef<Model>("Resources/Meshes/DamagedHelmet/DamagedHelmet.gltf");
+			auto scene		   = CreateRef<Model>("Resources/Meshes/Scene/scene.gltf");
 
 			m_PointLight = m_Scene->CreateEntity("PointLight");
 			m_PointLight.AddComponent<LightComponent>(LightType::Point, m_PointLightColor);
@@ -37,16 +58,24 @@ namespace YUME
 			m_DirectionalLight = m_Scene->CreateEntity("DirectionalLight");
 			m_DirectionalLight.AddComponent<LightComponent>(LightType::Directional, m_DirectionalLightColor);
 
-			//{
-			//	auto entt = m_Scene->CreateEntity("Backpack");
-			//	entt.AddComponent<ModelComponent>(backpack);
-			//	auto& tc = entt.AddOrReplaceComponent<TransformComponent>(glm::vec3{ 5.0f, 3.0f, -4.0f });
-			//}
-
 			{
 				auto entt = m_Scene->CreateEntity("ArtisansHub");
 				entt.AddComponent<ModelComponent>(artisansHub);
 				auto& tc = entt.AddOrReplaceComponent<TransformComponent>(glm::vec3{ 5.0f, 0.0f, -4.0f });
+			}
+
+			{
+				auto entt = m_Scene->CreateEntity("DamagedHelmet");
+				entt.AddComponent<ModelComponent>(damagedHelmet);
+				auto& tc = entt.AddOrReplaceComponent<TransformComponent>(glm::vec3{ -4.0f, 4.0f, -36.0f });
+				tc.Transform.SetLocalRotation({ glm::radians(90.0f), 0.0f, 0.0f });
+			}
+
+			{
+				auto entt = m_Scene->CreateEntity("Scene");
+				entt.AddComponent<ModelComponent>(scene);
+				auto& tc = entt.AddOrReplaceComponent<TransformComponent>(glm::vec3{ -27.0f, 23.0f, -38.0f });
+				tc.Transform.SetLocalRotation({ glm::radians(-90.0f), glm::radians(90.0f), 0.0f});
 			}
 		}
 		~ExampleLayer() { delete m_Scene; }
@@ -189,6 +218,8 @@ namespace YUME
 			}
 			ImGui::End();
 			ImGui::PopStyleColor();
+			
+			Renderer::OnImgui();
 
 			EndDockSpace();
 		}
@@ -220,16 +251,16 @@ namespace YUME
 
 	class Sandbox : public Application
 	{
-	public:
-		Sandbox()
-		{
-			ImGui::SetCurrentContext(Application::Get(
-			).GetImGuiLayer()->GetCurrentContext());
+		public:
+			Sandbox()
+			{
+				ImGui::SetCurrentContext(Application::Get(
+				).GetImGuiLayer()->GetCurrentContext());
 
-			PushLayer(new ExampleLayer());
-		}
+				PushLayer(new ExampleLayer());
+			}
 
-		~Sandbox() override = default;
+			~Sandbox() override = default;
 	};
 
 
